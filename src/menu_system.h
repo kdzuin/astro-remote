@@ -22,10 +22,18 @@ private:
     static void handleMainMenu();
     static void handleScanMenu();
     static void handleDeviceMenu();
+    static void handleTiltScroll();
 
     static int menuState;      // 0: main menu, 1: scanning menu, 2: device menu
     static int selectedDevice; // For device selection menu
     static int scanScrollPosition;
     static unsigned long scanStartTime;
     static const unsigned long DISPLAY_UPDATE_INTERVAL; // ms
+    static bool forceRedraw;
+    
+    // Tilt scroll parameters
+    static const float TILT_THRESHOLD;  // degrees
+    static float lastPitch;
+    static unsigned long lastTiltTime;
+    static const unsigned long TILT_COOLDOWN;  // ms
 };

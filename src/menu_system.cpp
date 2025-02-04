@@ -5,7 +5,14 @@ int MenuSystem::menuState = 0;
 int MenuSystem::selectedDevice = 0;
 int MenuSystem::scanScrollPosition = 0;
 unsigned long MenuSystem::scanStartTime = 0;
-const unsigned long MenuSystem::DISPLAY_UPDATE_INTERVAL = 200;
+const unsigned long MenuSystem::DISPLAY_UPDATE_INTERVAL = 1000;
+bool MenuSystem::forceRedraw = true;
+
+// Tilt parameters
+const float MenuSystem::TILT_THRESHOLD = 50.0f;
+float MenuSystem::lastPitch = 0.0f;
+unsigned long MenuSystem::lastTiltTime = 0;
+const unsigned long MenuSystem::TILT_COOLDOWN = 300; // Reduced cooldown for better responsiveness
 
 void MenuSystem::init()
 {
@@ -15,11 +22,21 @@ void MenuSystem::init()
     M5.Display.fillScreen(BLACK);
     M5.Display.println("Sony Camera Remote");
     delay(1000);
+    menuState = 0;
+    selectedDevice = 0;
+    scanScrollPosition = 0;
+    forceRedraw = true;
+    lastPitch = 0.0f;
+    lastTiltTime = 0;
+
+    // Initialize IMU
+    M5.Imu.begin();
 }
 
 void MenuSystem::update()
 {
     BLEDeviceManager::update();
+    handleTiltScroll();
 
     switch (menuState)
     {
@@ -53,23 +70,27 @@ void MenuSystem::draw()
 
 void MenuSystem::goBack()
 {
-    BLEDeviceManager::stopScan();
+    if (BLEDeviceManager::isScanning())
+    {
+        BLEDeviceManager::stopScan();
+    }
+    BLEDeviceManager::clearDiscoveredDevices();
     selectedDevice = 0;
-    scanScrollPosition = 0;
     menuState = 0;
+    forceRedraw = true;
     drawMainMenu();
 }
 
 void MenuSystem::drawMainMenu()
 {
     static bool lastConnected = false;
-    static bool lastPaired = true;  // Initialize to opposite to force first draw
+    static bool lastPaired = true; // Initialize to opposite to force first draw
     static String lastDeviceName = "";
 
     // Get current state
     bool isPaired = !CameraControl::getPairedDeviceAddress().isEmpty();
     bool isConnected = CameraControl::isConnected();
-    
+
     // Get device name
     String deviceName = "";
     if (isPaired)
@@ -81,9 +102,10 @@ void MenuSystem::drawMainMenu()
     }
 
     // Check if we need to redraw
-    bool needsRedraw = lastConnected != isConnected ||
-                      lastPaired != isPaired ||
-                      lastDeviceName != deviceName;
+    bool needsRedraw = forceRedraw ||
+                       lastConnected != isConnected ||
+                       lastPaired != isPaired ||
+                       lastDeviceName != deviceName;
 
     if (needsRedraw)
     {
@@ -120,6 +142,7 @@ void MenuSystem::drawMainMenu()
         lastConnected = isConnected;
         lastPaired = isPaired;
         lastDeviceName = deviceName;
+        forceRedraw = false;
     }
 }
 
@@ -131,7 +154,8 @@ void MenuSystem::drawScanMenu()
     const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
 
     // Check if we need to redraw
-    bool needsRedraw = lastScanning != BLEDeviceManager::isScanning() ||
+    bool needsRedraw = forceRedraw ||
+                       lastScanning != BLEDeviceManager::isScanning() ||
                        lastDeviceCount != discoveredDevices.size() ||
                        (!BLEDeviceManager::isScanning() && lastSelectedDevice != selectedDevice);
 
@@ -183,6 +207,7 @@ void MenuSystem::drawScanMenu()
         lastScanning = BLEDeviceManager::isScanning();
         lastSelectedDevice = selectedDevice;
         lastDeviceCount = discoveredDevices.size();
+        forceRedraw = false;
     }
 }
 
@@ -255,7 +280,7 @@ void MenuSystem::handleScanMenu()
                 prefs.putString("addr", CameraControl::getPairedDeviceAddress());
                 if (selectedDev.device->haveName())
                 {
-                    prefs.putString("name", selectedDev.name);
+                    prefs.putString("name", selectedDev.device->getName().c_str());
                 }
                 else
                 {
@@ -264,23 +289,27 @@ void MenuSystem::handleScanMenu()
                 prefs.end();
 
                 BLEDeviceManager::clearDiscoveredDevices();
-                scanScrollPosition = 0;
+                selectedDevice = 0;
 
                 menuState = 0;
-                drawMainMenu();
+                forceRedraw = true;
             }
         }
-
-        if (M5.BtnPWR.wasClicked())
+        else if (M5.BtnPWR.wasClicked())
         {
             Serial.println("Power button pressed");
+            BLEDeviceManager::clearDiscoveredDevices();
+            selectedDevice = 0;
             menuState = 0;
-            drawMainMenu();
+            forceRedraw = true;
         }
-
-        if (M5.BtnB.wasClicked())
+        else if (M5.BtnB.wasClicked())
         {
-            selectedDevice = (selectedDevice + 1) % BLEDeviceManager::getDiscoveredDevices().size();
+            const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+            if (!discoveredDevices.empty())
+            {
+                selectedDevice = (selectedDevice + 1) % discoveredDevices.size();
+            }
         }
     }
 }
@@ -305,11 +334,57 @@ void MenuSystem::handleDeviceMenu()
             menuState = 0;
             break;
         }
-        drawMainMenu();
+        forceRedraw = true;
     }
     else if (M5.BtnB.wasClicked())
     {
         selectedDevice = (selectedDevice + 1) % 2;
         drawDeviceMenu();
+    }
+}
+
+void MenuSystem::handleTiltScroll()
+{
+    if (menuState != 1 || BLEDeviceManager::isScanning())
+    {
+        return; // Only handle tilt in scan menu when not scanning
+    }
+
+    float accX, accY, accZ;
+    if (M5.Imu.getAccel(&accX, &accY, &accZ))
+    {
+        // Calculate pitch angle from accelerometer data
+        // In landscape mode, Y is forward/back tilt
+        float pitch = atan2(accY, accZ) * 180.0f / PI;
+
+        // Check if enough time has passed since last tilt action
+        if (millis() - lastTiltTime >= TILT_COOLDOWN)
+        {
+            // Only trigger if we're coming from a neutral position (within ±30°)
+            bool wasNeutral = abs(lastPitch) < 30.0f;
+
+            // Forward tilt
+            if (wasNeutral && pitch < -TILT_THRESHOLD)
+            {
+                const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+                if (!discoveredDevices.empty())
+                {
+                    selectedDevice = (selectedDevice > 0) ? selectedDevice - 1 : discoveredDevices.size() - 1;
+                    lastTiltTime = millis();
+                }
+            }
+            // Backward tilt
+            else if (wasNeutral && pitch > TILT_THRESHOLD)
+            {
+                const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+                if (!discoveredDevices.empty())
+                {
+                    selectedDevice = (selectedDevice + 1) % discoveredDevices.size();
+                    lastTiltTime = millis();
+                }
+            }
+        }
+
+        lastPitch = pitch;
     }
 }
