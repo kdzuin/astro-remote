@@ -3,40 +3,23 @@
 
 int MenuSystem::menuState = 0;
 int MenuSystem::selectedDevice = 0;
-int MenuSystem::scanScrollPosition = 0;
-unsigned long MenuSystem::scanStartTime = 0;
-const unsigned long MenuSystem::DISPLAY_UPDATE_INTERVAL = 1000;
 bool MenuSystem::forceRedraw = true;
-
-// Tilt parameters
-const float MenuSystem::TILT_THRESHOLD = 50.0f;
-float MenuSystem::lastPitch = 0.0f;
-unsigned long MenuSystem::lastTiltTime = 0;
-const unsigned long MenuSystem::TILT_COOLDOWN = 300; // Reduced cooldown for better responsiveness
 
 void MenuSystem::init()
 {
     M5.Display.setRotation(1);
     M5.Display.setTextSize(1.25, 1.5);
-    M5.Display.setBaseColor(BLACK);
     M5.Display.fillScreen(BLACK);
     M5.Display.println("Sony Camera Remote");
     delay(1000);
     menuState = 0;
     selectedDevice = 0;
-    scanScrollPosition = 0;
     forceRedraw = true;
-    lastPitch = 0.0f;
-    lastTiltTime = 0;
-
-    // Initialize IMU
-    M5.Imu.begin();
 }
 
 void MenuSystem::update()
 {
     BLEDeviceManager::update();
-    handleTiltScroll();
 
     switch (menuState)
     {
@@ -340,51 +323,5 @@ void MenuSystem::handleDeviceMenu()
     {
         selectedDevice = (selectedDevice + 1) % 2;
         drawDeviceMenu();
-    }
-}
-
-void MenuSystem::handleTiltScroll()
-{
-    if (menuState != 1 || BLEDeviceManager::isScanning())
-    {
-        return; // Only handle tilt in scan menu when not scanning
-    }
-
-    float accX, accY, accZ;
-    if (M5.Imu.getAccel(&accX, &accY, &accZ))
-    {
-        // Calculate pitch angle from accelerometer data
-        // In landscape mode, Y is forward/back tilt
-        float pitch = atan2(accY, accZ) * 180.0f / PI;
-
-        // Check if enough time has passed since last tilt action
-        if (millis() - lastTiltTime >= TILT_COOLDOWN)
-        {
-            // Only trigger if we're coming from a neutral position (within ±30°)
-            bool wasNeutral = abs(lastPitch) < 30.0f;
-
-            // Forward tilt
-            if (wasNeutral && pitch < -TILT_THRESHOLD)
-            {
-                const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
-                if (!discoveredDevices.empty())
-                {
-                    selectedDevice = (selectedDevice > 0) ? selectedDevice - 1 : discoveredDevices.size() - 1;
-                    lastTiltTime = millis();
-                }
-            }
-            // Backward tilt
-            else if (wasNeutral && pitch > TILT_THRESHOLD)
-            {
-                const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
-                if (!discoveredDevices.empty())
-                {
-                    selectedDevice = (selectedDevice + 1) % discoveredDevices.size();
-                    lastTiltTime = millis();
-                }
-            }
-        }
-
-        lastPitch = pitch;
     }
 }
