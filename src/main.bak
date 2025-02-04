@@ -1,0 +1,159 @@
+#include <M5StickC.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+#include <BLEClient.h>
+
+// Sony camera BLE service and characteristic UUIDs
+#define SONY_SERVICE_UUID "8000FF00-FF00-FF00-FF00-FF00FF00FF00"
+#define SONY_CHAR_UUID "8000FF01-FF00-FF00-FF00-FF00FF00FF00"
+
+// Global variables
+BLEClient *pClient = nullptr;
+BLERemoteService *pRemoteService = nullptr;
+BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;
+bool deviceConnected = false;
+bool shooting = false;
+unsigned long exposureStartTime = 0;
+unsigned long currentExposureTime = 30000; // Default exposure time (30 seconds)
+
+// Connection status callback
+class ConnectionCallback : public BLEClientCallbacks
+{
+    void onConnect(BLEClient *pclient)
+    {
+        deviceConnected = true;
+        M5.Lcd.println("Connected!");
+    }
+
+    void onDisconnect(BLEClient *pclient)
+    {
+        deviceConnected = false;
+        M5.Lcd.println("Disconnected!");
+    }
+};
+
+void connectToCamera()
+{
+    if (pClient == nullptr)
+    {
+        pClient = BLEDevice::createClient();
+        pClient->setClientCallbacks(new ConnectionCallback());
+    }
+
+    // Connect to server
+    pClient->connect(BLEAddress("XX:XX:XX:XX:XX:XX")); // Replace with your camera's MAC address
+
+    // Get the remote service
+    pRemoteService = pClient->getService(BLEUUID(SONY_SERVICE_UUID));
+    if (pRemoteService != nullptr)
+    {
+        pRemoteCharacteristic = pRemoteService->getCharacteristic(BLEUUID(SONY_CHAR_UUID));
+    }
+}
+
+void setup()
+{
+    M5.begin();
+    M5.Lcd.setRotation(3);
+    M5.Lcd.fillScreen(BLACK);
+    M5.Lcd.setTextSize(1);
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.println("Sony Camera Remote");
+
+    BLEDevice::init("M5StickC Remote");
+
+    // Initial connection attempt
+    // connectToCamera();
+}
+
+void startBulbExposure()
+{
+    if (pRemoteCharacteristic != nullptr && deviceConnected)
+    {
+        // Command to start bulb exposure (you'll need to implement the actual command)
+        uint8_t cmd[] = {0x01}; // Placeholder command
+        pRemoteCharacteristic->writeValue(cmd, sizeof(cmd));
+        shooting = true;
+        exposureStartTime = millis();
+    }
+}
+
+void stopBulbExposure()
+{
+    if (pRemoteCharacteristic != nullptr && deviceConnected)
+    {
+        // Command to stop bulb exposure (you'll need to implement the actual command)
+        uint8_t cmd[] = {0x00}; // Placeholder command
+        pRemoteCharacteristic->writeValue(cmd, sizeof(cmd));
+        shooting = false;
+    }
+}
+
+void updateDisplay()
+{
+    M5.Lcd.fillScreen(BLACK);
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.printf("Status: %s\n", deviceConnected ? "Connected" : "Disconnected");
+
+    if (shooting)
+    {
+        unsigned long elapsedTime = (millis() - exposureStartTime) / 1000;
+        M5.Lcd.printf("Shooting: %lus\n", elapsedTime);
+    }
+    else
+    {
+        M5.Lcd.printf("Ready\n");
+    }
+
+    M5.Lcd.printf("Exp Time: %lus\n", currentExposureTime / 1000);
+}
+
+void loop()
+{
+    M5.update();
+
+    // Button A (M5 button): Start/Stop exposure
+    if (M5.BtnA.wasPressed())
+    {
+        if (!shooting)
+        {
+            startBulbExposure();
+        }
+        else
+        {
+            stopBulbExposure();
+        }
+    }
+
+    // Button B: Adjust exposure time
+    if (M5.BtnB.wasPressed())
+    {
+        currentExposureTime += 30000; // Add 30 seconds
+        if (currentExposureTime > 300000)
+        { // Max 5 minutes
+            currentExposureTime = 30000;
+        }
+    }
+
+    // Auto-stop exposure if time is reached
+    if (shooting && (millis() - exposureStartTime >= currentExposureTime))
+    {
+        stopBulbExposure();
+    }
+
+    // Update display every 1 second
+    static unsigned long lastUpdate = 0;
+    if (millis() - lastUpdate >= 1000)
+    {
+        updateDisplay();
+        lastUpdate = millis();
+    }
+
+    // Reconnect if disconnected
+    if (!deviceConnected && pClient != nullptr)
+    {
+        delay(500);
+        connectToCamera();
+    }
+}
