@@ -5,17 +5,25 @@
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <BLEClient.h>
 #include <BLEServer.h>
 #include <BLESecurity.h>
 #include <Preferences.h>
 #include <vector>
+#include <string>
 
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D
 #define SONY_CAMERA_TYPE 0x03
-#define SONY_REMOTE_SERVICE_UUID "8000ff00-ff00-ffff-ffff-ffffffffffff"
-#define SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID "0000ff01-0000-1000-8000-00805f9b34fb"
-#define SONY_REMOTE_STATUS_CHARACTERISTIC_UUID "0000ff02-0000-1000-8000-00805f9b34fb"
+
+// Sony Remote Control Service UUIDs
+static BLEUUID SONY_REMOTE_SERVICE_UUID("8000FF00-FF00-FFFF-FFFF-FFFFFFFFFFFF");
+static BLEUUID SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID((uint16_t)0xFF01);  // Write commands
+static BLEUUID SONY_REMOTE_STATUS_CHARACTERISTIC_UUID((uint16_t)0xFF02);   // Status notifications
+static BLEUUID SONY_REMOTE_STATUS_READ_CHARACTERISTIC_UUID("0000cc05-0000-1000-8000-00805f9b34fb"); // Read status
+
+// Forward declaration
+class ClientCallback;
 
 // Security callback
 class MySecurity : public BLESecurityCallbacks {
@@ -27,7 +35,7 @@ class MySecurity : public BLESecurityCallbacks {
     void onPassKeyNotify(uint32_t pass_key) {
         Serial.printf("PassKey Notify number:%d\n", pass_key);
         // Show pairing code on display
-        M5.Display.fillScreen(BLACK);
+        M5.Display.fillScreen(M5.Display.color565(0, 0, 0));  // BLACK
         M5.Display.setCursor(0, 0);
         M5.Display.println("Pairing with camera");
         M5.Display.printf("Code: %06d\n", pass_key);
@@ -57,41 +65,54 @@ class MySecurity : public BLESecurityCallbacks {
     }
 };
 
+// Device info structure
 struct DeviceInfo {
     BLEAdvertisedDevice* device;
+    std::string address;
+    std::string name;
+    int rssi;
+    bool isSonyCamera;
     
     DeviceInfo(BLEAdvertisedDevice* d) : device(d) {
-        // Constructor just stores the device pointer
+        address = d->getAddress().toString();
+        name = d->getName();
+        rssi = d->getRSSI();
+        isSonyCamera = false;
     }
     
-    std::string getName() const {
-        return device ? device->getName() : "Unknown";
-    }
-    
-    std::string getAddress() const {
-        return device ? device->getAddress().toString() : "";
-    }
-    
-    int getRSSI() const {
-        return device ? device->getRSSI() : 0;
-    }
+    std::string getName() const { return name; }
+    std::string getAddress() const { return address; }
+    int getRSSI() const { return rssi; }
 };
 
-// Client callbacks
-class ClientCallback : public BLEClientCallbacks {
-    void onConnect(BLEClient* client) {
-        Serial.println("Client connected");
-    }
-
-    void onDisconnect(BLEClient* client) {
-        Serial.println("Client disconnected");
-    }
-};
-
-class BLEDeviceManager
-{
+class BLEDeviceManager {
 public:
     static void init();
+    static bool isInitialized();
+    static bool isConnected();
+    static bool connectToSavedDevice();
+    static bool connectToDevice(BLEAdvertisedDevice* device);
+    static void disconnect();
+    static void scan();
+    static bool initConnection();
+    static BLERemoteCharacteristic* getControlCharacteristic();
+    static BLERemoteCharacteristic* getStatusCharacteristic();
+    static BLERemoteService* getService();
+    static void onConnect(BLEClient* client);
+    static void onDisconnect(BLEClient* client);
+    static void onScanComplete();
+
+    // Connection management
+    static bool connectToCamera(const BLEAdvertisedDevice* device);
+    static void disconnectCamera();
+    
+    // Pairing management
+    static bool pairCamera(const BLEAdvertisedDevice* device);
+    static void unpairCamera();
+    static bool isPaired() { return !cachedAddress.empty(); }
+    static const std::string& getPairedDeviceAddress() { return cachedAddress; }
+
+    // Scanning
     static void startScan(int duration);
     static void stopScan();
     static void update();
@@ -100,35 +121,22 @@ public:
     static const std::vector<DeviceInfo>& getDiscoveredDevices();
     static bool isScanning();
 
-    // Connection management
-    static bool connectToCamera(const BLEAdvertisedDevice* device);
-    static bool connectToSavedDevice();
-    static void disconnectCamera();
-    static bool isConnected();
-    
-    // Pairing management
-    static bool pairCamera(const BLEAdvertisedDevice* device);
-    static void unpairCamera();
-    static bool isPaired() { return !cachedAddress.empty(); }
-    static const std::string& getPairedDeviceAddress() { return cachedAddress; }
-
-    // Characteristic access
-    static BLERemoteCharacteristic* getControlCharacteristic() { return pRemoteControlChar; }
-    static BLERemoteCharacteristic* getStatusCharacteristic() { return pRemoteStatusChar; }
-
 private:
-    static bool scanning;
-    static unsigned long scanEndTime;
-    static std::vector<DeviceInfo> discoveredDevices;
-    static BLEScan* pBLEScan;
     static BLEClient* pClient;
-    static BLERemoteService* pRemoteService;
+    static BLEAdvertisedDevice* pDevice;
     static BLERemoteCharacteristic* pRemoteControlChar;
     static BLERemoteCharacteristic* pRemoteStatusChar;
+    static BLERemoteService* pRemoteService;
+    static bool initialized;
+    static bool connected;
+    static bool scanning;
+    static unsigned long scanEndTime;
+    static BLEScan* pBLEScan;
+    static std::string lastDeviceAddress;
+    static std::vector<DeviceInfo> discoveredDevices;
     static Preferences preferences;
     static std::string cachedAddress;
     
-    static bool initConnection();
     static void saveDeviceAddress(const std::string& address);
     static void loadDeviceAddress();
 };

@@ -227,27 +227,6 @@ void MenuSystem::drawControlMenu()
 
             // Basic controls
             controlList.addItem("Take Photo");
-            if (CameraCommands::isRecording()) {
-                controlList.addItem("Stop Recording");
-            } else {
-                controlList.addItem("Start Recording");
-            }
-
-            // Focus controls
-            controlList.addItem("--- Focus ---");
-            controlList.addItem("AF Lock", "", false); // Header
-            controlList.addItem("Focus Lock");
-            controlList.addItem("Focus Near");
-            controlList.addItem("Focus Far");
-
-            // Zoom controls
-            controlList.addItem("--- Zoom ---");
-            controlList.addItem("Zoom In");
-            controlList.addItem("Zoom Out");
-
-            // Custom buttons
-            controlList.addItem("--- Custom ---");
-            controlList.addItem("C1 Button");
 
             // Restore selection if valid
             if (prevIndex < controlList.size())
@@ -501,135 +480,13 @@ void MenuSystem::handleControlMenu()
                 needsFullRedraw = true;
             }
         }
-        else if (selectedItem.label == "Start Recording")
-        {
-            if (BLEDeviceManager::isConnected())
-            {
-                if (CameraCommands::recordStart())
-                {
-                    needsRedraw = true;
-                    needsFullRedraw = true;
-                }
-            }
-        }
-        else if (selectedItem.label == "Stop Recording")
-        {
-            if (BLEDeviceManager::isConnected())
-            {
-                if (CameraCommands::recordStop())
-                {
-                    needsRedraw = true;
-                    needsFullRedraw = true;
-                }
-            }
-        }
-        else if (selectedItem.label == "Focus Lock")
-        {
-            if (BLEDeviceManager::isConnected())
-            {
-                M5.Display.fillScreen(BLACK);
-                M5.Display.setCursor(0, 0);
-                M5.Display.println("Acquiring focus...");
-
-                if (CameraCommands::afPress())
-                {
-                    // Wait for focus confirmation
-                    unsigned long startTime = millis();
-                    while (millis() - startTime < 3000) // 3 second timeout
-                    {
-                        if (CameraCommands::isFocusAcquired())
-                        {
-                            M5.Display.println("Focus acquired!");
-                            break;
-                        }
-                        delay(50);
-                    }
-
-                    if (!CameraCommands::isFocusAcquired())
-                    {
-                        M5.Display.println("Focus failed!");
-                    }
-
-                    CameraCommands::afRelease();
-                }
-                delay(1000);
-                needsRedraw = true;
-                needsFullRedraw = true;
-            }
-        }
-        else if (selectedItem.label == "Focus Near" || selectedItem.label == "Focus Far")
-        {
-            if (BLEDeviceManager::isConnected())
-            {
-                bool isNear = selectedItem.label == "Focus Near";
-                M5.Display.fillScreen(BLACK);
-                M5.Display.setCursor(0, 0);
-                M5.Display.printf("Focus %s...\n", isNear ? "near" : "far");
-
-                // Press focus button
-                if (isNear)
-                {
-                    CameraCommands::focusInPress();
-                    delay(500); // Hold for half second
-                    CameraCommands::focusInRelease();
-                }
-                else
-                {
-                    CameraCommands::focusOutPress();
-                    delay(500); // Hold for half second
-                    CameraCommands::focusOutRelease();
-                }
-
-                delay(500);
-                needsRedraw = true;
-                needsFullRedraw = true;
-            }
-        }
-        else if (selectedItem.label == "Zoom In" || selectedItem.label == "Zoom Out")
-        {
-            if (BLEDeviceManager::isConnected())
-            {
-                bool isIn = selectedItem.label == "Zoom In";
-                M5.Display.fillScreen(BLACK);
-                M5.Display.setCursor(0, 0);
-                M5.Display.printf("Zoom %s...\n", isIn ? "in" : "out");
-
-                // Press zoom button
-                if (isIn)
-                {
-                    CameraCommands::zoomTelePress();
-                    delay(500); // Hold for half second
-                    CameraCommands::zoomTeleRelease();
-                }
-                else
-                {
-                    CameraCommands::zoomWidePress();
-                    delay(500); // Hold for half second
-                    CameraCommands::zoomWideRelease();
-                }
-
-                delay(500);
-                needsRedraw = true;
-                needsFullRedraw = true;
-            }
-        }
-        else if (selectedItem.label == "C1 Button")
-        {
-            if (BLEDeviceManager::isConnected())
-            {
-                CameraCommands::c1Press();
-                delay(100);
-                CameraCommands::c1Release();
-                needsRedraw = true;
-            }
-        }
     }
     else if (M5.BtnB.wasClicked())
     {
         controlList.next();
         needsRedraw = true;
     }
-    else if (M5.BtnC.wasClicked())
+    else if (M5.BtnPWR.wasClicked())
     {
         currentMenu = 0; // Go back to main menu
         needsRedraw = true;
