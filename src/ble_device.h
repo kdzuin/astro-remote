@@ -5,98 +5,75 @@
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <BLEServer.h>
+#include <BLESecurity.h>
 #include <Preferences.h>
+#include <vector>
 
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D
 #define SONY_CAMERA_TYPE 0x03
-#define SONY_REMOTE_SERVICE_UUID "8000FF00-FF00-FFFF-FFFF-FFFFFFFFFFFF"
-#define SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID "8000FF01-FF00-FFFF-FFFF-FFFFFFFFFFFF"
-#define SONY_REMOTE_STATUS_CHARACTERISTIC_UUID "8000FF02-FF00-FFFF-FFFF-FFFFFFFFFFFF"
+#define SONY_REMOTE_SERVICE_UUID "8000ff00-ff00-ffff-ffff-ffffffffffff"
+#define SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID "0000ff01-0000-1000-8000-00805f9b34fb"
+#define SONY_REMOTE_STATUS_CHARACTERISTIC_UUID "0000ff02-0000-1000-8000-00805f9b34fb"
 
-// Remote control commands
-namespace SonyCommand {
-    // Shutter commands
-    const uint8_t SHUTTER_HALF_UP[]   = {0x01, 0x06};
-    const uint8_t SHUTTER_HALF_DOWN[] = {0x01, 0x07};
-    const uint8_t SHUTTER_FULL_UP[]   = {0x01, 0x08};
-    const uint8_t SHUTTER_FULL_DOWN[] = {0x01, 0x09};
-    
-    // Record commands
-    const uint8_t RECORD_UP[]   = {0x01, 0x0E};
-    const uint8_t RECORD_DOWN[] = {0x01, 0x0F};
-    
-    // AF commands
-    const uint8_t AF_ON_UP[]   = {0x01, 0x14};
-    const uint8_t AF_ON_DOWN[] = {0x01, 0x15};
-}
+// Security callback
+class MySecurity : public BLESecurityCallbacks {
+    uint32_t onPassKeyRequest() {
+        Serial.println("PassKey Request");
+        return 123456;
+    }
 
-// Camera status codes
-namespace SonyStatus {
-    // Focus status
-    const uint8_t FOCUS_LOST[]      = {0x02, 0x3F, 0x00};
-    const uint8_t FOCUS_ACQUIRED[]  = {0x02, 0x3F, 0x20};
-    
-    // Shutter status
-    const uint8_t SHUTTER_READY[]   = {0x02, 0xA0, 0x00};
-    const uint8_t SHUTTER_ACTIVE[]  = {0x02, 0xA0, 0x20};
-    
-    // Recording status
-    const uint8_t RECORD_STOPPED[]  = {0x02, 0xD5, 0x00};
-    const uint8_t RECORD_STARTED[]  = {0x02, 0xD5, 0x20};
-}
+    void onPassKeyNotify(uint32_t pass_key) {
+        Serial.printf("PassKey Notify number:%d\n", pass_key);
+        // Show pairing code on display
+        M5.Display.fillScreen(BLACK);
+        M5.Display.setCursor(0, 0);
+        M5.Display.println("Pairing with camera");
+        M5.Display.printf("Code: %06d\n", pass_key);
+        M5.Display.println("\nPlease confirm on camera");
+    }
 
-struct SonyCameraInfo {
-    uint8_t protocolVersion;
-    uint16_t modelCode;
-    bool isPairingMode;
-
-    static bool parseMfgData(const uint8_t* data, size_t length, SonyCameraInfo& info) {
-        if (length < 11) {
-            Serial.println("MFG data too short");
-            return false;
-        }
-        
-        // Check Sony identifier (0x2D 0x01)
-        if (data[0] != (SONY_COMPANY_ID & 0xFF) || data[1] != (SONY_COMPANY_ID >> 8)) {
-            Serial.println("Not a Sony device");
-            return false;
-        }
-        
-        // Check if it's a camera (0x03)
-        if (data[2] != SONY_CAMERA_TYPE) {
-            Serial.println("Not a camera device");
-            return false;
-        }
-        
-        info.protocolVersion = data[3];
-        info.modelCode = (data[4] << 8) | data[5];
-        
-        // Pairing mode is indicated by bit 0 of byte 10
-        info.isPairingMode = (data[10] & 0x01) == 0x01;
-        
-        Serial.printf("Sony Camera: Protocol v%d, Model 0x%04X, Pairing: %s\n",
-            info.protocolVersion, info.modelCode, info.isPairingMode ? "yes" : "no");
-            
+    bool onConfirmPIN(uint32_t pass_key) {
+        Serial.printf("Confirm pin:%d\n", pass_key);
         return true;
+    }
+
+    bool onSecurityRequest() {
+        Serial.println("Security Request");
+        return true;
+    }
+
+    void onAuthenticationComplete(esp_ble_auth_cmpl_t auth_cmpl) {
+        if(auth_cmpl.success) {
+            Serial.println("Authentication Success");
+            M5.Display.println("\nPairing successful!");
+            delay(1000);
+        } else {
+            Serial.println("Authentication Failure");
+            M5.Display.println("\nPairing failed!");
+            delay(1000);
+        }
     }
 };
 
 struct DeviceInfo {
     BLEAdvertisedDevice* device;
-    std::string name;
-    SonyCameraInfo cameraInfo;
-
+    
     DeviceInfo(BLEAdvertisedDevice* d) : device(d) {
-        updateName();
+        // Constructor just stores the device pointer
     }
-
-    void updateName() const {
-        if (device && device->haveName()) {
-            const_cast<DeviceInfo*>(this)->name = device->getName().c_str();
-        } else if (device) {
-            const_cast<DeviceInfo*>(this)->name = device->getAddress().toString().c_str();
-        }
+    
+    std::string getName() const {
+        return device ? device->getName() : "Unknown";
+    }
+    
+    std::string getAddress() const {
+        return device ? device->getAddress().toString() : "";
+    }
+    
+    int getRSSI() const {
+        return device ? device->getRSSI() : 0;
     }
 };
 
@@ -125,6 +102,7 @@ public:
 
     // Connection management
     static bool connectToCamera(const BLEAdvertisedDevice* device);
+    static bool connectToSavedDevice();
     static void disconnectCamera();
     static bool isConnected();
     

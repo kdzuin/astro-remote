@@ -8,22 +8,24 @@ class MenuSystem {
 public:
     static void init();
     static void update();
+    static void drawMenu();
 
 private:
-    static void drawMenu();
-    static void drawMainMenu();
-    static void drawDeviceMenu();
-    static void drawControlMenu();
-    static void drawScanMenu();
-    
-    static void handleMainMenu();
-    static void handleDeviceMenu();
-    static void handleControlMenu();
-    static void handleScanMenu();
-    
-    static void goBack();
-    
-    static int menuState;
+    static int currentMenu;  // 0: Main, 1: Scan, 2: Control, 3: Settings
     static int selectedDevice;
     static bool needsRedraw;
+    
+    static void drawMainMenu();
+    static void drawScanMenu();
+    static void drawDeviceMenu();
+    static void drawControlMenu();
+    static void drawSettingsMenu();
+    
+    static void handleMainMenu();
+    static void handleScanMenu();
+    static void handleDeviceMenu();
+    static void handleControlMenu();
+    static void handleSettingsMenu();
+    
+    static void goBack();
 };
