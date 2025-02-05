@@ -182,33 +182,38 @@ bool BLEDeviceManager::connectToSavedDevice()
 
     Serial.printf("Attempting to connect to saved device: %s\n", cachedAddress.c_str());
     
-    // Start a scan to find the device
-    startScan(5);
-    delay(5000); // Wait for scan to complete
-
-    // Check if we found our saved device
-    bool deviceFound = false;
-    BLEAdvertisedDevice* savedDevice = nullptr;
-    
-    for (const auto& device : discoveredDevices)
-    {
-        if (device.device->getAddress().toString() == cachedAddress)
-        {
-            Serial.println("Found saved device in scan results!");
-            savedDevice = device.device;
-            deviceFound = true;
-            break;
-        }
+    // Create a client
+    if (pClient != nullptr) {
+        Serial.println("Cleaning up old client");
+        delete pClient;
+        pClient = nullptr;
     }
-
-    if (!deviceFound)
-    {
-        Serial.println("Saved device not found in scan results");
+    
+    pClient = BLEDevice::createClient();
+    if (!pClient) {
+        Serial.println("Failed to create client");
         return false;
     }
 
-    // Try to connect
-    return connectToCamera(savedDevice);
+    // Connect directly using the address
+    BLEAddress bleAddress(cachedAddress);
+    if (!pClient->connect(bleAddress)) {
+        Serial.println("Failed to connect to saved device");
+        delete pClient;
+        pClient = nullptr;
+        return false;
+    }
+
+    Serial.println("Connected to saved device!");
+
+    // Initialize the connection (set up service and characteristics)
+    if (!initConnection()) {
+        Serial.println("Failed to initialize connection");
+        disconnectCamera();
+        return false;
+    }
+
+    return true;
 }
 
 bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
