@@ -1,8 +1,6 @@
 #include <M5Unified.h>
-#include <Arduino.h>
-#include "ble_device.h"
 #include "menu_system.h"
-#include "camera_control.h"
+#include "ble_device.h"
 
 void setup()
 {
@@ -12,15 +10,19 @@ void setup()
     Serial.begin(115200);
     Serial.println("Starting Sony Camera Remote");
 
+    M5.Display.setRotation(1);
+    M5.Display.setTextSize(1.25, 1.5);
+    M5.Display.setTextScroll(true);
+    M5.Display.fillScreen(BLACK);
+    M5.Display.println("Sony Camera Remote");
+    delay(1000);
+
     BLEDeviceManager::init();
-    CameraControl::init();
     MenuSystem::init();
 }
 
 void loop()
 {
-    M5.update();
-    MenuSystem::update();
-    MenuSystem::draw();
-    delay(5);
+    MenuSystem::update(); // This will handle M5.update() internally
+    delay(10);            // Small delay to prevent tight loop
 }

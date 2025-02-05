@@ -3,23 +3,26 @@
 
 int MenuSystem::menuState = 0;
 int MenuSystem::selectedDevice = 0;
-bool MenuSystem::forceRedraw = true;
+bool MenuSystem::needsRedraw = true;
 
 void MenuSystem::init()
 {
-    M5.Display.setRotation(1);
-    M5.Display.setTextSize(1.25, 1.5);
-    M5.Display.fillScreen(BLACK);
-    M5.Display.println("Sony Camera Remote");
-    delay(1000);
     menuState = 0;
     selectedDevice = 0;
-    forceRedraw = true;
+    needsRedraw = true;
+    drawMenu();
 }
 
 void MenuSystem::update()
 {
+    M5.update(); // Make sure this is called first
     BLEDeviceManager::update();
+
+    if (needsRedraw)
+    {
+        drawMenu();
+        needsRedraw = false;
+    }
 
     switch (menuState)
     {
@@ -27,15 +30,15 @@ void MenuSystem::update()
         handleMainMenu();
         break;
     case 1:
-        handleScanMenu();
+        handleDeviceMenu();
         break;
     case 2:
-        handleDeviceMenu();
+        handleControlMenu();
         break;
     }
 }
 
-void MenuSystem::draw()
+void MenuSystem::drawMenu()
 {
     switch (menuState)
     {
@@ -43,11 +46,91 @@ void MenuSystem::draw()
         drawMainMenu();
         break;
     case 1:
-        drawScanMenu();
-        break;
-    case 2:
         drawDeviceMenu();
         break;
+    case 2:
+        drawControlMenu();
+        break;
+    }
+}
+
+void MenuSystem::drawMainMenu()
+{
+    M5.Display.fillScreen(BLACK);
+    M5.Display.setCursor(0, 0);
+    M5.Display.println("Sony Camera Remote\n");
+
+    if (BLEDeviceManager::isPaired())
+    {
+        if (BLEDeviceManager::isConnected())
+        {
+            M5.Display.println("Camera connected");
+            M5.Display.println("A: Control camera");
+            M5.Display.println("B: Disconnect");
+        }
+        else
+        {
+            M5.Display.println("Camera paired");
+            M5.Display.println("A: Connect");
+            M5.Display.println("B: Forget camera");
+        }
+    }
+    else
+    {
+        M5.Display.println("No camera paired");
+        M5.Display.println("A: Scan for cameras");
+    }
+}
+
+void MenuSystem::handleMainMenu()
+{
+    if (M5.BtnA.wasClicked())
+    {
+        Serial.println("Button A clicked in main menu"); // Debug print
+
+        if (BLEDeviceManager::isPaired())
+        {
+            if (BLEDeviceManager::isConnected())
+            {
+                menuState = 2; // Go to camera control menu
+                needsRedraw = true;
+            }
+            else
+            {
+                // Try to connect to paired camera
+                std::string address = BLEDeviceManager::getPairedDeviceAddress();
+                if (!address.empty())
+                {
+                    M5.Display.fillScreen(BLACK);
+                    M5.Display.println("Connecting...");
+                    needsRedraw = true;
+                }
+            }
+        }
+        else
+        {
+            Serial.println("Starting scan..."); // Debug print
+            menuState = 1;                      // Go to device menu
+            BLEDeviceManager::startScan(5);     // 5 second scan
+            needsRedraw = true;
+        }
+    }
+    else if (M5.BtnB.wasClicked())
+    {
+        Serial.println("Button B clicked in main menu"); // Debug print
+
+        if (BLEDeviceManager::isPaired())
+        {
+            if (BLEDeviceManager::isConnected())
+            {
+                BLEDeviceManager::disconnectCamera();
+            }
+            else
+            {
+                BLEDeviceManager::unpairCamera();
+            }
+            needsRedraw = true;
+        }
     }
 }
 
@@ -60,73 +143,8 @@ void MenuSystem::goBack()
     BLEDeviceManager::clearDiscoveredDevices();
     selectedDevice = 0;
     menuState = 0;
-    forceRedraw = true;
+    needsRedraw = true;
     drawMainMenu();
-}
-
-void MenuSystem::drawMainMenu()
-{
-    static bool lastConnected = false;
-    static bool lastPaired = true; // Initialize to opposite to force first draw
-    static String lastDeviceName = "";
-
-    // Get current state
-    bool isPaired = !CameraControl::getPairedDeviceAddress().isEmpty();
-    bool isConnected = CameraControl::isConnected();
-
-    // Get device name
-    String deviceName = "";
-    if (isPaired)
-    {
-        Preferences prefs;
-        prefs.begin("camera", true);
-        deviceName = prefs.getString("name", "");
-        prefs.end();
-    }
-
-    // Check if we need to redraw
-    bool needsRedraw = forceRedraw ||
-                       lastConnected != isConnected ||
-                       lastPaired != isPaired ||
-                       lastDeviceName != deviceName;
-
-    if (needsRedraw)
-    {
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setCursor(0, 0);
-        M5.Display.println("Sony Camera Remote\n");
-
-        if (isConnected)
-        {
-            if (deviceName.length() > 0)
-            {
-                M5.Display.printf("Connected: %s\n", deviceName.c_str());
-            }
-            else
-            {
-                M5.Display.println("Connected");
-            }
-        }
-        else
-        {
-            M5.Display.println("Disconnected");
-            if (isPaired)
-            {
-                if (deviceName.length() > 0)
-                {
-                    M5.Display.printf("Last: %s\n", deviceName.c_str());
-                }
-                M5.Display.println("\nA: Connect");
-            }
-            M5.Display.println("\nB: Find camera");
-        }
-
-        // Update state tracking
-        lastConnected = isConnected;
-        lastPaired = isPaired;
-        lastDeviceName = deviceName;
-        forceRedraw = false;
-    }
 }
 
 void MenuSystem::drawScanMenu()
@@ -139,7 +157,7 @@ void MenuSystem::drawScanMenu()
     const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
 
     // Check if we need to redraw
-    bool needsRedraw = forceRedraw ||
+    bool needsRedraw = MenuSystem::needsRedraw ||
                        lastScanning != BLEDeviceManager::isScanning() ||
                        lastDeviceCount != discoveredDevices.size() ||
                        (!BLEDeviceManager::isScanning() && lastSelectedDevice != selectedDevice);
@@ -211,57 +229,74 @@ void MenuSystem::drawScanMenu()
         lastScanning = BLEDeviceManager::isScanning();
         lastSelectedDevice = selectedDevice;
         lastDeviceCount = discoveredDevices.size();
-        forceRedraw = false;
+        MenuSystem::needsRedraw = false;
     }
 }
 
 void MenuSystem::drawDeviceMenu()
 {
-    static int lastSelected = -1;
-    static const char *items[] = {
-        "Forget device",
-        "Back"};
-    static const int numItems = sizeof(items) / sizeof(items[0]);
+    M5.Display.fillScreen(BLACK);
+    M5.Display.setCursor(0, 0);
 
-    if (lastSelected != selectedDevice)
+    const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+
+    if (BLEDeviceManager::isScanning())
     {
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setCursor(0, 0);
-        M5.Display.println("Device Menu:\n");
-
-        for (int i = 0; i < numItems; i++)
+        M5.Display.println("Scanning for cameras...");
+        if (!discoveredDevices.empty())
         {
+            M5.Display.printf("\nFound %d camera%s\n",
+                              discoveredDevices.size(),
+                              discoveredDevices.size() == 1 ? "" : "s");
+        }
+    }
+    else if (discoveredDevices.empty())
+    {
+        M5.Display.println("No cameras found\n");
+        M5.Display.println("PWR: Back");
+        M5.Display.println("B: Scan again");
+    }
+    else
+    {
+        M5.Display.printf("Available Cameras (%d):\n\n",
+                          discoveredDevices.size());
+
+        // Show all devices with pagination
+        int itemsPerPage = 4;
+        int currentPage = selectedDevice / itemsPerPage;
+        int startIdx = currentPage * itemsPerPage;
+        int endIdx = min(startIdx + itemsPerPage, (int)discoveredDevices.size());
+
+        for (int i = startIdx; i < endIdx; i++)
+        {
+            const auto &deviceInfo = discoveredDevices[i];
             M5.Display.print(i == selectedDevice ? "> " : "  ");
-            M5.Display.println(items[i]);
+
+            if (deviceInfo.device->haveName())
+            {
+                M5.Display.println(deviceInfo.device->getName().c_str());
+            }
+            else
+            {
+                M5.Display.println(deviceInfo.device->getAddress().toString().c_str());
+            }
+
+            // Show additional info for selected device
+            if (i == selectedDevice)
+            {
+                M5.Display.printf("   Model: %04X\n", deviceInfo.cameraInfo.modelCode);
+                M5.Display.printf("   Protocol: v%d\n", deviceInfo.cameraInfo.protocolVersion);
+            }
         }
 
-        M5.Display.println("\nA:Select  B:Next  PWR:Back");
-        lastSelected = selectedDevice;
-    }
-}
+        if (discoveredDevices.size() > itemsPerPage)
+        {
+            M5.Display.printf("\nPage %d/%d",
+                              currentPage + 1,
+                              (discoveredDevices.size() + itemsPerPage - 1) / itemsPerPage);
+        }
 
-void MenuSystem::handleMainMenu()
-{
-    if (M5.BtnA.wasClicked())
-    {
-        Serial.println("Button A pressed in main menu");
-    }
-    else if (M5.BtnPWR.wasClicked())
-    {
-        Serial.println("Button PWR pressed in main menu");
-    }
-    else if (M5.BtnB.wasClicked())
-    {
-        Serial.println("Button B pressed in main menu");
-        if (CameraControl::getPairedDeviceAddress().isEmpty())
-        {
-            menuState = 1; // Go directly to scanning
-            BLEDeviceManager::startScan(3);
-        }
-        else
-        {
-            menuState = 2; // Show device menu
-        }
+        M5.Display.println("\nA: Pair  B: Next  PWR: Back");
     }
 }
 
@@ -271,6 +306,7 @@ void MenuSystem::handleScanMenu()
     {
         if (M5.BtnA.wasClicked())
         {
+            Serial.println("BtnA button pressed");
             const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
             if (!discoveredDevices.empty())
             {
@@ -296,7 +332,7 @@ void MenuSystem::handleScanMenu()
                 selectedDevice = 0;
 
                 menuState = 0;
-                forceRedraw = true;
+                needsRedraw = true;
             }
         }
         else if (M5.BtnPWR.wasClicked())
@@ -305,7 +341,7 @@ void MenuSystem::handleScanMenu()
             BLEDeviceManager::clearDiscoveredDevices();
             selectedDevice = 0;
             menuState = 0;
-            forceRedraw = true;
+            needsRedraw = true;
         }
         else if (M5.BtnB.wasClicked())
         {
@@ -313,6 +349,7 @@ void MenuSystem::handleScanMenu()
             if (!discoveredDevices.empty())
             {
                 selectedDevice = (selectedDevice + 1) % discoveredDevices.size();
+                needsRedraw = true;
             }
         }
     }
@@ -322,27 +359,75 @@ void MenuSystem::handleDeviceMenu()
 {
     if (M5.BtnA.wasClicked())
     {
-        switch (selectedDevice)
+        const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+        if (!discoveredDevices.empty() && selectedDevice < discoveredDevices.size())
         {
-        case 0: // Forget device
-            if (!CameraControl::getPairedDeviceAddress().isEmpty())
+            Serial.println("Connecting to selected camera...");
+            if (BLEDeviceManager::pairCamera(discoveredDevices[selectedDevice].device))
             {
-                CameraControl::forgetDevice();
-                menuState = 0;
                 M5.Display.fillScreen(BLACK);
-                M5.Display.println("Device forgotten");
+                M5.Display.println("Camera paired!");
                 delay(1000);
+                menuState = 0; // Return to main menu
+                needsRedraw = true;
             }
-            break;
-        case 1: // Back
-            menuState = 0;
-            break;
+            else
+            {
+                M5.Display.fillScreen(BLACK);
+                M5.Display.println("Pairing failed!");
+                delay(1000);
+                needsRedraw = true;
+            }
         }
-        forceRedraw = true;
     }
     else if (M5.BtnB.wasClicked())
     {
-        selectedDevice = (selectedDevice + 1) % 2;
-        drawDeviceMenu();
+        const auto &devices = BLEDeviceManager::getDiscoveredDevices();
+        if (!devices.empty())
+        {
+            selectedDevice = (selectedDevice + 1) % devices.size();
+            needsRedraw = true;
+        }
+    }
+    else if (M5.BtnPWR.wasClicked())
+    {
+        menuState = 0;
+        needsRedraw = true;
+    }
+}
+
+void MenuSystem::drawControlMenu()
+{
+    M5.Display.fillScreen(BLACK);
+    M5.Display.setCursor(0, 0);
+    M5.Display.println("Camera Control\n");
+
+    if (!BLEDeviceManager::isConnected())
+    {
+        M5.Display.println("Camera disconnected!");
+        delay(1000);
+        menuState = 0;
+        needsRedraw = true;
+        return;
+    }
+
+    M5.Display.println("A: Shutter");
+    M5.Display.println("B: Record");
+    M5.Display.println("PWR: Back");
+}
+
+void MenuSystem::handleControlMenu()
+{
+    if (!BLEDeviceManager::isConnected())
+    {
+        menuState = 0;
+        needsRedraw = true;
+        return;
+    }
+
+    if (M5.BtnPWR.wasClicked())
+    {
+        menuState = 0;
+        needsRedraw = true;
     }
 }

@@ -5,73 +5,68 @@
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
-#include <vector>
-#include <Arduino.h>
+#include <Preferences.h>
 
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D
 #define SONY_CAMERA_TYPE 0x0003
 #define SONY_REMOTE_SERVICE_UUID "8000FF00-FF00-FFFF-FFFF-FFFFFFFFFFFF"
+#define SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID "8000FF01-FF00-FFFF-FFFF-FFFFFFFFFFFF"
+#define SONY_REMOTE_STATUS_CHARACTERISTIC_UUID "8000FF02-FF00-FFFF-FFFF-FFFFFFFFFFFF"
 
 struct SonyCameraInfo {
     uint8_t protocolVersion;
     uint16_t modelCode;
     bool isPairingMode;
-    
-    SonyCameraInfo() : protocolVersion(0), modelCode(0), isPairingMode(false) {}
-    
+
     static bool parseMfgData(const uint8_t* data, size_t length, SonyCameraInfo& info) {
         if (length < 11) return false;
         
         // Check Sony identifier (0x2D, 0x01)
         if (data[0] != 0x2D || data[1] != 0x01) return false;
         
-        // Check camera type (0x03, 0x00)
-        if (data[2] != 0x03 || data[3] != 0x00) return false;
+        // Check if it's a camera (0x03)
+        if (data[2] != 0x03) return false;
         
-        info.protocolVersion = data[4];
-        info.modelCode = (data[6] << 8) | data[7];
-        info.isPairingMode = (data[8] == 0x22 && data[9] == 0xEF && data[10] == 0x00);
+        info.protocolVersion = data[3];
+        info.modelCode = (data[4] << 8) | data[5];
+        info.isPairingMode = (data[10] == 0x01);
         
         return true;
     }
 };
 
-struct DeviceInfo
-{
+struct DeviceInfo {
     BLEAdvertisedDevice* device;
-    mutable String name;
-    mutable bool nameRequested;
-    mutable SonyCameraInfo cameraInfo;
+    std::string name;
+    SonyCameraInfo cameraInfo;
 
-    DeviceInfo(BLEAdvertisedDevice* dev) : device(dev), nameRequested(false)
-    {
-        name = dev->getAddress().toString().c_str();
-        
-        // Try to parse Sony camera info
-        if (dev->haveManufacturerData()) {
-            std::string mfgData = dev->getManufacturerData();
-            if (mfgData.length() >= 11) {
-                SonyCameraInfo::parseMfgData((const uint8_t*)mfgData.c_str(), mfgData.length(), cameraInfo);
-            }
-        }
+    DeviceInfo(BLEAdvertisedDevice* d) : device(d) {
+        updateName();
     }
 
-    void updateName() const
-    {
-        if (!nameRequested && device->haveName())
-        {
-            name = device->getName().c_str();
-            nameRequested = true;
+    void updateName() const {
+        if (device && device->haveName()) {
+            const_cast<DeviceInfo*>(this)->name = device->getName().c_str();
+        } else if (device) {
+            const_cast<DeviceInfo*>(this)->name = device->getAddress().toString().c_str();
         }
-    }
-    
-    bool isSonyCamera() const {
-        return device->haveManufacturerData() && cameraInfo.isPairingMode;
     }
 };
 
-class BLEDeviceManager {
+// Client callbacks
+class ClientCallback : public BLEClientCallbacks {
+    void onConnect(BLEClient* client) {
+        Serial.println("Client connected");
+    }
+
+    void onDisconnect(BLEClient* client) {
+        Serial.println("Client disconnected");
+    }
+};
+
+class BLEDeviceManager
+{
 public:
     static void init();
     static void startScan(int duration);
@@ -82,12 +77,30 @@ public:
     static const std::vector<DeviceInfo>& getDiscoveredDevices();
     static bool isScanning();
 
+    // Connection management
+    static bool connectToCamera(const BLEAdvertisedDevice* device);
+    static void disconnectCamera();
+    static bool isConnected();
+    
+    // Pairing management
+    static bool pairCamera(const BLEAdvertisedDevice* device);
+    static void unpairCamera();
+    static bool isPaired() { return !cachedAddress.empty(); }
+    static const std::string& getPairedDeviceAddress() { return cachedAddress; }
+
 private:
     static bool scanning;
+    static unsigned long scanEndTime;
     static std::vector<DeviceInfo> discoveredDevices;
     static BLEScan* pBLEScan;
-    static unsigned long scanStartTime;
-    static unsigned long scanDuration;
-    static unsigned long scanEndTime;
-    static unsigned long lastScanTime;
+    static BLEClient* pClient;
+    static BLERemoteService* pRemoteService;
+    static BLERemoteCharacteristic* pRemoteControlChar;
+    static BLERemoteCharacteristic* pRemoteStatusChar;
+    static Preferences preferences;
+    static std::string cachedAddress;
+    
+    static bool initConnection();
+    static void saveDeviceAddress(const std::string& address);
+    static void loadDeviceAddress();
 };
