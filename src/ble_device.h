@@ -112,6 +112,10 @@ public:
     static bool isPaired() { return !cachedAddress.empty(); }
     static const std::string& getPairedDeviceAddress() { return cachedAddress; }
 
+    // Characteristic access
+    static BLERemoteCharacteristic* getControlCharacteristic() { return pRemoteControlChar; }
+    static BLERemoteCharacteristic* getStatusCharacteristic() { return pRemoteStatusChar; }
+
 private:
     static bool scanning;
     static unsigned long scanEndTime;

@@ -2,7 +2,6 @@
 
 void SelectableList::clear()
 {
-    Serial.println("[SelectableList] Clearing list");
     items.clear();
     selectedIndex = 0; // Reset to default
     prevSelectedIndex = 0;
@@ -10,7 +9,6 @@ void SelectableList::clear()
 
 void SelectableList::addItem(const std::string &label, const std::string &description, bool enabled)
 {
-    Serial.printf("[SelectableList] Adding item: %s (enabled: %d)\n", label.c_str(), enabled);
     Item item;
     item.label = label;
     item.description = description;
@@ -22,23 +20,17 @@ bool SelectableList::next()
 {
     if (items.empty())
     {
-        Serial.println("[SelectableList] next() called but list is empty");
         return false;
     }
-
-    Serial.printf("[SelectableList] next() called, current index: %d, items: %d\n", selectedIndex, items.size());
 
     // Find next enabled item
     int originalIndex = selectedIndex;
     do
     {
         selectedIndex = (selectedIndex + 1) % items.size();
-        Serial.printf("[SelectableList] trying index: %d, enabled: %d\n", selectedIndex, items[selectedIndex].enabled);
     } while (!items[selectedIndex].enabled && selectedIndex != originalIndex);
 
     bool changed = selectedIndex != originalIndex;
-    Serial.printf("[SelectableList] next() result: index %d -> %d, changed: %d\n",
-                  originalIndex, selectedIndex, changed);
     return changed;
 }
 
@@ -53,8 +45,6 @@ void SelectableList::setSelectedIndex(int index)
 
 void SelectableList::draw(int startY, bool fullRedraw)
 {
-    Serial.printf("[SelectableList] Drawing list with %d items, selected: %d, full: %d\n",
-                  items.size(), selectedIndex, fullRedraw);
     int y = startY;
 
     // Draw title if present and doing full redraw

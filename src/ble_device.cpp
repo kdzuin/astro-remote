@@ -1,4 +1,5 @@
 #include "ble_device.h"
+#include "camera_commands.h"
 
 bool BLEDeviceManager::scanning = false;
 unsigned long BLEDeviceManager::scanEndTime = 0;
@@ -374,6 +375,9 @@ bool BLEDeviceManager::initConnection()
             Serial.println();
         });
     }
+
+    // Initialize camera commands
+    CameraCommands::init();
 
     Serial.println("Connection initialized successfully!");
     return true;

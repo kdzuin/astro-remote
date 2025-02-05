@@ -1,4 +1,5 @@
 #include "menu_system.h"
+#include "camera_commands.h"
 
 int MenuSystem::currentMenu = 0;
 bool MenuSystem::needsRedraw = true;
@@ -15,7 +16,6 @@ void MenuSystem::init()
     M5.begin();
     M5.Display.setRotation(1); // Rotate to landscape
     M5.Display.setTextSize(1.25, 1.5);
-    Serial.printf("[MenuSystem] Display size: %dx%d\n", M5.Display.width(), M5.Display.height());
     BLEDeviceManager::init();
 }
 
@@ -52,8 +52,6 @@ void MenuSystem::drawNavigation(const char *leftBtn, const char *rightBtn)
     int displayHeight = M5.Display.height();
     int displayWidth = M5.Display.width();
     int fontHeight = M5.Display.fontHeight();
-    Serial.printf("[MenuSystem] Display size: %dx%d\n", displayWidth, displayHeight);
-    Serial.printf("[MenuSystem] Font height: %d\n", fontHeight);
 
     // Draw navigation bar background
     M5.Display.fillRect(0, displayHeight - NAV_HEIGHT, displayWidth, NAV_HEIGHT, NAV_BG_COLOR);
@@ -211,18 +209,44 @@ void MenuSystem::drawControlMenu()
 {
     if (needsRedraw)
     {
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setCursor(0, 0);
+        bool fullRedraw = needsFullRedraw;
+        if (fullRedraw)
+        {
+            M5.Display.fillScreen(BLACK);
+            M5.Display.setTextSize(1.25, 1.5);
+        }
 
-        controlList.clear();
-        controlList.setTitle("Camera Control");
+        // Store current selection before clearing
+        int prevIndex = controlList.getSelectedIndex();
 
-        controlList.addItem("Take Photo");
+        // Update menu items if doing full redraw
+        if (fullRedraw)
+        {
+            controlList.clear();
+            controlList.setTitle("Camera Control");
 
-        controlList.draw();
-        drawNavigation("Next", "Select");
+            controlList.addItem("Acquire Focus");
+            controlList.addItem("Take Photo");
+
+            // Restore selection if valid
+            if (prevIndex < controlList.size())
+            {
+                controlList.setSelectedIndex(prevIndex);
+            }
+        }
+
+        // Draw the list in the available space
+        controlList.draw(4, fullRedraw);
+
+        // Draw navigation only if text changed
+        if (fullRedraw || navigationTextChanged)
+        {
+            drawNavigation("Next", "Select");
+            navigationTextChanged = false;
+        }
 
         needsRedraw = false;
+        needsFullRedraw = false;
     }
 }
 
@@ -433,7 +457,74 @@ void MenuSystem::handleControlMenu()
 {
     if (M5.BtnA.wasClicked())
     {
-        const auto &selectedItem = settingsList.getSelectedItem();
+        const auto &selectedItem = controlList.getSelectedItem();
+        if (selectedItem.label == "Acquire Focus")
+        {
+            if (BLEDeviceManager::isConnected())
+            {
+                needsFullRedraw = true;
+                needsRedraw = true;
+
+                M5.Display.fillScreen(BLACK);
+                M5.Display.setCursor(0, 0);
+                M5.Display.println("Acquiring focus...");
+
+                // Press shutter half-way
+                if (CameraCommands::shutterHalfPress())
+                {
+                    // Wait for focus confirmation
+                    unsigned long startTime = millis();
+                    while (millis() - startTime < 3000)
+                    { // 3 second timeout
+                        if (CameraCommands::isFocusAcquired())
+                        {
+                            M5.Display.println("Focus acquired!");
+                            break;
+                        }
+                        delay(50); // Small delay to prevent tight loop
+                    }
+
+                    if (!CameraCommands::isFocusAcquired())
+                    {
+                        M5.Display.println("Focus failed!");
+                    }
+
+                    // Release shutter
+                    CameraCommands::shutterHalfRelease();
+                }
+                else
+                {
+                    M5.Display.println("Failed to start focus!");
+                }
+
+                delay(1500); // Show result for 1.5 seconds
+            }
+            else
+            {
+                Serial.println("Camera not connected");
+            }
+            needsRedraw = true;
+            needsFullRedraw = true;
+        }
+        else if (selectedItem.label == "Take Photo")
+        {
+            if (BLEDeviceManager::isConnected())
+            {
+                // Execute full shutter sequence
+                if (CameraCommands::shutterPress())
+                {
+                    Serial.println("Photo taken successfully");
+                }
+                else
+                {
+                    Serial.println("Failed to take photo");
+                }
+            }
+            else
+            {
+                Serial.println("Camera not connected");
+            }
+        }
     }
     else if (M5.BtnB.wasClicked())
     {
