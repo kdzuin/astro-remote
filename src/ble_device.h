@@ -9,10 +9,42 @@
 
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D
-#define SONY_CAMERA_TYPE 0x0003
+#define SONY_CAMERA_TYPE 0x03
 #define SONY_REMOTE_SERVICE_UUID "8000FF00-FF00-FFFF-FFFF-FFFFFFFFFFFF"
 #define SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID "8000FF01-FF00-FFFF-FFFF-FFFFFFFFFFFF"
 #define SONY_REMOTE_STATUS_CHARACTERISTIC_UUID "8000FF02-FF00-FFFF-FFFF-FFFFFFFFFFFF"
+
+// Remote control commands
+namespace SonyCommand {
+    // Shutter commands
+    const uint8_t SHUTTER_HALF_UP[]   = {0x01, 0x06};
+    const uint8_t SHUTTER_HALF_DOWN[] = {0x01, 0x07};
+    const uint8_t SHUTTER_FULL_UP[]   = {0x01, 0x08};
+    const uint8_t SHUTTER_FULL_DOWN[] = {0x01, 0x09};
+    
+    // Record commands
+    const uint8_t RECORD_UP[]   = {0x01, 0x0E};
+    const uint8_t RECORD_DOWN[] = {0x01, 0x0F};
+    
+    // AF commands
+    const uint8_t AF_ON_UP[]   = {0x01, 0x14};
+    const uint8_t AF_ON_DOWN[] = {0x01, 0x15};
+}
+
+// Camera status codes
+namespace SonyStatus {
+    // Focus status
+    const uint8_t FOCUS_LOST[]      = {0x02, 0x3F, 0x00};
+    const uint8_t FOCUS_ACQUIRED[]  = {0x02, 0x3F, 0x20};
+    
+    // Shutter status
+    const uint8_t SHUTTER_READY[]   = {0x02, 0xA0, 0x00};
+    const uint8_t SHUTTER_ACTIVE[]  = {0x02, 0xA0, 0x20};
+    
+    // Recording status
+    const uint8_t RECORD_STOPPED[]  = {0x02, 0xD5, 0x00};
+    const uint8_t RECORD_STARTED[]  = {0x02, 0xD5, 0x20};
+}
 
 struct SonyCameraInfo {
     uint8_t protocolVersion;
@@ -20,18 +52,32 @@ struct SonyCameraInfo {
     bool isPairingMode;
 
     static bool parseMfgData(const uint8_t* data, size_t length, SonyCameraInfo& info) {
-        if (length < 11) return false;
+        if (length < 11) {
+            Serial.println("MFG data too short");
+            return false;
+        }
         
-        // Check Sony identifier (0x2D, 0x01)
-        if (data[0] != 0x2D || data[1] != 0x01) return false;
+        // Check Sony identifier (0x2D 0x01)
+        if (data[0] != (SONY_COMPANY_ID & 0xFF) || data[1] != (SONY_COMPANY_ID >> 8)) {
+            Serial.println("Not a Sony device");
+            return false;
+        }
         
         // Check if it's a camera (0x03)
-        if (data[2] != 0x03) return false;
+        if (data[2] != SONY_CAMERA_TYPE) {
+            Serial.println("Not a camera device");
+            return false;
+        }
         
         info.protocolVersion = data[3];
         info.modelCode = (data[4] << 8) | data[5];
-        info.isPairingMode = (data[10] == 0x01);
         
+        // Pairing mode is indicated by bit 0 of byte 10
+        info.isPairingMode = (data[10] & 0x01) == 0x01;
+        
+        Serial.printf("Sony Camera: Protocol v%d, Model 0x%04X, Pairing: %s\n",
+            info.protocolVersion, info.modelCode, info.isPairingMode ? "yes" : "no");
+            
         return true;
     }
 };
