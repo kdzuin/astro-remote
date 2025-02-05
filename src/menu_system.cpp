@@ -341,6 +341,7 @@ void MenuSystem::handleScanMenu()
         }
         currentMenu = 0; // Go back to main menu
         needsRedraw = true;
+        needsFullRedraw = true;
         return;
     }
 
@@ -424,6 +425,7 @@ void MenuSystem::handleSettingsMenu()
     {
         currentMenu = 0;
         needsRedraw = true;
+        needsFullRedraw = true;
     }
 }
 
@@ -442,5 +444,6 @@ void MenuSystem::handleControlMenu()
     {
         currentMenu = 0; // Go back to main menu
         needsRedraw = true;
+        needsFullRedraw = true;
     }
 }
