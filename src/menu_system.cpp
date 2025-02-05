@@ -4,6 +4,7 @@ int MenuSystem::currentMenu = 0;
 bool MenuSystem::needsRedraw = true;
 bool MenuSystem::needsFullRedraw = true;
 bool MenuSystem::navigationTextChanged = true;
+
 SelectableList MenuSystem::mainList;
 SelectableList MenuSystem::scanList;
 SelectableList MenuSystem::controlList;
@@ -16,6 +17,34 @@ void MenuSystem::init()
     M5.Display.setTextSize(1.25, 1.5);
     Serial.printf("[MenuSystem] Display size: %dx%d\n", M5.Display.width(), M5.Display.height());
     BLEDeviceManager::init();
+}
+
+void MenuSystem::update()
+{
+    M5.update(); // Make sure this is called first
+    BLEDeviceManager::update();
+
+    if (needsRedraw)
+    {
+        drawMenu();
+        needsRedraw = false;
+    }
+
+    switch (currentMenu)
+    {
+    case 0:
+        handleMainMenu();
+        break;
+    case 1:
+        handleScanMenu();
+        break;
+    case 2:
+        handleControlMenu();
+        break;
+    case 3:
+        handleSettingsMenu();
+        break;
+    }
 }
 
 void MenuSystem::drawNavigation(const char *leftBtn, const char *rightBtn)
@@ -51,16 +80,37 @@ void MenuSystem::drawNavigation(const char *leftBtn, const char *rightBtn)
     M5.Display.setTextColor(WHITE);
 }
 
+void MenuSystem::drawMenu()
+{
+    if (!needsRedraw)
+    {
+        return;
+    }
+
+    switch (currentMenu)
+    {
+    case 0:
+        drawMainMenu();
+        break;
+    case 1:
+        drawScanMenu();
+        break;
+    case 2:
+        drawControlMenu();
+        break;
+    case 3:
+        drawSettingsMenu();
+        break;
+    }
+}
+
 void MenuSystem::drawMainMenu()
 {
     if (needsRedraw)
     {
-        Serial.printf("[MenuSystem] Drawing main menu, current selection: %d\n", mainList.getSelectedIndex());
-
         bool fullRedraw = needsFullRedraw; // Only fill screen and redraw everything if needed
         if (fullRedraw)
         {
-            Serial.println("[MenuSystem] Doing full redraw");
             M5.Display.fillScreen(BLACK);
             M5.Display.setTextSize(1.25, 1.5);
         }
@@ -82,7 +132,6 @@ void MenuSystem::drawMainMenu()
                 mainList.addItem("Connect Last Camera");
             }
             mainList.addItem("Settings");
-            mainList.setActionLabel("Select");
 
             // Restore selection if valid
             if (prevIndex < mainList.size())
@@ -137,15 +186,13 @@ void MenuSystem::drawScanMenu()
             // Add discovered devices to the list
             for (const auto &deviceInfo : discoveredDevices)
             {
-                std::string desc = "RSSI: " + std::to_string(deviceInfo.getRSSI()) +
-                                   "\nAddr: " + deviceInfo.getAddress();
+                std::string desc = "Addr: " + deviceInfo.getAddress();
                 scanList.addItem(deviceInfo.getName(), desc);
             }
 
             if (!discoveredDevices.empty())
             {
-                scanList.setActionLabel("Connect");
-                scanList.draw(M5.Display.getCursorY());
+                scanList.draw();
                 drawNavigation("Next", "Select");
             }
             else
@@ -160,55 +207,85 @@ void MenuSystem::drawScanMenu()
     }
 }
 
-void MenuSystem::update()
+void MenuSystem::drawControlMenu()
 {
-    M5.update(); // Make sure this is called first
-    BLEDeviceManager::update();
-
     if (needsRedraw)
     {
-        drawMenu();
-        needsRedraw = false;
-    }
+        M5.Display.fillScreen(BLACK);
+        M5.Display.setCursor(0, 0);
 
-    switch (currentMenu)
-    {
-    case 0:
-        handleMainMenu();
-        break;
-    case 1:
-        handleScanMenu();
-        break;
-    case 2:
-        handleControlMenu();
-        break;
-    case 3:
-        handleSettingsMenu();
-        break;
+        controlList.clear();
+        controlList.setTitle("Camera Control");
+
+        controlList.addItem("Take Photo");
+
+        controlList.draw();
+        drawNavigation("Next", "Select");
+
+        needsRedraw = false;
     }
 }
 
-void MenuSystem::drawMenu()
+void MenuSystem::drawSettingsMenu()
 {
-    if (!needsRedraw)
+    if (needsRedraw)
     {
-        return;
-    }
+        bool fullRedraw = needsFullRedraw; // Only fill screen and redraw everything if needed
+        if (fullRedraw)
+        {
+            M5.Display.fillScreen(BLACK);
+            M5.Display.setTextSize(1.25, 1.5);
+        }
 
-    switch (currentMenu)
-    {
-    case 0:
-        drawMainMenu();
-        break;
-    case 1:
-        drawScanMenu();
-        break;
-    case 2:
-        drawControlMenu();
-        break;
-    case 3:
-        drawSettingsMenu();
-        break;
+        // Store current selection before clearing
+        int prevIndex = settingsList.getSelectedIndex();
+
+        // Update menu items if doing full redraw
+        if (fullRedraw)
+        {
+            settingsList.clear();
+            settingsList.setTitle("Settings");
+
+            std::string status;
+            if (BLEDeviceManager::isConnected())
+            {
+                status = "Connected";
+            }
+            else if (BLEDeviceManager::isPaired())
+            {
+                status = "Paired";
+            }
+            else
+            {
+                status = "Not Paired";
+            }
+
+            settingsList.addItem(("Camera " + status).c_str());
+            settingsList.addItem("Connect New Camera");
+            if (BLEDeviceManager::isPaired())
+            {
+                settingsList.addItem("Forget Camera");
+            }
+
+            // Restore selection if valid
+            if (prevIndex < settingsList.size())
+            {
+                settingsList.setSelectedIndex(prevIndex);
+            }
+        }
+
+        // Draw the list in the available space
+        settingsList.draw(4, fullRedraw);
+
+        // Draw navigation only if text changed
+        if (fullRedraw || navigationTextChanged)
+        {
+            drawNavigation("Next", "Select");
+            navigationTextChanged = false;
+        }
+
+        needsRedraw = false;
+        needsFullRedraw = false;
     }
 }
 
@@ -216,7 +293,6 @@ void MenuSystem::handleMainMenu()
 {
     if (M5.BtnA.wasClicked())
     {
-        Serial.printf("[MenuSystem] BtnA clicked, selection: %d\n", mainList.getSelectedIndex());
         const auto &selectedItem = mainList.getSelectedItem();
 
         if (selectedItem.label == "Control Camera")
@@ -245,9 +321,7 @@ void MenuSystem::handleMainMenu()
     }
     else if (M5.BtnB.wasClicked())
     {
-        Serial.printf("[MenuSystem] BtnB clicked, selection before next: %d\n", mainList.getSelectedIndex());
         mainList.next();
-        Serial.printf("[MenuSystem] BtnB clicked, selection after next: %d\n", mainList.getSelectedIndex());
         needsRedraw = true; // Only need partial redraw for selection change
     }
 }
@@ -321,104 +395,6 @@ void MenuSystem::handleScanMenu()
     }
 }
 
-void MenuSystem::drawControlMenu()
-{
-    if (needsRedraw)
-    {
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setCursor(0, 0);
-
-        controlList.clear();
-        controlList.setTitle("Camera Control");
-
-        if (!BLEDeviceManager::isConnected())
-        {
-            M5.Display.println("Camera disconnected!");
-            delay(1000);
-            currentMenu = 0;
-            needsRedraw = true;
-            return;
-        }
-
-        controlList.addItem("Take Photo", "Press to capture");
-        controlList.addItem("Record Video", "Press to start/stop");
-        controlList.setActionLabel("Execute");
-
-        controlList.draw(M5.Display.getCursorY());
-        drawNavigation("Next", "Select");
-
-        needsRedraw = false;
-    }
-}
-
-void MenuSystem::handleControlMenu()
-{
-    if (M5.BtnA.wasClicked())
-    {
-        const auto &selectedItem = controlList.getSelectedItem();
-
-        if (selectedItem.label == "Take Photo")
-        {
-            // TODO: Implement shutter
-            Serial.println("Shutter pressed");
-        }
-        else if (selectedItem.label == "Record Video")
-        {
-            // TODO: Implement record
-            Serial.println("Record pressed");
-        }
-    }
-    else if (M5.BtnB.wasClicked())
-    {
-        controlList.next();
-        needsRedraw = true;
-    }
-    else if (M5.BtnPWR.wasClicked())
-    {
-        goBack();
-    }
-}
-
-void MenuSystem::drawSettingsMenu()
-{
-    if (needsRedraw)
-    {
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setCursor(0, 0);
-
-        settingsList.clear();
-        settingsList.setTitle("Settings");
-
-        // Show connection status
-        std::string status;
-        if (BLEDeviceManager::isConnected())
-        {
-            status = "Connected";
-        }
-        else if (BLEDeviceManager::isPaired())
-        {
-            status = "Paired";
-        }
-        else
-        {
-            status = "Not Paired";
-        }
-
-        settingsList.addItem(("Camera Status: " + status).c_str());
-        settingsList.addItem("Connect New Camera");
-        if (BLEDeviceManager::isPaired())
-        {
-            settingsList.addItem("Forget Camera");
-        }
-
-        settingsList.setActionLabel("Select");
-        settingsList.draw(M5.Display.getCursorY());
-        drawNavigation("Next", "Select");
-
-        needsRedraw = false;
-    }
-}
-
 void MenuSystem::handleSettingsMenu()
 {
     if (M5.BtnA.wasClicked())
@@ -442,6 +418,24 @@ void MenuSystem::handleSettingsMenu()
     else if (M5.BtnB.wasClicked())
     {
         settingsList.next();
+        needsRedraw = true; // Only need partial redraw for selection change
+    }
+    else if (M5.BtnPWR.wasClicked())
+    {
+        currentMenu = 0;
+        needsRedraw = true;
+    }
+}
+
+void MenuSystem::handleControlMenu()
+{
+    if (M5.BtnA.wasClicked())
+    {
+        const auto &selectedItem = settingsList.getSelectedItem();
+    }
+    else if (M5.BtnB.wasClicked())
+    {
+        controlList.next();
         needsRedraw = true;
     }
     else if (M5.BtnPWR.wasClicked())
@@ -449,16 +443,4 @@ void MenuSystem::handleSettingsMenu()
         currentMenu = 0; // Go back to main menu
         needsRedraw = true;
     }
-}
-
-void MenuSystem::goBack()
-{
-    if (BLEDeviceManager::isConnected() && currentMenu != 2)
-    {
-        BLEDeviceManager::disconnectCamera();
-        delay(200); // Give some time for cleanup
-    }
-
-    currentMenu = 0; // Return to main menu
-    needsRedraw = true;
 }

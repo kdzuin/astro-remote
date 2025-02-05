@@ -20,7 +20,6 @@ public:
     void clear();
     void addItem(const std::string &label, const std::string &description = "", bool enabled = true);
     void setTitle(const std::string &newTitle) { title = newTitle; }
-    void setActionLabel(const std::string &label) { actionLabel = label; }
     void setSelectedIndex(int index);
 
     int getSelectedIndex() const { return selectedIndex; }
@@ -39,7 +38,6 @@ private:
     int selectedIndex = 0;
     int prevSelectedIndex = 0; // Track previous selection for partial redraw
     std::string title;
-    std::string actionLabel = "Select"; // Default action label
 
     // Display constants
     static const int ITEM_HEIGHT = 14;        // Height per item

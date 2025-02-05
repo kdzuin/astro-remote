@@ -42,8 +42,8 @@ private:
     static void handleMainMenu();
     static void handleScanMenu();
     static void handleDeviceMenu();
-    static void handleControlMenu();
     static void handleSettingsMenu();
+    static void handleControlMenu();
 
     static void goBack();
 };
