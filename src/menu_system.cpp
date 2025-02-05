@@ -131,9 +131,11 @@ void MenuSystem::drawMainMenu()
 
 void MenuSystem::drawScanMenu()
 {
-    static bool lastScanning = !BLEDeviceManager::isScanning();
+    static bool lastScanning = false;
+    static int lastDeviceCount = 0;
     static int lastSelectedDevice = -1;
-    static size_t lastDeviceCount = 0;
+    const int itemsPerPage = 4;
+
     const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
 
     // Check if we need to redraw
@@ -149,30 +151,50 @@ void MenuSystem::drawScanMenu()
 
         if (BLEDeviceManager::isScanning())
         {
-            M5.Display.printf("Scanning...\n");
-            M5.Display.printf("Found: %d\n\n", discoveredDevices.size());
+            M5.Display.println("Scanning for Sony cameras...\n");
+            if (!discoveredDevices.empty())
+            {
+                M5.Display.printf("Found %d camera%s\n\n",
+                                  discoveredDevices.size(),
+                                  discoveredDevices.size() == 1 ? "" : "s");
+            }
+        }
+        else if (discoveredDevices.empty())
+        {
+            M5.Display.println("No cameras found\n");
+            M5.Display.println("\nB:Refresh  PWR:Back");
         }
         else
         {
-            M5.Display.println("Select a device:\n");
+            M5.Display.printf("Found %d camera%s\n\n",
+                              discoveredDevices.size(),
+                              discoveredDevices.size() == 1 ? "" : "s");
 
-            // Show all devices with pagination
-            int itemsPerPage = 5;
             int currentPage = selectedDevice / itemsPerPage;
             int startIdx = currentPage * itemsPerPage;
             int endIdx = min(startIdx + itemsPerPage, (int)discoveredDevices.size());
 
             for (int i = startIdx; i < endIdx; i++)
             {
+                const auto &deviceInfo = discoveredDevices[i];
+                deviceInfo.updateName();
+
                 M5.Display.print(i == selectedDevice ? "> " : "  ");
-                const auto &device = discoveredDevices[i];
-                if (device.device->haveName())
+                if (deviceInfo.device->haveName())
                 {
-                    M5.Display.printf("%s\n", device.device->getName().c_str());
+                    M5.Display.printf("%s\n", deviceInfo.name.c_str());
                 }
                 else
                 {
-                    M5.Display.printf("%s\n", device.device->getAddress().toString().c_str());
+                    M5.Display.printf("%s\n", deviceInfo.device->getAddress().toString().c_str());
+                }
+
+                // Show camera info if this is the selected device
+                if (i == selectedDevice)
+                {
+                    M5.Display.printf("   Model: %04X, Ver: %d\n",
+                                      deviceInfo.cameraInfo.modelCode,
+                                      deviceInfo.cameraInfo.protocolVersion);
                 }
             }
 
@@ -186,7 +208,6 @@ void MenuSystem::drawScanMenu()
             M5.Display.println("\nA:Select  B:Next  PWR:Back");
         }
 
-        // Update state tracking
         lastScanning = BLEDeviceManager::isScanning();
         lastSelectedDevice = selectedDevice;
         lastDeviceCount = discoveredDevices.size();
