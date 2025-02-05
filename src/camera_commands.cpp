@@ -3,6 +3,7 @@
 namespace {
     uint8_t focusStatus = CameraCommands::Status::FOCUS_LOST;
     uint8_t shutterStatus = CameraCommands::Status::SHUTTER_READY;
+    uint8_t recordingStatus = CameraCommands::Status::RECORDING_STOPPED;
     bool statusNotificationEnabled = false;
 
     // Helper function to send command
@@ -80,9 +81,17 @@ namespace CameraCommands {
         delay(100); // Give camera time to focus
         if (!shutterFullPress()) return false;
         delay(100); // Give camera time to take photo
-        if (!shutterHalfRelease()) return false;
         if (!shutterFullRelease()) return false;
+        if (!shutterHalfRelease()) return false;
         return true;
+    }
+
+    bool recordStart() {
+        return sendCommand(Cmd::RECORD_DOWN);
+    }
+
+    bool recordStop() {
+        return sendCommand(Cmd::RECORD_UP);
     }
 
     bool afPress() {
@@ -93,7 +102,36 @@ namespace CameraCommands {
         return sendCommand(Cmd::AF_ON_UP);
     }
 
+    bool c1Press() {
+        return sendCommand(Cmd::C1_DOWN);
+    }
+
+    bool c1Release() {
+        return sendCommand(Cmd::C1_UP);
+    }
+
+    bool zoomTelePress(uint8_t strength) {
+        if (strength < 0x10) strength = 0x10;
+        if (strength > 0x8F) strength = 0x8F;
+        return sendCommandWithParam(Cmd::ZOOM_TELE_PRESS, strength);
+    }
+
+    bool zoomTeleRelease() {
+        return sendCommandWithParam(Cmd::ZOOM_TELE_RELEASE, 0x00);
+    }
+
+    bool zoomWidePress(uint8_t strength) {
+        if (strength < 0x10) strength = 0x10;
+        if (strength > 0x8F) strength = 0x8F;
+        return sendCommandWithParam(Cmd::ZOOM_WIDE_PRESS, strength);
+    }
+
+    bool zoomWideRelease() {
+        return sendCommandWithParam(Cmd::ZOOM_WIDE_RELEASE, 0x00);
+    }
+
     bool focusInPress(uint8_t strength) {
+        if (strength > 0x7F) strength = 0x7F;
         return sendCommandWithParam(Cmd::FOCUS_IN_PRESS, strength);
     }
 
@@ -102,6 +140,7 @@ namespace CameraCommands {
     }
 
     bool focusOutPress(uint8_t strength) {
+        if (strength > 0x7F) strength = 0x7F;
         return sendCommandWithParam(Cmd::FOCUS_OUT_PRESS, strength);
     }
 
@@ -117,6 +156,10 @@ namespace CameraCommands {
         return shutterStatus == Status::SHUTTER_ACTIVE;
     }
 
+    bool isRecording() {
+        return recordingStatus == Status::RECORDING_STARTED;
+    }
+
     void onStatusNotification(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
         if (length < 3) return;
 
@@ -125,16 +168,22 @@ namespace CameraCommands {
         uint8_t value = pData[2];
 
         switch (type) {
-            case 0x3F: // Focus status
+            case Status::TYPE_FOCUS: // Focus status
                 focusStatus = value;
                 Serial.printf("[Camera] Focus status: %s\n", 
                     value == Status::FOCUS_ACQUIRED ? "Acquired" : "Lost");
                 break;
 
-            case 0xA0: // Shutter status
+            case Status::TYPE_SHUTTER: // Shutter status
                 shutterStatus = value;
                 Serial.printf("[Camera] Shutter status: %s\n", 
                     value == Status::SHUTTER_ACTIVE ? "Active" : "Ready");
+                break;
+
+            case Status::TYPE_RECORDING: // Recording status
+                recordingStatus = value;
+                Serial.printf("[Camera] Recording status: %s\n", 
+                    value == Status::RECORDING_STARTED ? "Started" : "Stopped");
                 break;
 
             default:
