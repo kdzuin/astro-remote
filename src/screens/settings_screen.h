@@ -12,6 +12,7 @@ enum class SettingsMenuItem
     Scan,
     AutoConnect,
     Brightness,
+    Battery
 };
 
 class SettingsScreen : public BaseScreen<SettingsMenuItem>

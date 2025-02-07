@@ -40,6 +40,7 @@ void SettingsScreen::updateMenuItems()
                           (BLEDeviceManager::isAutoConnectEnabled() ? "On" : "Off"));
 
     menuItems.addItem(SettingsMenuItem::Brightness, std::string("Brightness: ") + std::to_string(PreferencesManager::getBrightness()));
+    menuItems.addItem(SettingsMenuItem::Battery, std::string("Battery: ") + std::to_string(M5.Power.getBatteryLevel()) + "%", false);
 }
 
 void SettingsScreen::drawContent()
