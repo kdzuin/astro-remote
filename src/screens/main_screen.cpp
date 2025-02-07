@@ -1,4 +1,10 @@
 #include "main_screen.h"
+#include "video_screen.h"
+#include "photo_screen.h"
+#include "astro_screen.h"
+#include "settings_screen.h"
+#include "manual_screen.h"
+#include "../components/menu_system.h"
 
 MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
 {
@@ -45,7 +51,7 @@ void MainScreen::updateMenuItems()
     menuItems.addItem(MainMenuItem::Astro, "Astro Remote", isConnected);
     menuItems.addItem(MainMenuItem::Video, "Video Remote", isConnected);
     menuItems.addItem(MainMenuItem::Photo, "Photo Remote", isConnected);
-
+    menuItems.addItem(MainMenuItem::Manual, "Manual Control", isConnected);
     menuItems.addItem(MainMenuItem::Settings, "Settings");
 }
 
@@ -83,6 +89,10 @@ void MainScreen::update()
 
         case MainMenuItem::Astro:
             MenuSystem::setScreen(new AstroScreen());
+            break;
+
+        case MainMenuItem::Manual:
+            MenuSystem::setScreen(new ManualScreen());
             break;
         }
     }

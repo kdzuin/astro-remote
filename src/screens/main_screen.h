@@ -18,9 +18,10 @@ class AstroScreen;
 enum class MainMenuItem
 {
     Connect,
-    Astro,
     Video,
     Photo,
+    Astro,
+    Manual,
     Settings
 };
 
@@ -28,7 +29,7 @@ class MainScreen : public BaseScreen<MainMenuItem>
 {
 public:
     MainScreen();
-    void updateMenuItems();
-    void drawContent() override;
     void update() override;
+    void updateMenuItems() override;
+    void drawContent() override;
 };

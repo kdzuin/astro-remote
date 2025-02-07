@@ -68,6 +68,7 @@ namespace CameraCommands
     void init();
     void update();
     bool takePhoto();
+    bool takeBulb();
     bool recordStart();
     bool recordStop();
     bool isFocusAcquired();

@@ -102,11 +102,63 @@ namespace CameraCommands
     bool takePhoto()
     {
         Serial.println("[Camera] Take photo");
-        if (sendCommand16(Cmd::SHUTTER_FULL_DOWN) && sendCommand16(Cmd::SHUTTER_HALF_UP) && sendCommand16(Cmd::SHUTTER_FULL_UP))
+
+        // Step 1: Press shutter
+        if (!sendCommand16(Cmd::SHUTTER_FULL_DOWN))
         {
-            return true;
-        };
-        return false;
+            Serial.println("[Camera] Failed to press shutter");
+            return false;
+        }
+
+        // Step 2: Wait for shutter active notification
+        while (!isShutterActive())
+        {
+            delay(10);
+        }
+
+        // Step 3: Wait for shutter ready notification
+        while (isShutterActive())
+        {
+            delay(10);
+        }
+
+        // Step 4: Release shutter
+        if (!sendCommand16(Cmd::SHUTTER_FULL_UP))
+        {
+            Serial.println("[Camera] Failed to release shutter");
+            return false;
+        }
+
+        Serial.println("[Camera] Photo taken successfully");
+        return true;
+    };
+
+    bool takeBulb()
+    {
+        Serial.println("[Camera] Take bulb photo");
+
+        // Step 1: Press shutter
+        if (!sendCommand16(Cmd::SHUTTER_FULL_DOWN))
+        {
+            Serial.println("[Camera] Failed to press shutter");
+            return false;
+        }
+
+        // Step 2: Wait for shutter active notification
+        while (!isShutterActive())
+        {
+            delay(10);
+        }
+
+        // Step 4: Release shutter
+        if (!sendCommand16(Cmd::SHUTTER_FULL_UP))
+        {
+            Serial.println("[Camera] Failed to release shutter");
+            return false;
+        }
+
+        Serial.println("[Camera] Bulb Start/Stop command successful");
+        return true;
     };
 
     bool recordStart()
