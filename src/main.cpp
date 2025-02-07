@@ -1,5 +1,5 @@
 #include <M5Unified.h>
-#include "menu_system.h"
+#include "components/menu_system.h"
 #include "transport/ble_device.h"
 
 void setup()
@@ -11,7 +11,6 @@ void setup()
     Serial.println("Starting Sony Camera Remote");
 
     M5.Display.setRotation(0);
-    // M5.Display.setTextScroll(true);
     M5.Display.fillScreen(BLACK);
     M5.Display.setTextSize(1.75);
     int x = (M5.Display.width() - M5.Display.textWidth("Astro Remote")) / 2;
@@ -21,6 +20,7 @@ void setup()
     delay(1000);
 
     M5.Display.setTextSize(1.25);
+    M5.Display.setBrightness(50);
 
     BLEDeviceManager::init();
     MenuSystem::init();

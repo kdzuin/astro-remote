@@ -1,10 +1,9 @@
 #include "menu_system.h"
-#include "screens/main_screen.h"
-#include "screens/control_screen.h"
-#include "screens/video_screen.h"
-#include "screens/photo_screen.h"
-#include "screens/astro_screen.h"
-#include "screens/settings_screen.h"
+#include "../screens/main_screen.h"
+#include "../screens/video_screen.h"
+#include "../screens/photo_screen.h"
+#include "../screens/astro_screen.h"
+#include "../screens/settings_screen.h"
 #include <M5Unified.h>
 
 namespace MenuSystem
@@ -39,9 +38,10 @@ namespace MenuSystem
         }
     }
 
-    void setScreenInternal(IScreen* screen)
+    void setScreenInternal(IScreen *screen)
     {
-        if (!screen) return;
+        if (!screen)
+            return;
 
         // Store the screen
         currentScreen.reset(screen);
@@ -50,7 +50,7 @@ namespace MenuSystem
         screen->draw();
     }
 
-    IScreen* getCurrentScreen()
+    IScreen *getCurrentScreen()
     {
         return currentScreen.get();
     }
