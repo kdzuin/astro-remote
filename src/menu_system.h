@@ -7,6 +7,11 @@
 template<typename T>
 class BaseScreen;
 class MainScreen;
+class ControlScreen;
+class VideoScreen;
+class PhotoScreen;
+class AstroScreen;
+class SettingsScreen;
 
 // Type-erased interface for screens
 class IScreen {

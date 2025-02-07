@@ -481,3 +481,9 @@ bool BLEDeviceManager::isConnected()
 {
     return pClient != nullptr && pClient->isConnected();
 }
+
+void BLEDeviceManager::disconnect()
+{
+    setManuallyDisconnected(true);
+    disconnectCamera();
+}

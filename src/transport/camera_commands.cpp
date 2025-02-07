@@ -100,42 +100,31 @@ namespace CameraCommands
         }
     }
 
-    // Basic camera control functions
-    bool startFocus()
+    bool takePhoto()
     {
-        Serial.println("[Camera] Starting focus (half-press)...");
-        return sendCommand16(Cmd::SHUTTER_HALF_DOWN);
-    }
-
-    bool stopFocus()
-    {
-        Serial.println("[Camera] Stopping focus...");
-        return sendCommand16(Cmd::SHUTTER_HALF_UP);
-    }
-
-    bool pressShutter()
-    {
-        Serial.println("[Camera] Pressing shutter...");
-        return sendCommand16(Cmd::SHUTTER_FULL_DOWN);
-    }
-
-    bool releaseShutter()
-    {
-        Serial.println("[Camera] Releasing shutter...");
-        return sendCommand16(Cmd::SHUTTER_FULL_UP);
+        Serial.println("[Camera] Take photo");
+        // shutter half down
+        // delay
+        // shutter full down
+        // shutter full up
+        sendCommand16(Cmd::SHUTTER_HALF_DOWN);
+        delay(300);
+        sendCommand16(Cmd::SHUTTER_FULL_DOWN);
     }
 
     bool recordStart()
     {
         Serial.println("[Camera] Starting recording");
         // Press record button
-        if (!sendCommand16(Cmd::RECORD_DOWN)) {
+        if (!sendCommand16(Cmd::RECORD_DOWN))
+        {
             Serial.println("[Camera] Failed to start recording - DOWN failed");
             return false;
         }
         delay(100); // Small delay between down and up
         // Release record button
-        if (!sendCommand16(Cmd::RECORD_UP)) {
+        if (!sendCommand16(Cmd::RECORD_UP))
+        {
             Serial.println("[Camera] Failed to start recording - UP failed");
             return false;
         }
@@ -146,88 +135,18 @@ namespace CameraCommands
     {
         Serial.println("[Camera] Stopping recording");
         // Press record button again
-        if (!sendCommand16(Cmd::RECORD_DOWN)) {
+        if (!sendCommand16(Cmd::RECORD_DOWN))
+        {
             Serial.println("[Camera] Failed to stop recording - DOWN failed");
             return false;
         }
         delay(100); // Small delay between down and up
         // Release record button
-        if (!sendCommand16(Cmd::RECORD_UP)) {
+        if (!sendCommand16(Cmd::RECORD_UP))
+        {
             Serial.println("[Camera] Failed to stop recording - UP failed");
             return false;
         }
-        return true;
-    }
-
-    // Connection testing
-    bool testConnection()
-    {
-        Serial.println("[Camera] Testing connection...");
-
-        // First, make sure notifications are enabled
-        BLERemoteCharacteristic *pStatusChar = BLEDeviceManager::getStatusCharacteristic();
-        if (pStatusChar && pStatusChar->canNotify())
-        {
-            Serial.println("[Camera] Re-enabled notifications");
-            pStatusChar->registerForNotify(onStatusNotification);
-        }
-
-        // Read current status
-        BLERemoteCharacteristic *pStatusReadChar = BLEDeviceManager::getService()->getCharacteristic(SONY_REMOTE_STATUS_READ_CHARACTERISTIC_UUID);
-        if (pStatusReadChar && pStatusReadChar->canRead())
-        {
-            std::string value = pStatusReadChar->readValue();
-            Serial.print("[Camera] Current status (cc05): ");
-            for (size_t i = 0; i < value.length(); i++)
-            {
-                Serial.printf("%02X ", (uint8_t)value[i]);
-            }
-            Serial.println();
-        }
-
-        // Test sequence:
-        // 1. Half-press (focus)
-        Serial.println("\n[Camera] Testing half-press (focus)...");
-        if (!startFocus())
-        {
-            Serial.println("[Camera] Focus start failed");
-            return false;
-        }
-        delay(1000); // Wait for focus
-
-        // Check if we got any response
-        if (millis() - lastMessageTime > 1000)
-        {
-            Serial.println("[Camera] No response to focus command");
-            stopFocus();
-            return false;
-        }
-
-        // Release half-press
-        if (!stopFocus())
-        {
-            Serial.println("[Camera] Focus stop failed");
-            return false;
-        }
-        delay(500);
-
-        // 2. Full-press (shutter)
-        Serial.println("\n[Camera] Testing full-press (shutter)...");
-        if (!pressShutter())
-        {
-            Serial.println("[Camera] Shutter press failed");
-            return false;
-        }
-        delay(500);
-
-        // Release shutter
-        if (!releaseShutter())
-        {
-            Serial.println("[Camera] Shutter release failed");
-            return false;
-        }
-
-        Serial.println("[Camera] Test sequence completed");
         return true;
     }
 
@@ -293,93 +212,6 @@ namespace CameraCommands
                 }
             }
         }
-    }
-
-    bool shutterPress(uint32_t focusTimeout)
-    {
-        Serial.println("[Camera] Starting shutter sequence");
-        
-        // 1. Focus down (half-press)
-        if (!sendCommand16(Cmd::SHUTTER_HALF_DOWN)) {  // 0x0107
-            Serial.println("[Camera] Failed to half-press");
-            return false;
-        }
-        delay(100);
-
-        // 2. Full press
-        if (!sendCommand16(Cmd::SHUTTER_FULL_DOWN)) {  // 0x0109
-            Serial.println("[Camera] Failed to full-press");
-            return false;
-        }
-        delay(100);
-
-        // 3. Release shutter
-        if (!sendCommand16(Cmd::SHUTTER_FULL_UP)) {    // 0x0108
-            Serial.println("[Camera] Failed to release shutter");
-            return false;
-        }
-        delay(100);
-
-        // 4. Release focus
-        if (!sendCommand16(Cmd::SHUTTER_HALF_UP)) {    // 0x0106
-            Serial.println("[Camera] Failed to release focus");
-            return false;
-        }
-
-        return true;
-    }
-
-    bool shutterRelease()
-    {
-        // Hold focus first
-        if (!stopFocus())
-            return false;
-        delay(10);
-
-        // Then release shutter
-        return releaseShutter();
-    }
-
-    bool focusPress()
-    {
-        return startFocus();
-    }
-
-    bool focusRelease()
-    {
-        if (!stopFocus())
-            return false;
-        delay(10);
-        return releaseShutter();
-    }
-
-    void setFocusMode(FocusMode mode)
-    {
-        currentMode = mode;
-        focusHeld = false;
-    }
-
-    void holdFocus(bool hold)
-    {
-        if (currentMode == FocusMode::MANUAL_FOCUS)
-        {
-            focusHeld = hold;
-            if (hold)
-            {
-                startFocus();
-            }
-            else
-            {
-                stopFocus();
-                delay(10);
-                releaseShutter();
-            }
-        }
-    }
-
-    bool isFocusHeld()
-    {
-        return focusHeld;
     }
 
     bool isFocusAcquired()

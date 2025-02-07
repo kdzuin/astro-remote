@@ -6,118 +6,83 @@
 
 enum class VideoMenuItem
 {
-    Record,
-    Back
+    None
 };
 
 class VideoScreen : public BaseScreen<VideoMenuItem>
 {
 public:
-    VideoScreen() : BaseScreen<VideoMenuItem>("Video"), recordStartTime(0)
+    VideoScreen() : BaseScreen<VideoMenuItem>("Video"), recordStartTime(0) {}
+
+    void drawContent() override;
+    void update() override;
+
+private:
+    unsigned long recordStartTime;
+};
+
+inline void VideoScreen::drawContent()
+{
+    int centerX = M5.Display.width() / 2;
+    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+
+    if (CameraCommands::isRecording())
     {
-        menuItems.setTitle("Video Menu");
-        updateMenuItems();
+        // Red background when recording
+        M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(), RED);
+        M5.Display.setTextColor(WHITE);
+
+        // Show recording time
+        unsigned long recordTime = (millis() - recordStartTime) / 1000;
+        int minutes = recordTime / 60;
+        int seconds = recordTime % 60;
+
+        char timeStr[10];
+        sprintf(timeStr, "%02d:%02d", minutes, seconds);
+
+        M5.Display.setTextSize(3);
+        M5.Display.setTextDatum(middle_center);
+        M5.Display.drawString(timeStr, centerX, centerY);
+    }
+    else
+    {
+        // Normal display
+        M5.Display.fillScreen(BLACK);
+
+        // Draw record symbol
+        int radius = 20;
+        M5.Display.fillCircle(centerX, centerY, radius, RED);
+        M5.Display.drawCircle(centerX, centerY, radius + 2, WHITE);
     }
 
-    void updateMenuItems()
+    setStatusBgColor(M5.Display.color888(32, 32, 32));
+    setStatusText(CameraCommands::isRecording() ? "Recording" : "Ready");
+    drawStatusBar();
+}
+
+inline void VideoScreen::update()
+{
+    if (M5.BtnA.wasClicked())
     {
-        menuItems.clear();
-        if (CameraCommands::isRecording())
+        if (CameraCommands::isRecording() && CameraCommands::recordStop())
         {
-            menuItems.addItem(VideoMenuItem::Record, "Stop Recording");
+            recordStartTime = 0;
         }
-        else
+        else if (CameraCommands::recordStart())
         {
-            menuItems.addItem(VideoMenuItem::Record, "Start Recording");
+            recordStartTime = millis();
         }
-        menuItems.addItem(VideoMenuItem::Back, "Back");
+        draw();
     }
 
-    void drawContent() override
+    // Update recording time display
+    if (CameraCommands::isRecording())
     {
-        int centerX = M5.Display.width() / 2;
-        int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
-
-        if (CameraCommands::isRecording())
+        static unsigned long lastUpdate = 0;
+        if (millis() - lastUpdate > 1000)
         {
-            // Tally light - full red screen with REC text
-            M5.Display.fillScreen(RED);
-            M5.Display.setTextColor(WHITE);
-
-            // Center text by calculating position
-            M5.Display.setTextSize(3);
-            M5.Display.setTextDatum(middle_center);
-            M5.Display.drawString("REC", centerX, centerY - 20);
-
-            // Show time elapsed
-            M5.Display.setTextSize(2);
-            unsigned long elapsed = (millis() - recordStartTime) / 1000;
-            char timeStr[10];
-            sprintf(timeStr, "%02d:%02d", (int)(elapsed / 60), (int)(elapsed % 60));
-
-            M5.Display.setTextDatum(middle_center);
-            M5.Display.drawString(timeStr, centerX, centerY + 20);
-
-            setStatusBgColor(M5.Display.color888(5, 5, 5));
-            setStatusText("Recording");
-            drawStatusBar();
-        }
-        else
-        {
-            // Show ready state
-            M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(), BLACK);
-            M5.Display.drawRoundRect(centerX - 20, centerY - 20, 40, 40, 4, WHITE);
-            M5.Display.fillCircle(centerX, centerY, 10, RED);
-
-            setStatusBgColor(M5.Display.color888(32, 32, 32));
-            setStatusText("Ready To Record");
-            drawStatusBar();
-        }
-    }
-
-    void update() override
-    {
-        if (M5.BtnA.wasClicked() && !M5.BtnB.wasPressed())
-        {
-            switch (menuItems.getSelectedId())
-            {
-            case VideoMenuItem::Record:
-                if (!CameraCommands::isRecording())
-                {
-                    // Start recording
-                    if (CameraCommands::recordStart())
-                    {
-                        recordStartTime = millis();
-                        updateMenuItems();
-                        draw();
-                    }
-                }
-                else
-                {
-                    // Stop recording
-                    if (CameraCommands::recordStop())
-                    {
-                        recordStartTime = 0;
-                        updateMenuItems();
-                        draw();
-                    }
-                }
-                break;
-
-            case VideoMenuItem::Back:
-                // Return to main menu will be handled by menu system
-                break;
-            }
-        }
-
-        if (M5.BtnB.wasClicked())
-        {
-            menuItems.selectNext();
+            lastUpdate = millis();
             draw();
         }
     }
-
-private:
-    SelectableList<VideoMenuItem> menuItems;
-    unsigned long recordStartTime;
-};
+}
