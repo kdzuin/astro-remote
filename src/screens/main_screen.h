@@ -6,10 +6,16 @@
 #include "../menu_system.h"
 #include "control_screen.h"
 #include "settings_screen.h"
+#include "photo_screen.h"
+#include "video_screen.h"
+#include "astro_screen.h"
 
 // Forward declare screens we'll create
 class ControlScreen;
 class SettingsScreen;
+class PhotoScreen;
+class VideoScreen;
+class AstroScreen;
 
 enum class MainMenuItem
 {
@@ -95,6 +101,18 @@ public:
 
             case MainMenuItem::Settings:
                 MenuSystem::setScreen(new SettingsScreen());
+                break;
+
+            case MainMenuItem::Photo:
+                MenuSystem::setScreen(new PhotoScreen());
+                break;
+
+            case MainMenuItem::Video:
+                MenuSystem::setScreen(new VideoScreen());
+                break;
+
+            case MainMenuItem::Astro:
+                MenuSystem::setScreen(new AstroScreen());
                 break;
             }
         }

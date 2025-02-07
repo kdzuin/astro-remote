@@ -26,6 +26,7 @@ public:
     // Pure virtual functions that must be implemented by derived screens
     virtual void update() = 0;
     virtual void beforeExit() {};
+    virtual void updateMenuItems() = 0;
 
     const int STATUS_BAR_HEIGHT = 20;
 

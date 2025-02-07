@@ -16,6 +16,7 @@ public:
 
     void drawContent() override;
     void update() override;
+    void updateMenuItems() override {}
 
 private:
     unsigned long recordStartTime;

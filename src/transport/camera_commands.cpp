@@ -1,6 +1,5 @@
 #include "camera_commands.h"
 #include "ble_device.h"
-#include <M5Unified.h>
 #include <Arduino.h>
 
 namespace CameraCommands
@@ -65,14 +64,14 @@ namespace CameraCommands
         if (newState == Status::FOCUS_ACQUIRED)
         {
             // Focus was just acquired - could trigger LED or display update
-            M5.Display.setTextColor(M5.Display.color565(0, 255, 0)); // Green
-            M5.Display.drawString("Focus OK", 10, 200);
+            // M5.Display.setTextColor(M5.Display.color565(0, 255, 0)); // Green
+            // M5.Display.drawString("Focus OK", 10, 200);
         }
         else
         {
             // Focus was lost
-            M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
-            M5.Display.drawString("No Focus", 10, 200);
+            // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
+            // M5.Display.drawString("No Focus", 10, 200);
         }
     }
 
@@ -81,8 +80,8 @@ namespace CameraCommands
         if (newState == Status::SHUTTER_ACTIVE)
         {
             // Shutter just activated - could play sound or flash LED
-            M5.Display.setTextColor(M5.Display.color565(255, 255, 0)); // Yellow
-            M5.Display.drawString("*CLICK*", 10, 220);
+            // M5.Display.setTextColor(M5.Display.color565(255, 255, 0)); // Yellow
+            // M5.Display.drawString("*CLICK*", 10, 220);
         }
     }
 
@@ -103,14 +102,12 @@ namespace CameraCommands
     bool takePhoto()
     {
         Serial.println("[Camera] Take photo");
-        // shutter half down
-        // delay
-        // shutter full down
-        // shutter full up
-        sendCommand16(Cmd::SHUTTER_HALF_DOWN);
-        delay(300);
-        sendCommand16(Cmd::SHUTTER_FULL_DOWN);
-    }
+        if (sendCommand16(Cmd::SHUTTER_FULL_DOWN) && sendCommand16(Cmd::SHUTTER_HALF_UP) && sendCommand16(Cmd::SHUTTER_FULL_UP))
+        {
+            return true;
+        };
+        return false;
+    };
 
     bool recordStart()
     {
@@ -262,15 +259,15 @@ namespace CameraCommands
                 {
                     Serial.println("[Camera] Focus lost");
                     focusStatus = Status::FOCUS_LOST;
-                    M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
-                    M5.Display.drawString("No Focus", 10, 200);
+                    // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
+                    // M5.Display.drawString("No Focus", 10, 200);
                 }
                 else if (statusValue == Status::FOCUS_ACQUIRED)
                 {
                     Serial.println("[Camera] Focus acquired");
                     focusStatus = Status::FOCUS_ACQUIRED;
-                    M5.Display.setTextColor(M5.Display.color565(0, 255, 0)); // Green
-                    M5.Display.drawString("Focus OK", 10, 200);
+                    // M5.Display.setTextColor(M5.Display.color565(0, 255, 0)); // Green
+                    // M5.Display.drawString("Focus OK", 10, 200);
                 }
                 break;
 
@@ -284,8 +281,8 @@ namespace CameraCommands
                 {
                     Serial.println("[Camera] Shutter active");
                     shutterStatus = Status::SHUTTER_ACTIVE;
-                    M5.Display.setTextColor(M5.Display.color565(255, 255, 0)); // Yellow
-                    M5.Display.drawString("*CLICK*", 10, 220);
+                    // M5.Display.setTextColor(M5.Display.color565(255, 255, 0)); // Yellow
+                    // M5.Display.drawString("*CLICK*", 10, 220);
                 }
                 break;
 
@@ -294,14 +291,14 @@ namespace CameraCommands
                 {
                     Serial.println("[Camera] Recording stopped");
                     recordingStatus = Status::RECORD_STOPPED;
-                    M5.Display.fillRect(280, 10, 40, 20, M5.Display.color565(0, 0, 0)); // Clear REC indicator
+                    // M5.Display.fillRect(280, 10, 40, 20, M5.Display.color565(0, 0, 0)); // Clear REC indicator
                 }
                 else if (statusValue == Status::RECORD_STARTED)
                 {
                     Serial.println("[Camera] Recording started");
                     recordingStatus = Status::RECORD_STARTED;
-                    M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
-                    M5.Display.drawString("REC", 280, 10);
+                    // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
+                    // M5.Display.drawString("REC", 280, 10);
                 }
                 break;
 

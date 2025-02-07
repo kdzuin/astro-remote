@@ -68,6 +68,8 @@ public:
         }
     }
 
+    void updateMenuItems() override {}
+
 private:
     int photoCount;
     unsigned long flashStartTime;
