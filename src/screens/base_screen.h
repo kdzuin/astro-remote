@@ -10,7 +10,10 @@
 class BaseScreen
 {
 public:
-    BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(M5.Display.color888(55, 55, 55)) {}
+    BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(M5.Display.color888(55, 55, 55))
+    {
+        M5.Display.fillScreen(BLACK);
+    }
     virtual ~BaseScreen() = default;
 
     // Pure virtual functions that must be implemented by derived screens
@@ -23,7 +26,7 @@ public:
     virtual void draw()
     {
         // First clear the entire screen
-        M5.Display.fillScreen(BLACK);
+        // M5.Display.fillScreen(BLACK);
 
         // Draw main content in the upper area
         M5.Display.setClipRect(0, 0, M5.Display.width(), M5.Display.height() - STATUS_BAR_HEIGHT);
@@ -65,6 +68,7 @@ public:
         M5.Display.fillRect(0, statusBarY, M5.Display.width(), STATUS_BAR_HEIGHT, statusBgColor);
 
         // Draw status text
+        M5.Display.setTextSize(1);
         M5.Display.setTextColor(M5.Display.color565(255, 255, 255));
         M5.Display.setTextDatum(middle_center);
         M5.Display.drawString(statusText.c_str(), M5.Display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);

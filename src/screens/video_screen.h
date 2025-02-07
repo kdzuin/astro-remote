@@ -11,49 +11,43 @@ public:
 
     void drawContent() override
     {
+        int centerX = M5.Display.width() / 2;
+        int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+
         if (CameraCommands::isRecording())
         {
             // Tally light - full red screen with REC text
             M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(), M5.Display.color565(255, 0, 0));
             M5.Display.setTextColor(WHITE);
-            M5.Display.setTextSize(3);
 
             // Center text by calculating position
-            int textWidth = M5.Display.textWidth("REC");
-            int x = (M5.Display.width() - textWidth) / 2;
-            int y = M5.Display.height() / 2 - 20;
-            M5.Display.drawString("REC", x, y);
+            M5.Display.setTextSize(3);
+            M5.Display.setTextDatum(middle_center);
+            M5.Display.drawString("REC", centerX, centerY - 20);
 
             // Show time elapsed
             M5.Display.setTextSize(2);
             uint32_t elapsed = (millis() - recordStartTime) / 1000; // seconds
             char timeStr[10];
             sprintf(timeStr, "%02d:%02d", (int)(elapsed / 60), (int)(elapsed % 60));
-            textWidth = M5.Display.textWidth(timeStr);
-            x = (M5.Display.width() - textWidth) / 2;
-            y = M5.Display.height() / 2 + 20;
-            M5.Display.drawString(timeStr, x, y);
+
+            M5.Display.setTextDatum(middle_center);
+            M5.Display.drawString(timeStr, centerX, centerY + 20);
+
+            setStatusBgColor(M5.Display.color888(5, 5, 5));
+            setStatusText("Recording");
+            drawStatusBar();
         }
         else
         {
             // Ready to record screen
             M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(), BLACK);
-            M5.Display.setTextColor(WHITE);
-            M5.Display.setTextSize(2);
+            M5.Display.drawRoundRect(centerX - 20, centerY - 20, 40, 40, 4, WHITE);
+            M5.Display.fillCircle(centerX, centerY, 10, RED);
 
-            // Center "Ready to Record"
-            const char *text1 = "Ready to Record";
-            int textWidth = M5.Display.textWidth(text1);
-            int x = (M5.Display.width() - textWidth) / 2;
-            int y = M5.Display.height() / 2 - 30;
-            M5.Display.drawString(text1, x, y);
-
-            // Center "Press A to Start"
-            const char *text2 = "Press A to Start";
-            textWidth = M5.Display.textWidth(text2);
-            x = (M5.Display.width() - textWidth) / 2;
-            y = M5.Display.height() / 2 + 10;
-            M5.Display.drawString(text2, x, y);
+            setStatusBgColor(M5.Display.color888(32, 32, 32));
+            setStatusText("Ready To Record");
+            drawStatusBar();
         }
     }
 

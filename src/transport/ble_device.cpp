@@ -56,15 +56,6 @@ void BLEDeviceManager::onDisconnect(BLEClient *client)
     pRemoteControlChar = nullptr;
     pRemoteStatusChar = nullptr;
     pRemoteService = nullptr;
-
-    // Try to reconnect if we have a saved device
-    if (!cachedAddress.empty())
-    {
-        Serial.println("Will try to reconnect...");
-        // Schedule reconnection attempt
-        delay(1000); // Wait a bit before trying to reconnect
-        connectToSavedDevice();
-    }
 }
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
@@ -190,6 +181,19 @@ void BLEDeviceManager::update()
     {
         Serial.println("Scan timeout reached");
         stopScan();
+    }
+
+    // Check if we're still connected by trying to read a characteristic
+    if (connected && pRemoteService != nullptr)
+    {
+        if (!pRemoteService->getClient()->isConnected())
+        {
+            Serial.println("Connection lost detected in update");
+            connected = false;
+            pRemoteControlChar = nullptr;
+            pRemoteStatusChar = nullptr;
+            pRemoteService = nullptr;
+        }
     }
 }
 

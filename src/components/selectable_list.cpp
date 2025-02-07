@@ -37,6 +37,7 @@ void SelectableList::draw()
 
     int y = 0;
 
+    M5.Display.fillScreen(BLACK);
     M5.Display.setTextSize(1.25);
 
     // Draw title

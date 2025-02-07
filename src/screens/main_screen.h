@@ -11,8 +11,7 @@ class MainScreen : public BaseScreen
 public:
     MainScreen() : BaseScreen("Main"), menuItems("Main Menu"), reconnectAttempts(0), lastConnectionCheck(0)
     {
-        // By default, auto-connect is disabled
-        BLEDeviceManager::enableAutoConnect(false);
+        BLEDeviceManager::enableAutoConnect(true);
 
         // Initialize screen state based on current connection
         if (BLEDeviceManager::isConnected())
@@ -23,7 +22,7 @@ public:
         else
         {
             setStatusText("Select Option");
-            setStatusBgColor(TFT_BLUE);
+            setStatusBgColor(M5.Display.color888(0, 0, 200));
         }
 
         updateMenuItems();
@@ -32,7 +31,7 @@ public:
         if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() && !BLEDeviceManager::wasManuallyDisconnected())
         {
             setStatusText("Auto-connecting...");
-            setStatusBgColor(TFT_YELLOW);
+            setStatusBgColor(M5.Display.color888(128, 128, 0));
             drawStatusBar();
 
             if (BLEDeviceManager::connectToSavedDevice())
@@ -92,7 +91,7 @@ public:
             if (reconnectAttempts < 10)
             {
                 setStatusText("Reconnecting...");
-                setStatusBgColor(TFT_YELLOW);
+                setStatusBgColor(M5.Display.color888(128, 128, 128));
                 drawStatusBar();
 
                 if (BLEDeviceManager::connectToSavedDevice())
@@ -135,7 +134,7 @@ public:
                 {
                     // Try to connect
                     setStatusText("Connecting...");
-                    setStatusBgColor(TFT_YELLOW);
+                    setStatusBgColor(M5.Display.color888(128, 128, 0));
                     drawStatusBar();
 
                     // Reset manual disconnect flag when user explicitly tries to connect
