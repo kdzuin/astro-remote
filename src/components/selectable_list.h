@@ -4,17 +4,17 @@
 #include <vector>
 #include <string>
 
-template<typename IdType>
+template <typename IdType>
 class SelectableList
 {
 public:
     struct Item
     {
-        IdType id;             // Unique identifier for the item (enum)
-        std::string label;     // Display text
-        bool enabled = true;   // If false, item is shown but can't be selected
-        
-        Item(IdType itemId, const std::string& itemLabel, bool itemEnabled = true)
+        IdType id;           // Unique identifier for the item (enum)
+        std::string label;   // Display text
+        bool enabled = true; // If false, item is shown but can't be selected
+
+        Item(IdType itemId, const std::string &itemLabel, bool itemEnabled = true)
             : id(itemId), label(itemLabel), enabled(itemEnabled) {}
     };
 
@@ -33,7 +33,7 @@ public:
     }
 
     void setTitle(const std::string &newTitle) { title = newTitle; }
-    
+
     void setSelectedIndex(int index)
     {
         if (index >= 0 && index < items.size())
@@ -42,8 +42,8 @@ public:
         }
     }
 
-    IdType getSelectedId() const 
-    { 
+    IdType getSelectedId() const
+    {
         return items.empty() ? IdType{} : items[selectedIndex].id;
     }
 
@@ -69,7 +69,7 @@ public:
     {
         // Display constants
         const int ITEM_HEIGHT = 14;       // Height per item
-        const int HORIZONTAL_PADDING = 8;  // Space for selection marker
+        const int HORIZONTAL_PADDING = 8; // Space for selection marker
         const int ITEM_PADDING = 2;       // Padding between items
         const int TITLE_PADDING = 4;      // Extra padding below title
         const uint16_t SELECTED_BG = WHITE;
@@ -107,7 +107,7 @@ public:
 
             // Draw item text
             M5.Display.setTextDatum(middle_left);
-            M5.Display.setTextColor(isSelected ? SELECTED_FG : (item.enabled ? NORMAL_FG : DISABLED_FG));
+            M5.Display.setTextColor(isSelected ? (item.enabled ? SELECTED_FG : DISABLED_FG) : (item.enabled ? NORMAL_FG : DISABLED_FG));
             M5.Display.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
 
             y += itemHeight + ITEM_PADDING;

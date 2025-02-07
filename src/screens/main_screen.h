@@ -14,8 +14,9 @@ class SettingsScreen;
 enum class MainMenuItem
 {
     Connect,
-    Disconnect,
-    Control,
+    Astro,
+    Video,
+    Photo,
     Settings
 };
 
@@ -26,20 +27,48 @@ public:
     {
         menuItems.setTitle("Main Menu");
         updateMenuItems();
+
+        if (BLEDeviceManager::isConnected())
+        {
+            setStatusText("Connected");
+            setStatusBgColor(M5.Display.color888(0, 100, 0));
+        }
+        else
+        {
+            setStatusText("Select Option");
+            setStatusBgColor(M5.Display.color888(0, 0, 100));
+        }
+
+        // Try to auto-connect on startup if enabled
+        if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() && !BLEDeviceManager::wasManuallyDisconnected())
+        {
+            setStatusText("Auto-connecting...");
+            setStatusBgColor(M5.Display.color888(128, 128, 0));
+            drawStatusBar();
+
+            if (BLEDeviceManager::connectToSavedDevice())
+            {
+                setStatusText("Connected");
+                setStatusBgColor(M5.Display.color888(0, 200, 0));
+                updateMenuItems();
+                draw();
+            }
+        }
     }
 
     void updateMenuItems()
     {
+        const bool isConnected = BLEDeviceManager::isConnected();
+
         menuItems.clear();
-        if (BLEDeviceManager::isConnected())
-        {
-            menuItems.addItem(MainMenuItem::Disconnect, "Disconnect");
-        }
-        else
+        if (!isConnected)
         {
             menuItems.addItem(MainMenuItem::Connect, "Connect");
         }
-        menuItems.addItem(MainMenuItem::Control, "Control");
+        menuItems.addItem(MainMenuItem::Astro, "Astro Remote", isConnected);
+        menuItems.addItem(MainMenuItem::Video, "Video Remote", isConnected);
+        menuItems.addItem(MainMenuItem::Photo, "Photo Remote", isConnected);
+
         menuItems.addItem(MainMenuItem::Settings, "Settings");
     }
 
@@ -50,23 +79,8 @@ public:
 
     void update() override
     {
-        // Check connection status periodically
-        unsigned long now = millis();
-        if (now - lastConnectionCheck > 1000)
-        {
-            bool isConnected = BLEDeviceManager::isConnected();
 
-            if (wasConnected != isConnected)
-            {
-                updateMenuItems();
-                draw();
-            }
-
-            lastConnectionCheck = now;
-            wasConnected = isConnected;
-        }
-
-        if (M5.BtnA.wasClicked() && !M5.BtnB.wasPressed())
+        if (M5.BtnA.wasClicked())
         {
             switch (menuItems.getSelectedId())
             {
@@ -77,16 +91,6 @@ public:
                 }
                 updateMenuItems();
                 draw();
-                break;
-            case MainMenuItem::Disconnect:
-                BLEDeviceManager::disconnect();
-                BLEDeviceManager::setManuallyDisconnected(true);
-                updateMenuItems();
-                draw();
-                break;
-
-            case MainMenuItem::Control:
-                MenuSystem::setScreen(new ControlScreen());
                 break;
 
             case MainMenuItem::Settings:
@@ -101,8 +105,4 @@ public:
             draw();
         }
     }
-
-private:
-    unsigned long lastConnectionCheck = 0;
-    bool wasConnected = false;
 };

@@ -6,7 +6,9 @@
 
 enum class SettingsMenuItem
 {
-    CameraPairing,
+    Disconnect,
+    Forget,
+    Scan,
     AutoConnect,
     Brightness,
 };
@@ -24,25 +26,25 @@ public:
     {
         menuItems.clear();
 
-        // Camera pairing option
+        if (BLEDeviceManager::isConnected())
+        {
+            menuItems.addItem(SettingsMenuItem::Disconnect, "Disconnect");
+        }
+
         if (BLEDeviceManager::isPaired())
         {
-            menuItems.addItem(SettingsMenuItem::CameraPairing, "Forget Camera");
+            menuItems.addItem(SettingsMenuItem::Forget, "Forget Camera");
         }
         else
         {
-            menuItems.addItem(SettingsMenuItem::CameraPairing, "Scan New");
+            menuItems.addItem(SettingsMenuItem::Scan, "Scan New");
         }
 
-        // Auto-connect toggle
         menuItems.addItem(SettingsMenuItem::AutoConnect,
                           std::string("AutoConnect: ") +
                               (BLEDeviceManager::isAutoConnectEnabled() ? "On" : "Off"));
 
-        // Brightness control
-        char brightnessStr[20];
-        sprintf(brightnessStr, "Brightness: %d%%", brightness);
-        menuItems.addItem(SettingsMenuItem::Brightness, brightnessStr);
+        menuItems.addItem(SettingsMenuItem::Brightness, "Brightness");
     }
 
     void drawContent() override
@@ -56,18 +58,17 @@ public:
         {
             switch (menuItems.getSelectedId())
             {
-            case SettingsMenuItem::CameraPairing:
-                if (BLEDeviceManager::isPaired())
-                {
-                    BLEDeviceManager::disconnect();
-                    BLEDeviceManager::setManuallyDisconnected(true);
-                    // Clear saved device info
-                    // TODO: Add method to clear saved device info
-                }
-                else
-                {
-                    BLEDeviceManager::startScan(30); // 30 second scan
-                }
+            case SettingsMenuItem::Forget:
+                BLEDeviceManager::disconnect();
+                BLEDeviceManager::setManuallyDisconnected(true);
+                // Clear saved device info
+                // TODO: Add method to clear saved device info
+                updateMenuItems();
+                draw();
+                break;
+
+            case SettingsMenuItem::Scan:
+                BLEDeviceManager::startScan(30); // 30 second scan
                 updateMenuItems();
                 draw();
                 break;
@@ -89,10 +90,15 @@ public:
                     brightness = 10;
                 M5.Display.setBrightness(brightness);
                 // TODO: Save to persistent storage
-                updateMenuItems();
-                draw();
             }
             break;
+
+            case SettingsMenuItem::Disconnect:
+                BLEDeviceManager::disconnect();
+                BLEDeviceManager::setManuallyDisconnected(true);
+                updateMenuItems();
+                draw();
+                break;
             }
         }
 

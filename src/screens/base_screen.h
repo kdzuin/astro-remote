@@ -92,9 +92,62 @@ public:
     void setStatusText(const std::string &text) { statusText = text; }
     void setStatusBgColor(uint32_t color) { statusBgColor = color; }
 
+    void checkConnection()
+    {
+        // Check connection every 1 second
+        if (millis() - lastConnectionCheck < 1000)
+        {
+            return;
+        }
+        lastConnectionCheck = millis();
+
+        // Only attempt reconnection if:
+        // 1. We were connected but lost connection
+        // 2. We haven't manually disconnected
+        // 3. Auto-connect is enabled
+        if (!BLEDeviceManager::isConnected() &&
+            BLEDeviceManager::isPaired() &&
+            !BLEDeviceManager::wasManuallyDisconnected() &&
+            BLEDeviceManager::isAutoConnectEnabled())
+        {
+            if (reconnectAttempts < 10)
+            {
+                setStatusText("Reconnecting...");
+                setStatusBgColor(M5.Display.color888(128, 128, 128));
+                drawStatusBar();
+
+                if (BLEDeviceManager::connectToSavedDevice())
+                {
+                    // Connection restored
+                    reconnectAttempts = 0;
+                    setStatusText("Connected");
+                    setStatusBgColor(M5.Display.color888(0, 200, 0));
+                    updateMenuItems();
+                    draw();
+                }
+                else
+                {
+                    reconnectAttempts++;
+                }
+            }
+            else if (reconnectAttempts == 10)
+            {
+                // Max attempts reached, show error and update menu
+                setStatusText("Connection lost");
+                setStatusBgColor(M5.Display.color888(200, 0, 0));
+                reconnectAttempts++; // Increment to avoid showing this message again
+                updateMenuItems();
+                draw();
+            }
+        }
+    }
+
 protected:
     SelectableList<MenuItemType> menuItems;
     const char *screenName;
     std::string statusText;
     uint32_t statusBgColor;
+    unsigned long lastConnectionCheck = 0;
+    bool wasConnected = false;
+    int reconnectAttempts = 0;
 };
