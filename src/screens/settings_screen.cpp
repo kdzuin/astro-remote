@@ -2,7 +2,7 @@
 #include "scan_screen.h"
 #include "../utils/preferences.h"
 
-SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings"), brightness(PreferencesManager::getBrightness())
+SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings")
 {
     setStatusText("Select Option");
     setStatusBgColor(M5.Display.color888(0, 0, 100));
@@ -39,11 +39,12 @@ void SettingsScreen::updateMenuItems()
                       std::string("AutoConnect: ") +
                           (BLEDeviceManager::isAutoConnectEnabled() ? "On" : "Off"));
 
-    menuItems.addItem(SettingsMenuItem::Brightness, std::string("Brightness: ") + std::to_string(brightness));
+    menuItems.addItem(SettingsMenuItem::Brightness, std::string("Brightness: ") + std::to_string(PreferencesManager::getBrightness()));
 }
 
 void SettingsScreen::drawContent()
 {
+    menuItems.setSelectedIndex(selectedItem);
     menuItems.draw();
 }
 
@@ -91,10 +92,11 @@ void SettingsScreen::update()
 
         case SettingsMenuItem::Brightness:
         {
-            auto nextLevel = PreferencesManager::getNextBrightnessLevel(brightness);
-            brightness = static_cast<uint8_t>(nextLevel);
-            M5.Display.setBrightness(brightness);
-            PreferencesManager::setBrightness(brightness);
+            auto nextLevel = PreferencesManager::getNextBrightnessLevel(PreferencesManager::getBrightness());
+            M5.Display.setBrightness(static_cast<uint8_t>(nextLevel));
+            PreferencesManager::setBrightness(static_cast<uint8_t>(nextLevel));
+            updateMenuItems();
+            draw();
         }
         break;
 
@@ -112,6 +114,7 @@ void SettingsScreen::update()
     if (M5.BtnB.wasClicked())
     {
         menuItems.selectNext();
+        selectedItem = menuItems.getSelectedIndex();
         draw();
     }
 }

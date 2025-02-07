@@ -23,5 +23,5 @@ public:
     void update() override;
 
 private:
-    int brightness;
+    int selectedItem = 0;
 };
