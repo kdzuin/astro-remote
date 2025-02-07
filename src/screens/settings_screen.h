@@ -6,6 +6,7 @@
 
 enum class SettingsMenuItem
 {
+    Connect,
     Disconnect,
     Forget,
     Scan,

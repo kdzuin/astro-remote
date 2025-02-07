@@ -32,6 +32,7 @@ public:
     size_t size() const;
     bool selectNext();
     void draw();
+    int getSelectedIndex() const;
 
 private:
     std::vector<Item> items;

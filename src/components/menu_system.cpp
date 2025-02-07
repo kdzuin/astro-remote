@@ -38,6 +38,11 @@ namespace MenuSystem
         }
     }
 
+    void goHome()
+    {
+        setScreen(new MainScreen());
+    }
+
     void setScreenInternal(IScreen *screen)
     {
         if (!screen)

@@ -138,13 +138,13 @@ void BLEDeviceManager::unpairCamera()
     cachedAddress.clear();
 }
 
-void BLEDeviceManager::startScan(int duration)
+bool BLEDeviceManager::startScan(int duration)
 {
     Serial.println("Starting BLE scan...");
     if (pBLEScan == nullptr)
     {
         Serial.println("BLE Scan not initialized!");
-        return;
+        return false;
     }
 
     if (scanning)
@@ -160,6 +160,7 @@ void BLEDeviceManager::startScan(int duration)
 
     pBLEScan->start(duration, false);
     Serial.println("Scan started");
+    return true;
 }
 
 void BLEDeviceManager::stopScan()

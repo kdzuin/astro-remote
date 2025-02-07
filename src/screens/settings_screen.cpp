@@ -19,6 +19,10 @@ void SettingsScreen::updateMenuItems()
     {
         menuItems.addItem(SettingsMenuItem::Disconnect, "Disconnect");
     }
+    else if (BLEDeviceManager::isPaired())
+    {
+        menuItems.addItem(SettingsMenuItem::Connect, "Connect");
+    }
 
     if (BLEDeviceManager::isPaired())
     {
@@ -47,6 +51,21 @@ void SettingsScreen::update()
     {
         switch (menuItems.getSelectedId())
         {
+        case SettingsMenuItem::Connect:
+            if (BLEDeviceManager::connectToSavedDevice())
+            {
+                setStatusText("Connected!");
+                setStatusBgColor(M5.Display.color888(0, 200, 0));
+            }
+            else
+            {
+                setStatusText("Connection failed!");
+                setStatusBgColor(M5.Display.color888(200, 0, 0));
+            }
+            updateMenuItems();
+            draw();
+            break;
+
         case SettingsMenuItem::Forget:
             BLEDeviceManager::disconnect();
             BLEDeviceManager::setManuallyDisconnected(true);
@@ -85,6 +104,8 @@ void SettingsScreen::update()
         case SettingsMenuItem::Disconnect:
             BLEDeviceManager::disconnect();
             BLEDeviceManager::setManuallyDisconnected(true);
+            setStatusText("Select Option");
+            setStatusBgColor(M5.Display.color888(0, 0, 100));
             updateMenuItems();
             draw();
             break;

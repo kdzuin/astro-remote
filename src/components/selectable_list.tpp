@@ -78,6 +78,12 @@ bool SelectableList<IdType>::selectNext()
 }
 
 template <typename IdType>
+int SelectableList<IdType>::getSelectedIndex() const
+{
+    return selectedIndex;
+}
+
+template <typename IdType>
 void SelectableList<IdType>::draw()
 {
     // Display constants

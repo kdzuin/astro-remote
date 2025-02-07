@@ -1,0 +1,139 @@
+#include "scan_screen.h"
+
+ScanScreen::ScanScreen()
+    : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false)
+{
+    menuItems.setTitle("Available Cameras");
+    setStatusText("Starting scan...");
+    setStatusBgColor(M5.Display.color888(0, 0, 100));
+
+    // Start scanning immediately when screen is created
+    if (!BLEDeviceManager::startScan(5)) // 5-second scan
+    {
+        setStatusText("Scan failed!");
+        setStatusBgColor(M5.Display.color888(200, 0, 0));
+    }
+    updateMenuItems();
+}
+
+void ScanScreen::updateMenuItems()
+{
+    menuItems.clear();
+
+    const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+    for (const auto &deviceInfo : discoveredDevices)
+    {
+        menuItems.addItem(ScanMenuItem::Device, deviceInfo.getAddress());
+    }
+}
+
+void ScanScreen::drawContent()
+{
+    M5.Display.setTextDatum(middle_center);
+    int centerX = M5.Display.width() / 2;
+    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+
+    M5.Display.fillScreen(BLACK);
+
+    if (BLEDeviceManager::isScanning())
+    {
+        M5.Display.drawString("Scanning for cameras...", centerX, centerY - 10);
+        M5.Display.drawString("Please wait", centerX, centerY + 10);
+        setStatusText("Scanning...");
+        setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for scanning
+    }
+    else if (isConnecting)
+    {
+        M5.Display.drawString("Connecting to camera...", centerX, centerY - 10);
+        M5.Display.drawString("Please wait", centerX, centerY + 10);
+        setStatusText("Connecting...");
+        setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for connecting
+    }
+    else
+    {
+        const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+        if (!discoveredDevices.empty())
+        {
+            menuItems.draw();
+            setStatusText("Select camera");
+            setStatusBgColor(M5.Display.color888(0, 0, 100)); // Blue for selection
+        }
+        else
+        {
+            M5.Display.drawString("No cameras found", centerX, centerY - 10);
+            M5.Display.drawString("Restarting scan...", centerX, centerY + 10);
+            setStatusText("No devices");
+            setStatusBgColor(M5.Display.color888(200, 0, 0)); // Red for no devices
+
+            // Restart scan after a brief delay if not already scanning
+            if (!BLEDeviceManager::isScanning())
+            {
+                if (!BLEDeviceManager::startScan(5))
+                {
+                    setStatusText("Scan failed!");
+                }
+            }
+        }
+    }
+}
+
+void ScanScreen::update()
+{
+    // Check if scanning state changed
+    if (lastScanning != BLEDeviceManager::isScanning())
+    {
+        lastScanning = BLEDeviceManager::isScanning();
+        if (!lastScanning) // Scan just finished
+        {
+            updateMenuItems(); // Update the menu with any found devices
+        }
+        draw();
+        return;
+    }
+
+    if (!BLEDeviceManager::isScanning() && !isConnecting)
+    {
+        const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
+
+        if (M5.BtnA.wasClicked() && !discoveredDevices.empty())
+        {
+            size_t selectedIndex = menuItems.getSelectedIndex();
+            if (selectedIndex < discoveredDevices.size())
+            {
+                const auto &selectedDev = discoveredDevices[selectedIndex];
+                isConnecting = true;
+                draw();
+
+                if (BLEDeviceManager::connectToCamera(selectedDev.device))
+                {
+                    setStatusText("Connected!");
+                    setStatusBgColor(M5.Display.color888(0, 200, 0)); // Green for success
+                    draw();
+                    delay(500); // Show success message briefly
+                    isConnecting = false;
+                    MenuSystem::goHome(); // Return to previous screen
+                }
+                else
+                {
+                    isConnecting = false;
+                    setStatusText("Connection failed!");
+                    setStatusBgColor(M5.Display.color888(200, 0, 0)); // Red for failure
+                    BLEDeviceManager::clearDiscoveredDevices();
+                    draw();
+                    delay(1000); // Show error message
+
+                    if (!BLEDeviceManager::startScan(5))
+                    {
+                        setStatusText("Scan failed!");
+                    }
+                    draw();
+                }
+            }
+        }
+        else if (M5.BtnB.wasClicked() && !discoveredDevices.empty())
+        {
+            menuItems.selectNext();
+            draw();
+        }
+    }
+}

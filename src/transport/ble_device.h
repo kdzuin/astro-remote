@@ -123,7 +123,7 @@ public:
     static const std::string &getPairedDeviceAddress() { return cachedAddress; }
 
     // Scanning
-    static void startScan(int duration);
+    static bool startScan(int duration);
     static void stopScan();
     static void update();
     static void clearDiscoveredDevices();

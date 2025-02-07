@@ -20,7 +20,7 @@ void setup()
     delay(1000);
 
     M5.Display.setTextSize(1.25);
-    M5.Display.setBrightness(50);
+    M5.Display.setBrightness(80);
 
     BLEDeviceManager::init();
     MenuSystem::init();
