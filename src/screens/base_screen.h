@@ -33,6 +33,13 @@ public:
         drawStatusBar();
     }
 
+    void drawConnectionStatus() const
+    {
+        const int32_t connectionBgStatusColor = M5.Display.color565(0, 255, 0);
+        const int statusBarY = M5.Display.height() - STATUS_BAR_HEIGHT;
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, GREEN);
+    }
+
     // Draw the status bar only
     void drawStatusBar() const
     {
@@ -45,6 +52,8 @@ public:
         M5.Display.setTextColor(M5.Display.color565(255, 255, 255));
         M5.Display.setTextDatum(middle_center);
         M5.Display.drawString(statusText.c_str(), M5.Display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);
+
+        drawConnectionStatus();
     }
 
     // New pure virtual function for content drawing
