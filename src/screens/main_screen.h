@@ -6,12 +6,22 @@
 #include "../components/selectable_list.h"
 #include "../transport/ble_device.h"
 
-class MainScreen : public BaseScreen
+// Menu item IDs
+enum class MainMenuItem
+{
+    Connection,
+    Video,
+    Control,
+    Settings
+};
+
+class MainScreen : public BaseScreen<MainMenuItem>
 {
 public:
-    MainScreen() : BaseScreen("Main"), menuItems("Main Menu"), reconnectAttempts(0), lastConnectionCheck(0)
+    MainScreen() : BaseScreen<MainMenuItem>("Main"), reconnectAttempts(0), lastConnectionCheck(0)
     {
-        BLEDeviceManager::enableAutoConnect(true);
+        menuItems.setTitle("Main Menu");
+        BLEDeviceManager::setAutoConnect(false);
 
         // Initialize screen state based on current connection
         if (BLEDeviceManager::isConnected())
@@ -46,23 +56,13 @@ public:
 
     void updateMenuItems()
     {
-        menuItems.clear();
+        const bool isConnected = BLEDeviceManager::isConnected();
 
-        // Add items based on connection state
-        if (BLEDeviceManager::isConnected())
-        {
-            menuItems.addItem("Disconnect");
-            menuItems.addItem("Video");
-            menuItems.addItem("Control");
-            menuItems.addItem("Settings");
-        }
-        else
-        {
-            menuItems.addItem("Connect");
-            menuItems.addItem("Video", false);   // Disabled when not connected
-            menuItems.addItem("Control", false); // Disabled when not connected
-            menuItems.addItem("Settings");
-        }
+        menuItems.clear();
+        menuItems.addItem(MainMenuItem::Connection, isConnected ? "Disconnect" : "Connect");
+        menuItems.addItem(MainMenuItem::Video, "Video", isConnected);
+        menuItems.addItem(MainMenuItem::Control, "Control", isConnected);
+        menuItems.addItem(MainMenuItem::Settings, "Settings");
     }
 
     void drawContent() override
@@ -123,14 +123,16 @@ public:
     void update() override
     {
         checkConnection();
+        const bool isConnected = BLEDeviceManager::isConnected();
 
         if (M5.BtnA.wasClicked() && !M5.BtnB.wasPressed())
         {
+
             // Handle menu selection
-            switch (menuItems.getSelectedIndex())
+            switch (menuItems.getSelectedId())
             {
-            case 0: // Connect/Disconnect
-                if (!BLEDeviceManager::isConnected())
+            case MainMenuItem::Connection:
+                if (!isConnected)
                 {
                     // Try to connect
                     setStatusText("Connecting...");
@@ -145,8 +147,6 @@ public:
                         setStatusText("Connected");
                         setStatusBgColor(M5.Display.color888(0, 200, 0));
                         reconnectAttempts = 0;
-                        updateMenuItems();
-                        draw();
                     }
                     else
                     {
@@ -157,26 +157,27 @@ public:
                 }
                 else
                 {
+
                     // Disconnect
                     BLEDeviceManager::disconnectCamera();
                     // Set manual disconnect flag to prevent auto-reconnect
                     BLEDeviceManager::setManuallyDisconnected(true);
                     setStatusText("Disconnected");
                     setStatusBgColor(M5.Display.color888(55, 55, 55));
-                    updateMenuItems();
-                    draw();
                 }
+                updateMenuItems();
+                draw();
+
                 break;
 
-            case 1: // Video screen
-                if (onScreenChange)
-                    onScreenChange(new VideoScreen());
+            case MainMenuItem::Video:
+                MenuSystem::setScreen(new VideoScreen());
                 break;
 
-            case 2: // Control screen
+            case MainMenuItem::Control:
                 break;
 
-            case 3: // Settings
+            case MainMenuItem::Settings:
                 break;
             }
         }
@@ -188,14 +189,13 @@ public:
         }
     }
 
-    void setScreenChangeCallback(std::function<void(BaseScreen *)> callback)
+    void setScreenChangeCallback(std::function<void(BaseScreen<MainMenuItem> *)> callback)
     {
         onScreenChange = callback;
     }
 
 private:
-    SelectableList menuItems;
     unsigned long lastConnectionCheck;
     int reconnectAttempts;
-    std::function<void(BaseScreen *)> onScreenChange;
+    std::function<void(BaseScreen<MainMenuItem> *)> onScreenChange;
 };

@@ -1,47 +1,23 @@
 #include "menu_system.h"
-#include "transport/ble_device.h"
-#include <memory>
+#include "screens/main_screen.h"
+#include "screens/video_screen.h"
+#include <M5Unified.h>
 
 namespace MenuSystem
 {
-    namespace
-    {
-        std::unique_ptr<BaseScreen> currentScreen;
-    }
+    // Current screen being displayed
+    static std::unique_ptr<IScreen> currentScreen;
 
     void init()
     {
         // Set initial screen
-        currentScreen.reset(new MainScreen());
-
-        // Set up screen change callback
-        static_cast<MainScreen *>(currentScreen.get())->setScreenChangeCallback([](BaseScreen *newScreen)
-                                                                                { setScreen(newScreen); });
-
-        currentScreen->draw();
+        setScreen(new MainScreen());
     }
 
     void update()
     {
-        // Update M5 buttons
+        // Update buttons
         M5.update();
-
-        // Handle power button to return to main menu
-        if (M5.BtnPWR.wasClicked())
-        {
-            // Only reinitialize if we're not already on main screen
-            if (strcmp(currentScreen->getName(), "Main") != 0)
-            {
-                // Call beforeExit on current screen
-                if (currentScreen)
-                {
-                    currentScreen->beforeExit();
-                }
-
-                // Create fresh main screen
-                init();
-            }
-        }
 
         // Update current screen
         if (currentScreen)
@@ -49,35 +25,28 @@ namespace MenuSystem
             currentScreen->update();
         }
 
-        // Update BLE connection
-        BLEDeviceManager::update();
+        // Handle power button to return to main menu
+        if (M5.BtnPWR.wasClicked())
+        {
+            if (strcmp(currentScreen->getName(), "Main") != 0)
+            {
+                setScreen(new MainScreen());
+            }
+        }
     }
 
-    void setScreen(BaseScreen *screen)
+    void setScreenInternal(IScreen* screen)
     {
-        if (!screen)
-            return;
+        if (!screen) return;
 
-        // Call beforeExit on current screen
-        if (currentScreen)
-        {
-            currentScreen->beforeExit();
-        }
-
-        // Take ownership of new screen
+        // Store the screen
         currentScreen.reset(screen);
-
-        // Set up screen change callback if it's a main screen
-        if (strcmp(screen->getName(), "Main") == 0)
-        {
-            static_cast<MainScreen *>(currentScreen.get())->setScreenChangeCallback([](BaseScreen *newScreen)
-                                                                                    { setScreen(newScreen); });
-        }
-
-        currentScreen->draw();
+        
+        // Draw the new screen
+        screen->draw();
     }
 
-    BaseScreen *getCurrentScreen()
+    IScreen* getCurrentScreen()
     {
         return currentScreen.get();
     }

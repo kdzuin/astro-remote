@@ -7,6 +7,13 @@
 #include "../components/selectable_list.h"
 #include "../transport/ble_device.h"
 
+// Base menu item type for screens that don't define their own
+enum class BaseMenuItem
+{
+    None
+};
+
+template <typename MenuItemType>
 class BaseScreen
 {
 public:
@@ -86,7 +93,7 @@ public:
     void setStatusBgColor(uint32_t color) { statusBgColor = color; }
 
 protected:
-    SelectableList menuItems;
+    SelectableList<MenuItemType> menuItems;
     const char *screenName;
     std::string statusText;
     uint32_t statusBgColor;
