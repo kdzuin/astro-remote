@@ -7,20 +7,17 @@ namespace MenuSystem
     namespace
     {
         std::unique_ptr<BaseScreen> currentScreen;
-        std::unique_ptr<MainScreen> mainScreen;
     }
 
     void init()
     {
-        // Create main screen
-        mainScreen.reset(new MainScreen());
+        // Set initial screen
+        currentScreen.reset(new MainScreen());
 
         // Set up screen change callback
-        mainScreen->setScreenChangeCallback([](BaseScreen *newScreen)
-                                            { setScreen(newScreen); });
+        static_cast<MainScreen *>(currentScreen.get())->setScreenChangeCallback([](BaseScreen *newScreen)
+                                                                                { setScreen(newScreen); });
 
-        // Set initial screen
-        currentScreen.reset(new MainScreen(*mainScreen));
         currentScreen->draw();
     }
 
@@ -32,10 +29,17 @@ namespace MenuSystem
         // Handle power button to return to main menu
         if (M5.BtnPWR.wasClicked())
         {
-            if (currentScreen.get() != mainScreen.get())
+            // Only reinitialize if we're not already on main screen
+            if (strcmp(currentScreen->getName(), "Main") != 0)
             {
-                currentScreen.reset(new MainScreen(*mainScreen));
-                currentScreen->draw();
+                // Call beforeExit on current screen
+                if (currentScreen)
+                {
+                    currentScreen->beforeExit();
+                }
+
+                // Create fresh main screen
+                init();
             }
         }
 
@@ -51,11 +55,26 @@ namespace MenuSystem
 
     void setScreen(BaseScreen *screen)
     {
-        if (screen)
+        if (!screen)
+            return;
+
+        // Call beforeExit on current screen
+        if (currentScreen)
         {
-            currentScreen.reset(screen);
-            currentScreen->draw();
+            currentScreen->beforeExit();
         }
+
+        // Take ownership of new screen
+        currentScreen.reset(screen);
+
+        // Set up screen change callback if it's a main screen
+        if (strcmp(screen->getName(), "Main") == 0)
+        {
+            static_cast<MainScreen *>(currentScreen.get())->setScreenChangeCallback([](BaseScreen *newScreen)
+                                                                                    { setScreen(newScreen); });
+        }
+
+        currentScreen->draw();
     }
 
     BaseScreen *getCurrentScreen()

@@ -131,6 +131,12 @@ public:
     static const std::vector<DeviceInfo> &getDiscoveredDevices();
     static bool isScanning();
 
+    // Auto-connect management
+    static void enableAutoConnect(bool enable) { autoConnectEnabled = enable; }
+    static bool isAutoConnectEnabled() { return autoConnectEnabled; }
+    static void setManuallyDisconnected(bool value) { manuallyDisconnected = value; }
+    static bool wasManuallyDisconnected() { return manuallyDisconnected; }
+
 private:
     static BLEClient *pClient;
     static BLEAdvertisedDevice *pDevice;
@@ -140,6 +146,8 @@ private:
     static bool initialized;
     static bool connected;
     static bool scanning;
+    static bool manuallyDisconnected;  // Flag to prevent auto-reconnect after manual disconnect
+    static bool autoConnectEnabled;     // Flag to control auto-connect behavior
     static unsigned long scanEndTime;
     static BLEScan *pBLEScan;
     static std::string lastDeviceAddress;

@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include "../components/selectable_list.h"
+#include "../transport/ble_device.h"
 
 class BaseScreen
 {
@@ -35,9 +36,24 @@ public:
 
     void drawConnectionStatus() const
     {
-        const int32_t connectionBgStatusColor = M5.Display.color565(0, 255, 0);
         const int statusBarY = M5.Display.height() - STATUS_BAR_HEIGHT;
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, GREEN);
+
+        // Draw connection status indicator
+        if (BLEDeviceManager::isConnected())
+        {
+            // Connected - solid green line
+            M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color888(0, 255, 0));
+        }
+        else if (BLEDeviceManager::isPaired())
+        {
+            // Paired but not connected - yellow line
+            M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color888(255, 255, 0));
+        }
+        else
+        {
+            // Not paired - red line
+            M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color888(255, 0, 0));
+        }
     }
 
     // Draw the status bar only
@@ -48,7 +64,7 @@ public:
         // Draw status bar background
         M5.Display.fillRect(0, statusBarY, M5.Display.width(), STATUS_BAR_HEIGHT, statusBgColor);
 
-        // Draw status text if present
+        // Draw status text
         M5.Display.setTextColor(M5.Display.color565(255, 255, 255));
         M5.Display.setTextDatum(middle_center);
         M5.Display.drawString(statusText.c_str(), M5.Display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);

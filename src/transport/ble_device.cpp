@@ -2,58 +2,67 @@
 #include "camera_commands.h"
 
 // Client callbacks implementation
-class ClientCallback : public BLEClientCallbacks {
-    void onConnect(BLEClient* client) {
+class ClientCallback : public BLEClientCallbacks
+{
+    void onConnect(BLEClient *client)
+    {
         Serial.println("Client connected");
         BLEDeviceManager::onConnect(client);
     }
 
-    void onDisconnect(BLEClient* client) {
+    void onDisconnect(BLEClient *client)
+    {
         Serial.println("Client disconnected");
         BLEDeviceManager::onDisconnect(client);
     }
 };
 
-// Static member definitions
-BLEClient* BLEDeviceManager::pClient = nullptr;
-BLEAdvertisedDevice* BLEDeviceManager::pDevice = nullptr;
-BLERemoteCharacteristic* BLEDeviceManager::pRemoteControlChar = nullptr;
-BLERemoteCharacteristic* BLEDeviceManager::pRemoteStatusChar = nullptr;
-BLERemoteService* BLEDeviceManager::pRemoteService = nullptr;
+// Initialize static members
+BLEClient *BLEDeviceManager::pClient = nullptr;
+BLEAdvertisedDevice *BLEDeviceManager::pDevice = nullptr;
+BLERemoteCharacteristic *BLEDeviceManager::pRemoteControlChar = nullptr;
+BLERemoteCharacteristic *BLEDeviceManager::pRemoteStatusChar = nullptr;
+BLERemoteService *BLEDeviceManager::pRemoteService = nullptr;
 bool BLEDeviceManager::initialized = false;
 bool BLEDeviceManager::connected = false;
 bool BLEDeviceManager::scanning = false;
+bool BLEDeviceManager::manuallyDisconnected = false;
+bool BLEDeviceManager::autoConnectEnabled = false;
 unsigned long BLEDeviceManager::scanEndTime = 0;
-BLEScan* BLEDeviceManager::pBLEScan = nullptr;
-std::string BLEDeviceManager::lastDeviceAddress;
+BLEScan *BLEDeviceManager::pBLEScan = nullptr;
+std::string BLEDeviceManager::lastDeviceAddress = "";
 std::vector<DeviceInfo> BLEDeviceManager::discoveredDevices;
 Preferences BLEDeviceManager::preferences;
-std::string BLEDeviceManager::cachedAddress;
+std::string BLEDeviceManager::cachedAddress = "";
 
-void BLEDeviceManager::onConnect(BLEClient* client) {
+void BLEDeviceManager::onConnect(BLEClient *client)
+{
     connected = true;
     Serial.println("BLEDeviceManager: Device connected");
-    
+
     // Save the device address if it's not already saved
-    if (pDevice && !cachedAddress.empty()) {
+    if (pDevice && !cachedAddress.empty())
+    {
         saveDeviceAddress(pDevice->getAddress().toString());
     }
 }
 
-void BLEDeviceManager::onDisconnect(BLEClient* client) {
+void BLEDeviceManager::onDisconnect(BLEClient *client)
+{
     connected = false;
     Serial.println("BLEDeviceManager: Device disconnected");
-    
+
     // Clean up characteristics
     pRemoteControlChar = nullptr;
     pRemoteStatusChar = nullptr;
     pRemoteService = nullptr;
-    
+
     // Try to reconnect if we have a saved device
-    if (!cachedAddress.empty()) {
+    if (!cachedAddress.empty())
+    {
         Serial.println("Will try to reconnect...");
         // Schedule reconnection attempt
-        delay(1000);  // Wait a bit before trying to reconnect
+        delay(1000); // Wait a bit before trying to reconnect
         connectToSavedDevice();
     }
 }
@@ -84,9 +93,9 @@ void BLEDeviceManager::init()
 {
     // Set device name before initializing BLE
     esp_ble_gap_set_device_name("AstroRemote");
-    
+
     BLEDevice::init("AstroRemote");
-    
+
     // Set security parameters
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
     esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;
@@ -95,7 +104,7 @@ void BLEDeviceManager::init()
     uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
     uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE;
     uint8_t oob_support = ESP_BLE_OOB_DISABLE;
-    
+
     esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(auth_req));
     esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(iocap));
     esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(key_size));
@@ -103,7 +112,7 @@ void BLEDeviceManager::init()
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(rsp_key));
     esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(auth_option));
     esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(oob_support));
-    
+
     // Set up scan
     pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
@@ -125,7 +134,7 @@ void BLEDeviceManager::loadDeviceAddress()
     cachedAddress = addr.c_str();
 }
 
-void BLEDeviceManager::saveDeviceAddress(const std::string& address)
+void BLEDeviceManager::saveDeviceAddress(const std::string &address)
 {
     preferences.putString("device_address", address.c_str());
     cachedAddress = address;
@@ -186,17 +195,17 @@ void BLEDeviceManager::update()
 
 void BLEDeviceManager::clearDiscoveredDevices()
 {
-    for (auto& deviceInfo : discoveredDevices)
+    for (auto &deviceInfo : discoveredDevices)
     {
         delete deviceInfo.device;
     }
     discoveredDevices.clear();
 }
 
-void BLEDeviceManager::addDiscoveredDevice(BLEAdvertisedDevice* device)
+void BLEDeviceManager::addDiscoveredDevice(BLEAdvertisedDevice *device)
 {
     // Check if device already exists
-    for (const auto& deviceInfo : discoveredDevices)
+    for (const auto &deviceInfo : discoveredDevices)
     {
         if (deviceInfo.device->getAddress().equals(device->getAddress()))
         {
@@ -209,7 +218,7 @@ void BLEDeviceManager::addDiscoveredDevice(BLEAdvertisedDevice* device)
     discoveredDevices.push_back(info);
 }
 
-const std::vector<DeviceInfo>& BLEDeviceManager::getDiscoveredDevices()
+const std::vector<DeviceInfo> &BLEDeviceManager::getDiscoveredDevices()
 {
     return discoveredDevices;
 }
@@ -228,23 +237,26 @@ bool BLEDeviceManager::connectToSavedDevice()
     }
 
     Serial.printf("Attempting to connect to saved device: %s\n", cachedAddress.c_str());
-    
+
     // Create a client
-    if (pClient != nullptr) {
+    if (pClient != nullptr)
+    {
         Serial.println("Cleaning up old client");
         delete pClient;
         pClient = nullptr;
     }
-    
+
     pClient = BLEDevice::createClient();
-    if (!pClient) {
+    if (!pClient)
+    {
         Serial.println("Failed to create client");
         return false;
     }
 
     // Connect directly using the address
     BLEAddress bleAddress(cachedAddress);
-    if (!pClient->connect(bleAddress)) {
+    if (!pClient->connect(bleAddress))
+    {
         Serial.println("Failed to connect to saved device");
         delete pClient;
         pClient = nullptr;
@@ -254,7 +266,8 @@ bool BLEDeviceManager::connectToSavedDevice()
     Serial.println("Connected to saved device!");
 
     // Initialize the connection (set up service and characteristics)
-    if (!initConnection()) {
+    if (!initConnection())
+    {
         Serial.println("Failed to initialize connection");
         disconnectCamera();
         return false;
@@ -263,7 +276,7 @@ bool BLEDeviceManager::connectToSavedDevice()
     return true;
 }
 
-bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
+bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice *device)
 {
     if (!device)
     {
@@ -274,7 +287,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
     // Clean up any existing connection
     disconnectCamera();
 
-    BLEAddress address = const_cast<BLEAdvertisedDevice*>(device)->getAddress();
+    BLEAddress address = const_cast<BLEAdvertisedDevice *>(device)->getAddress();
     Serial.printf("Connecting to camera: %s\n", address.toString().c_str());
 
     pClient = BLEDevice::createClient();
@@ -291,13 +304,13 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
     memset(&connParams, 0, sizeof(connParams));
     memcpy(connParams.bda, address.getNative(), sizeof(esp_bd_addr_t));
     connParams.latency = 0;
-    connParams.max_int = 0x40;  // 80ms interval
-    connParams.min_int = 0x30;  // 60ms interval
-    connParams.timeout = 500;    // 5s timeout
-    
+    connParams.max_int = 0x40; // 80ms interval
+    connParams.min_int = 0x30; // 60ms interval
+    connParams.timeout = 500;  // 5s timeout
+
     // Set the connection parameters before connecting
     esp_ble_gap_update_conn_params(&connParams);
-    
+
     // Set security level to high
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
     esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;
@@ -321,12 +334,12 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
     }
 
     Serial.println("Connected to camera!");
-    
+
     // Set MTU and wait for completion
     Serial.println("Setting MTU...");
-    pClient->setMTU(517);  // Request maximum MTU
-    delay(1000);  // Wait for MTU exchange
-    
+    pClient->setMTU(517); // Request maximum MTU
+    delay(1000);          // Wait for MTU exchange
+
     // Set encryption using the correct address type
     Serial.println("Setting up encryption...");
     esp_bd_addr_t bdAddr;
@@ -335,7 +348,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
 
     // Give more time for pairing and service discovery
     Serial.println("Waiting for pairing and service discovery...");
-    delay(3000);  // Reduced from 5000 since we have other delays
+    delay(3000); // Reduced from 5000 since we have other delays
 
     if (!initConnection())
     {
@@ -352,7 +365,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device)
 void BLEDeviceManager::disconnectCamera()
 {
     Serial.println("Disconnecting from camera...");
-    
+
     if (pClient != nullptr)
     {
         if (pClient->isConnected())
@@ -360,14 +373,14 @@ void BLEDeviceManager::disconnectCamera()
             pClient->disconnect();
             delay(100); // Give it time to disconnect cleanly
         }
-        
+
         // Clear all pointers
         pRemoteService = nullptr;
         pRemoteControlChar = nullptr;
         pRemoteStatusChar = nullptr;
         pClient = nullptr;
     }
-    
+
     Serial.println("Disconnected and cleaned up");
 }
 
@@ -381,36 +394,42 @@ bool BLEDeviceManager::initConnection()
 
     Serial.println("Looking for Sony Remote service...");
     pRemoteService = pClient->getService(SONY_REMOTE_SERVICE_UUID);
-    if (pRemoteService == nullptr) {
+    if (pRemoteService == nullptr)
+    {
         Serial.println("Failed to find Sony Remote service");
         return false;
     }
 
     Serial.println("Looking for Remote Control characteristic...");
     pRemoteControlChar = pRemoteService->getCharacteristic(SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID);
-    if (pRemoteControlChar == nullptr) {
+    if (pRemoteControlChar == nullptr)
+    {
         Serial.println("Failed to find Remote Control characteristic");
         return false;
     }
 
     Serial.println("Looking for Remote Status characteristic...");
     pRemoteStatusChar = pRemoteService->getCharacteristic(SONY_REMOTE_STATUS_CHARACTERISTIC_UUID);
-    if (pRemoteStatusChar == nullptr) {
+    if (pRemoteStatusChar == nullptr)
+    {
         Serial.println("Failed to find Status characteristic");
         return false;
     }
 
     Serial.println("Registering for status notifications...");
-    if (pRemoteStatusChar->canNotify()) {
+    if (pRemoteStatusChar->canNotify())
+    {
         pRemoteStatusChar->registerForNotify(CameraCommands::onStatusNotification);
     }
 
     Serial.println("Reading initial camera status...");
-    BLERemoteCharacteristic* pStatusReadChar = pRemoteService->getCharacteristic(SONY_REMOTE_STATUS_READ_CHARACTERISTIC_UUID);
-    if (pStatusReadChar && pStatusReadChar->canRead()) {
+    BLERemoteCharacteristic *pStatusReadChar = pRemoteService->getCharacteristic(SONY_REMOTE_STATUS_READ_CHARACTERISTIC_UUID);
+    if (pStatusReadChar && pStatusReadChar->canRead())
+    {
         std::string value = pStatusReadChar->readValue();
-        if (!value.empty()) {
-            uint8_t* data = (uint8_t*)value.data();
+        if (!value.empty())
+        {
+            uint8_t *data = (uint8_t *)value.data();
             size_t length = value.length();
             CameraCommands::onStatusNotification(pStatusReadChar, data, length, false);
         }
@@ -420,15 +439,18 @@ bool BLEDeviceManager::initConnection()
     return true;
 }
 
-BLERemoteService* BLEDeviceManager::getService() {
+BLERemoteService *BLEDeviceManager::getService()
+{
     return pRemoteService;
 }
 
-BLERemoteCharacteristic* BLEDeviceManager::getControlCharacteristic() {
+BLERemoteCharacteristic *BLEDeviceManager::getControlCharacteristic()
+{
     return pRemoteControlChar;
 }
 
-BLERemoteCharacteristic* BLEDeviceManager::getStatusCharacteristic() {
+BLERemoteCharacteristic *BLEDeviceManager::getStatusCharacteristic()
+{
     return pRemoteStatusChar;
 }
 
