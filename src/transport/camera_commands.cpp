@@ -90,14 +90,13 @@ namespace CameraCommands
     {
         if (newState == Status::RECORD_STARTED)
         {
-            // Recording just started - update UI
-            M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
-            M5.Display.drawString("REC", 280, 10);
+            Serial.println("[Camera] Recording started");
+            recordingStatus = Status::RECORD_STARTED;
         }
         else
         {
-            // Recording stopped
-            M5.Display.fillRect(280, 10, 40, 20, M5.Display.color565(0, 0, 0)); // Clear REC indicator
+            Serial.println("[Camera] Recording stopped");
+            recordingStatus = Status::RECORD_STOPPED;
         }
     }
 
@@ -124,6 +123,40 @@ namespace CameraCommands
     {
         Serial.println("[Camera] Releasing shutter...");
         return sendCommand16(Cmd::SHUTTER_FULL_UP);
+    }
+
+    bool recordStart()
+    {
+        Serial.println("[Camera] Starting recording");
+        // Press record button
+        if (!sendCommand16(Cmd::RECORD_DOWN)) {
+            Serial.println("[Camera] Failed to start recording - DOWN failed");
+            return false;
+        }
+        delay(100); // Small delay between down and up
+        // Release record button
+        if (!sendCommand16(Cmd::RECORD_UP)) {
+            Serial.println("[Camera] Failed to start recording - UP failed");
+            return false;
+        }
+        return true;
+    }
+
+    bool recordStop()
+    {
+        Serial.println("[Camera] Stopping recording");
+        // Press record button again
+        if (!sendCommand16(Cmd::RECORD_DOWN)) {
+            Serial.println("[Camera] Failed to stop recording - DOWN failed");
+            return false;
+        }
+        delay(100); // Small delay between down and up
+        // Release record button
+        if (!sendCommand16(Cmd::RECORD_UP)) {
+            Serial.println("[Camera] Failed to stop recording - UP failed");
+            return false;
+        }
+        return true;
     }
 
     // Connection testing
@@ -318,16 +351,6 @@ namespace CameraCommands
             return false;
         delay(10);
         return releaseShutter();
-    }
-
-    bool recordStart()
-    {
-        return sendCommand16(Cmd::RECORD_DOWN);
-    }
-
-    bool recordStop()
-    {
-        return sendCommand16(Cmd::RECORD_UP);
     }
 
     void setFocusMode(FocusMode mode)
