@@ -28,6 +28,7 @@ void setup()
 
 void loop()
 {
-    MenuSystem::update(); // This will handle M5.update() internally
-    delay(10);            // Small delay to prevent tight loop
+    BLEDeviceManager::update();  // Update BLE state
+    MenuSystem::update();        // This will handle M5.update() internally
+    delay(10);                   // Small delay to prevent tight loop
 }

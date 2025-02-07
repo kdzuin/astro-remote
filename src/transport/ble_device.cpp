@@ -84,10 +84,8 @@ void BLEDeviceManager::init()
 {
     // Set device name before initializing BLE
     esp_ble_gap_set_device_name("AstroRemote");
-
     BLEDevice::init("AstroRemote");
 
-    // Set security parameters
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
     esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;
     uint8_t key_size = 16;
@@ -104,19 +102,26 @@ void BLEDeviceManager::init()
     esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(auth_option));
     esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(oob_support));
 
-    // Set up scan
+    // Set security callbacks
+    BLEDevice::setSecurityCallbacks(new MySecurity());
+    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+
+    // Create client
+    pClient = BLEDevice::createClient();
+    pClient->setClientCallbacks(new ClientCallback());
+
+    // Create scan
     pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
 
-    // Set security level
-    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
-    BLEDevice::setSecurityCallbacks(new MySecurity());
-
+    // Initialize preferences and load saved device
     preferences.begin("sony-camera", false);
     loadDeviceAddress();
+
+    initialized = true;
 }
 
 void BLEDeviceManager::loadDeviceAddress()

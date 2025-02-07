@@ -1,4 +1,5 @@
 #include "settings_screen.h"
+#include "scan_screen.h"
 
 SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings"), brightness(M5.Display.getBrightness())
 {
@@ -67,18 +68,14 @@ void SettingsScreen::update()
             break;
 
         case SettingsMenuItem::Forget:
-            BLEDeviceManager::disconnect();
+            BLEDeviceManager::unpairCamera();
             BLEDeviceManager::setManuallyDisconnected(true);
-            // Clear saved device info
-            // TODO: Add method to clear saved device info
             updateMenuItems();
             draw();
             break;
 
         case SettingsMenuItem::Scan:
-            BLEDeviceManager::startScan(30); // 30 second scan
-            updateMenuItems();
-            draw();
+            MenuSystem::setScreen(new ScanScreen());
             break;
 
         case SettingsMenuItem::AutoConnect:

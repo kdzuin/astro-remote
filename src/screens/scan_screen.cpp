@@ -3,9 +3,13 @@
 ScanScreen::ScanScreen()
     : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false)
 {
-    menuItems.setTitle("Available Cameras");
-    setStatusText("Starting scan...");
-    setStatusBgColor(M5.Display.color888(0, 0, 100));
+    M5.Display.setTextDatum(middle_center);
+    int centerX = M5.Display.width() / 2;
+    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+    M5.Display.drawString("Wait...", centerX, centerY);
+
+    setStatusText("Scanning...");
+    setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for scanning
 
     // Start scanning immediately when screen is created
     if (!BLEDeviceManager::startScan(5)) // 5-second scan
@@ -13,6 +17,7 @@ ScanScreen::ScanScreen()
         setStatusText("Scan failed!");
         setStatusBgColor(M5.Display.color888(200, 0, 0));
     }
+
     updateMenuItems();
 }
 
@@ -23,29 +28,26 @@ void ScanScreen::updateMenuItems()
     const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
     for (const auto &deviceInfo : discoveredDevices)
     {
-        menuItems.addItem(ScanMenuItem::Device, deviceInfo.getAddress());
+        std::string displayName = deviceInfo.getName();
+        if (displayName.empty())
+        {
+            displayName = deviceInfo.getAddress();
+        }
+        menuItems.addItem(ScanMenuItem::Device, displayName);
     }
 }
 
 void ScanScreen::drawContent()
 {
-    M5.Display.setTextDatum(middle_center);
-    int centerX = M5.Display.width() / 2;
-    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
-
     M5.Display.fillScreen(BLACK);
 
-    if (BLEDeviceManager::isScanning())
+    if (isConnecting)
     {
-        M5.Display.drawString("Scanning for cameras...", centerX, centerY - 10);
-        M5.Display.drawString("Please wait", centerX, centerY + 10);
-        setStatusText("Scanning...");
-        setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for scanning
-    }
-    else if (isConnecting)
-    {
-        M5.Display.drawString("Connecting to camera...", centerX, centerY - 10);
-        M5.Display.drawString("Please wait", centerX, centerY + 10);
+        M5.Display.setTextDatum(middle_center);
+        int centerX = M5.Display.width() / 2;
+        int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+        M5.Display.drawString("Wait...", centerX, centerY);
+
         setStatusText("Connecting...");
         setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for connecting
     }
@@ -54,14 +56,21 @@ void ScanScreen::drawContent()
         const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
         if (!discoveredDevices.empty())
         {
+            // Reset text alignment for menu drawing
             menuItems.draw();
+
             setStatusText("Select camera");
             setStatusBgColor(M5.Display.color888(0, 0, 100)); // Blue for selection
         }
         else
         {
-            M5.Display.drawString("No cameras found", centerX, centerY - 10);
-            M5.Display.drawString("Restarting scan...", centerX, centerY + 10);
+            M5.Display.setTextDatum(middle_center);
+            int centerX = M5.Display.width() / 2;
+            int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+
+            M5.Display.drawString("Not found", centerX, centerY - 10);
+            M5.Display.drawString("Restarting...", centerX, centerY + 10);
+
             setStatusText("No devices");
             setStatusBgColor(M5.Display.color888(200, 0, 0)); // Red for no devices
 
