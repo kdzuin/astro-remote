@@ -48,9 +48,9 @@ void MainScreen::updateMenuItems()
     {
         menuItems.addItem(MainMenuItem::Connect, "Connect");
     }
-    menuItems.addItem(MainMenuItem::Astro, "Astro Remote", isConnected);
     menuItems.addItem(MainMenuItem::Video, "Video Remote", isConnected);
     menuItems.addItem(MainMenuItem::Photo, "Photo Remote", isConnected);
+    menuItems.addItem(MainMenuItem::Astro, "Astro Remote", isConnected);
     menuItems.addItem(MainMenuItem::Manual, "Manual Control", isConnected);
     menuItems.addItem(MainMenuItem::Settings, "Settings");
 }

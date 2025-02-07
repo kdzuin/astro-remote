@@ -67,14 +67,27 @@ size_t SelectableList<IdType>::size() const
 template <typename IdType>
 bool SelectableList<IdType>::selectNext()
 {
-    if (selectedIndex < items.size() - 1)
-    {
-        selectedIndex++;
-        return true;
+    if (items.empty()) {
+        return false;
     }
 
-    selectedIndex = 0;
-    return true;
+    size_t startIndex = selectedIndex;
+    do {
+        selectedIndex = (selectedIndex + 1) % items.size();
+        if (items[selectedIndex].enabled) {
+            return true;
+        }
+    } while (selectedIndex != startIndex);
+
+    // If we got here, try to find any enabled item
+    for (size_t i = 0; i < items.size(); i++) {
+        if (items[i].enabled) {
+            selectedIndex = i;
+            return true;
+        }
+    }
+
+    return false; // No enabled items found
 }
 
 template <typename IdType>
@@ -88,7 +101,7 @@ void SelectableList<IdType>::draw()
 {
     // Display constants
     const int ITEM_HEIGHT = 14;       // Height per item
-    const int HORIZONTAL_PADDING = 8;  // Space for selection marker
+    const int HORIZONTAL_PADDING = 8; // Space for selection marker
     const int ITEM_PADDING = 2;       // Padding between items
     const int TITLE_PADDING = 4;      // Extra padding below title
     const uint16_t SELECTED_BG = WHITE;
