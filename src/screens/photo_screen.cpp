@@ -29,7 +29,7 @@ void PhotoScreen::drawContent()
         M5.Display.drawString(countStr, centerX, centerY);
     }
 
-    setStatusBgColor(M5.Display.color888(32, 32, 32));
+    setStatusBgColor(M5.Display.color565(32, 32, 32));
     setStatusText("Ready");
     drawStatusBar();
 }

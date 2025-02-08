@@ -1,7 +1,7 @@
 #pragma once
 
 template <typename MenuItemType>
-BaseScreen<MenuItemType>::BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(M5.Display.color888(55, 55, 55))
+BaseScreen<MenuItemType>::BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(M5.Display.color565(55, 55, 55))
 {
     M5.Display.fillScreen(BLACK);
 }
@@ -27,17 +27,17 @@ void BaseScreen<MenuItemType>::drawConnectionStatus() const
     if (BLEDeviceManager::isConnected())
     {
         // Connected - solid green line
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color888(0, 255, 0));
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color565(0, 255, 0));
     }
     else if (BLEDeviceManager::isPaired())
     {
         // Paired but not connected - yellow line
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color888(255, 255, 0));
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color565(255, 255, 0));
     }
     else
     {
         // Not paired - red line
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color888(255, 0, 0));
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color565(255, 0, 0));
     }
 }
 
@@ -80,7 +80,7 @@ void BaseScreen<MenuItemType>::checkConnection()
         if (reconnectAttempts < 10)
         {
             setStatusText("Reconnecting...");
-            setStatusBgColor(M5.Display.color888(128, 128, 128));
+            setStatusBgColor(M5.Display.color565(128, 128, 128));
             drawStatusBar();
 
             if (BLEDeviceManager::connectToSavedDevice())
@@ -88,7 +88,7 @@ void BaseScreen<MenuItemType>::checkConnection()
                 // Connection restored
                 reconnectAttempts = 0;
                 setStatusText("Connected");
-                setStatusBgColor(M5.Display.color888(0, 200, 0));
+                setStatusBgColor(M5.Display.color565(0, 200, 0));
                 updateMenuItems();
                 draw();
             }
@@ -101,7 +101,7 @@ void BaseScreen<MenuItemType>::checkConnection()
         {
             // Max attempts reached, show error and update menu
             setStatusText("Connection lost");
-            setStatusBgColor(M5.Display.color888(200, 0, 0));
+            setStatusBgColor(M5.Display.color565(200, 0, 0));
             reconnectAttempts++; // Increment to avoid showing this message again
             updateMenuItems();
             draw();

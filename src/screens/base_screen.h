@@ -40,7 +40,7 @@ public:
 
     // Status bar methods
     void setStatusText(const std::string &text) { statusText = text; }
-    void setStatusBgColor(uint32_t color) { statusBgColor = color; }
+    void setStatusBgColor(uint16_t color) { statusBgColor = color; }
 
     void checkConnection();
 
@@ -48,7 +48,7 @@ protected:
     SelectableList<MenuItemType> menuItems;
     const char *screenName;
     std::string statusText;
-    uint32_t statusBgColor;
+    uint16_t statusBgColor;
     unsigned long lastConnectionCheck = 0;
     bool wasConnected = false;
     int reconnectAttempts = 0;

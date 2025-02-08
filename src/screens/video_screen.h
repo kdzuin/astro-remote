@@ -56,7 +56,7 @@ inline void VideoScreen::drawContent()
         M5.Display.drawCircle(centerX, centerY, radius + 2, WHITE);
     }
 
-    setStatusBgColor(M5.Display.color888(32, 32, 32));
+    setStatusBgColor(M5.Display.color565(32, 32, 32));
     setStatusText(CameraCommands::isRecording() ? "Recording" : "Ready");
     drawStatusBar();
 }

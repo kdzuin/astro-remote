@@ -5,7 +5,7 @@
 ManualScreen::ManualScreen() : BaseScreen("Manual")
 {
     setStatusText("Manual Control");
-    setStatusBgColor(M5.Display.color888(0, 0, 100));
+    setStatusBgColor(M5.Display.color565(0, 0, 100));
     updateMenuItems();
 }
 

@@ -9,13 +9,13 @@ ScanScreen::ScanScreen()
     M5.Display.drawString("Wait...", centerX, centerY);
 
     setStatusText("Scanning...");
-    setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for scanning
+    setStatusBgColor(M5.Display.color565(128, 128, 0)); // Yellow for scanning
 
     // Start scanning immediately when screen is created
     if (!BLEDeviceManager::startScan(5)) // 5-second scan
     {
         setStatusText("Scan failed!");
-        setStatusBgColor(M5.Display.color888(200, 0, 0));
+        setStatusBgColor(M5.Display.color565(200, 0, 0));
     }
 
     updateMenuItems();
@@ -49,7 +49,7 @@ void ScanScreen::drawContent()
         M5.Display.drawString("Wait...", centerX, centerY);
 
         setStatusText("Connecting...");
-        setStatusBgColor(M5.Display.color888(128, 128, 0)); // Yellow for connecting
+        setStatusBgColor(M5.Display.color565(128, 128, 0)); // Yellow for connecting
     }
     else
     {
@@ -60,7 +60,7 @@ void ScanScreen::drawContent()
             menuItems.draw();
 
             setStatusText("Select camera");
-            setStatusBgColor(M5.Display.color888(0, 0, 100)); // Blue for selection
+            setStatusBgColor(M5.Display.color565(0, 0, 100)); // Blue for selection
         }
         else
         {
@@ -72,7 +72,7 @@ void ScanScreen::drawContent()
             M5.Display.drawString("Restarting...", centerX, centerY + 10);
 
             setStatusText("No devices");
-            setStatusBgColor(M5.Display.color888(200, 0, 0)); // Red for no devices
+            setStatusBgColor(M5.Display.color565(200, 0, 0)); // Red for no devices
 
             // Restart scan after a brief delay if not already scanning
             if (!BLEDeviceManager::isScanning())
@@ -116,7 +116,7 @@ void ScanScreen::update()
                 if (BLEDeviceManager::connectToCamera(selectedDev.device))
                 {
                     setStatusText("Connected!");
-                    setStatusBgColor(M5.Display.color888(0, 200, 0)); // Green for success
+                    setStatusBgColor(M5.Display.color565(0, 200, 0)); // Green for success
                     draw();
                     delay(500); // Show success message briefly
                     isConnecting = false;
@@ -126,7 +126,7 @@ void ScanScreen::update()
                 {
                     isConnecting = false;
                     setStatusText("Connection failed!");
-                    setStatusBgColor(M5.Display.color888(200, 0, 0)); // Red for failure
+                    setStatusBgColor(M5.Display.color565(200, 0, 0)); // Red for failure
                     BLEDeviceManager::clearDiscoveredDevices();
                     draw();
                     delay(1000); // Show error message

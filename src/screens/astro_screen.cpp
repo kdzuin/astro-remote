@@ -13,7 +13,7 @@ void AstroScreen::updateMenuItems()
 
 void AstroScreen::drawContent()
 {
-    setStatusBgColor(M5.Display.color888(32, 32, 32));
+    setStatusBgColor(M5.Display.color565(32, 32, 32));
     setStatusText("Astro");
     drawStatusBar();
 }

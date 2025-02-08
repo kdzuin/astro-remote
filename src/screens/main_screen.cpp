@@ -14,25 +14,25 @@ MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
     if (BLEDeviceManager::isConnected())
     {
         setStatusText("Connected");
-        setStatusBgColor(M5.Display.color888(0, 100, 0));
+        setStatusBgColor(M5.Display.color565(0, 100, 0));
     }
     else
     {
         setStatusText("Select Option");
-        setStatusBgColor(M5.Display.color888(0, 0, 100));
+        setStatusBgColor(M5.Display.color565(0, 0, 100));
     }
 
     // Try to auto-connect on startup if enabled
     if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() && !BLEDeviceManager::wasManuallyDisconnected())
     {
         setStatusText("Auto-connecting...");
-        setStatusBgColor(M5.Display.color888(128, 128, 0));
+        setStatusBgColor(M5.Display.color565(128, 128, 0));
         drawStatusBar();
 
         if (BLEDeviceManager::connectToSavedDevice())
         {
             setStatusText("Connected");
-            setStatusBgColor(M5.Display.color888(0, 200, 0));
+            setStatusBgColor(M5.Display.color565(0, 200, 0));
             updateMenuItems();
             draw();
         }

@@ -5,12 +5,12 @@
 SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings")
 {
     setStatusText("Select Option");
-    setStatusBgColor(M5.Display.color888(0, 0, 100));
+    setStatusBgColor(M5.Display.color565(0, 0, 100));
     menuItems.setTitle("Settings Menu");
     updateMenuItems();
 
     setStatusText("Select Option");
-    setStatusBgColor(M5.Display.color888(0, 0, 100));
+    setStatusBgColor(M5.Display.color565(0, 0, 100));
 }
 
 void SettingsScreen::updateMenuItems()
@@ -60,12 +60,12 @@ void SettingsScreen::update()
             if (BLEDeviceManager::connectToSavedDevice())
             {
                 setStatusText("Connected!");
-                setStatusBgColor(M5.Display.color888(0, 200, 0));
+                setStatusBgColor(M5.Display.color565(0, 200, 0));
             }
             else
             {
                 setStatusText("Connection failed!");
-                setStatusBgColor(M5.Display.color888(200, 0, 0));
+                setStatusBgColor(M5.Display.color565(200, 0, 0));
             }
             updateMenuItems();
             draw();
@@ -106,7 +106,7 @@ void SettingsScreen::update()
             BLEDeviceManager::disconnect();
             BLEDeviceManager::setManuallyDisconnected(true);
             setStatusText("Select Option");
-            setStatusBgColor(M5.Display.color888(0, 0, 100));
+            setStatusBgColor(M5.Display.color565(0, 0, 100));
             updateMenuItems();
             draw();
             break;
