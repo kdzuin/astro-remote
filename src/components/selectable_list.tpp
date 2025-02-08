@@ -20,6 +20,18 @@ void SelectableList<IdType>::addItem(IdType id, const std::string &label, bool e
 }
 
 template <typename IdType>
+void SelectableList<IdType>::addItem(IdType id, const std::string &label, const std::string &infoText, uint16_t infoColor, bool enabled)
+{
+    items.emplace_back(id, label, infoText, infoColor, enabled);
+}
+
+template <typename IdType>
+void SelectableList<IdType>::addItem(IdType id, const std::string &label, const std::string &infoText, bool enabled)
+{
+    items.emplace_back(id, label, infoText, enabled);
+}
+
+template <typename IdType>
 void SelectableList<IdType>::setTitle(const std::string &newTitle)
 {
     title = newTitle;
@@ -67,21 +79,26 @@ size_t SelectableList<IdType>::size() const
 template <typename IdType>
 bool SelectableList<IdType>::selectNext()
 {
-    if (items.empty()) {
+    if (items.empty())
+    {
         return false;
     }
 
     size_t startIndex = selectedIndex;
-    do {
+    do
+    {
         selectedIndex = (selectedIndex + 1) % items.size();
-        if (items[selectedIndex].enabled) {
+        if (items[selectedIndex].enabled)
+        {
             return true;
         }
     } while (selectedIndex != startIndex);
 
     // If we got here, try to find any enabled item
-    for (size_t i = 0; i < items.size(); i++) {
-        if (items[i].enabled) {
+    for (size_t i = 0; i < items.size(); i++)
+    {
+        if (items[i].enabled)
+        {
             selectedIndex = i;
             return true;
         }
@@ -99,17 +116,6 @@ int SelectableList<IdType>::getSelectedIndex() const
 template <typename IdType>
 void SelectableList<IdType>::draw()
 {
-    // Display constants
-    const int ITEM_HEIGHT = 14;       // Height per item
-    const int HORIZONTAL_PADDING = 8; // Space for selection marker
-    const int ITEM_PADDING = 2;       // Padding between items
-    const int TITLE_PADDING = 4;      // Extra padding below title
-    const uint16_t SELECTED_BG = WHITE;
-    const uint16_t SELECTED_FG = BLACK;
-    const uint16_t NORMAL_BG = BLACK;
-    const uint16_t NORMAL_FG = WHITE;
-    const uint16_t DISABLED_FG = M5.Display.color565(128, 128, 128); // Gray
-
     int y = 0;
 
     M5.Display.fillScreen(BLACK);
@@ -127,14 +133,14 @@ void SelectableList<IdType>::draw()
     // Draw all items
     for (size_t i = 0; i < items.size(); i++)
     {
-        const Item &item = items[i];
+        const auto &item = items[i];
         bool isSelected = (i == selectedIndex);
         int itemHeight = ITEM_HEIGHT;
 
-        // Draw selection background if selected
+        // Draw selection background
         if (isSelected)
         {
-            M5.Display.fillRect(0, y, M5.Display.width(), itemHeight, SELECTED_BG);
+            M5.Display.fillRect(0, y, M5.Display.width(), ITEM_HEIGHT, SELECTED_BG);
         }
 
         // Draw item text
@@ -142,6 +148,17 @@ void SelectableList<IdType>::draw()
         M5.Display.setTextColor(isSelected ? (item.enabled ? SELECTED_FG : DISABLED_FG) : (item.enabled ? NORMAL_FG : DISABLED_FG));
         M5.Display.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
 
-        y += itemHeight + ITEM_PADDING;
+        // Draw info section if present
+        if (item.info)
+        {
+            if (item.info->color)
+            {
+                M5.Display.setTextColor(*item.info->color);
+            }
+            M5.Display.setTextDatum(middle_right);
+            M5.Display.drawString(item.info->text.c_str(), M5.Display.width() - HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
+        }
+
+        y += ITEM_HEIGHT + ITEM_PADDING;
     }
 }

@@ -36,11 +36,12 @@ void SettingsScreen::updateMenuItems()
     }
 
     menuItems.addItem(SettingsMenuItem::AutoConnect,
-                      std::string("AutoConnect: ") +
-                          (BLEDeviceManager::isAutoConnectEnabled() ? "On" : "Off"));
+                      "AutoConnect",
+                      (BLEDeviceManager::isAutoConnectEnabled() ? "On" : "Off"),
+                      true);
 
-    menuItems.addItem(SettingsMenuItem::Brightness, std::string("Brightness: ") + std::to_string(PreferencesManager::getBrightness()));
-    menuItems.addItem(SettingsMenuItem::Battery, std::string("Battery: ") + std::to_string(M5.Power.getBatteryLevel()) + "%", false);
+    menuItems.addItem(SettingsMenuItem::Brightness, "Brightness", std::to_string(PreferencesManager::getBrightness()), true);
+    menuItems.addItem(SettingsMenuItem::Battery, "Battery", std::to_string(M5.Power.getBatteryLevel()) + "%", getStatusBgColor(M5.Power.getBatteryLevel()), false);
 }
 
 void SettingsScreen::drawContent()
@@ -118,4 +119,18 @@ void SettingsScreen::update()
         selectedItem = menuItems.getSelectedIndex();
         draw();
     }
+}
+
+uint16_t SettingsScreen::getStatusBgColor(int batteryLevel)
+{
+    if (batteryLevel < 20)
+    {
+        return M5.Display.color565(200, 0, 0); // Red
+    }
+    else if (batteryLevel < 50)
+    {
+        return M5.Display.color565(200, 200, 0); // Yellow
+    }
+
+    return M5.Display.color565(0, 200, 0); // Green
 }

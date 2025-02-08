@@ -24,5 +24,6 @@ public:
     void update() override;
 
 private:
+    uint16_t getStatusBgColor(int batteryLevel);
     int selectedItem = 0;
 };
