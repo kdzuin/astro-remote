@@ -5,7 +5,13 @@
 
 enum class AstroMenuItem
 {
-    None
+    InitialDelay,
+    ExposureTime,
+    NumberOfExposures,
+    DelayBetweenExposures,
+    Start,
+    Pause,
+    Stop
 };
 
 class AstroScreen : public BaseScreen<AstroMenuItem>
@@ -15,4 +21,7 @@ public:
     void updateMenuItems() override;
     void drawContent() override;
     void update() override;
+
+private:
+    int selectedItem = 0;
 };

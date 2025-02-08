@@ -8,9 +8,6 @@ SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings")
     setStatusBgColor(M5.Display.color565(0, 0, 100));
     menuItems.setTitle("Settings Menu");
     updateMenuItems();
-
-    setStatusText("Select Option");
-    setStatusBgColor(M5.Display.color565(0, 0, 100));
 }
 
 void SettingsScreen::updateMenuItems()
