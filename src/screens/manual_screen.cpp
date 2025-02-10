@@ -45,6 +45,10 @@ void ManualScreen::updateMenuItems()
     menuItems.addItem(ManualMenuItem::TakePhoto, "Photo Action");
     menuItems.addItem(ManualMenuItem::TakeVideo, "Video Action");
     menuItems.addItem(ManualMenuItem::TakeBulb, "Bulb Action");
+    menuItems.addItem(ManualMenuItem::FocusIn, "Focus In");
+    menuItems.addItem(ManualMenuItem::FocusOut, "Focus Out");
+    menuItems.addItem(ManualMenuItem::ZoomIn, "Zoom In");
+    menuItems.addItem(ManualMenuItem::ZoomOut, "Zoom Out");
 }
 
 void ManualScreen::drawContent()
@@ -79,6 +83,18 @@ void ManualScreen::selectMenuItem()
         break;
     case ManualMenuItem::TakeBulb:
         CameraCommands::takeBulb();
+        break;
+    case ManualMenuItem::ZoomIn:
+        CameraCommands::zoomIn(0x70);
+        break;
+    case ManualMenuItem::ZoomOut:
+        CameraCommands::zoomOut(0x70);
+        break;
+    case ManualMenuItem::FocusIn:
+        CameraCommands::focusIn(0x70);
+        break;
+    case ManualMenuItem::FocusOut:
+        CameraCommands::focusOut(0x70);
         break;
     }
 }

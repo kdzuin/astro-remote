@@ -61,6 +61,46 @@ namespace CameraCommands
         }
     }
 
+    bool sendCommand24(uint16_t cmd, uint8_t param)
+    {
+        if (!BLEDeviceManager::isConnected())
+        {
+            LOG_PERIPHERAL("[Camera] Not connected");
+            return false;
+        }
+
+        BLERemoteCharacteristic *pChar = BLEDeviceManager::getControlCharacteristic();
+        if (!pChar)
+        {
+            LOG_PERIPHERAL("[Camera] Control characteristic not available");
+            return false;
+        }
+
+        uint8_t cmdBuffer[] = {
+            (uint8_t)(cmd >> 8),   // Command MSB
+            (uint8_t)(cmd & 0xFF), // Command LSB
+            param                  // Parameter
+        };
+
+        // Debug output
+        char logText[128];
+        snprintf(logText, sizeof(logText), "[Camera] Sending command [0x%02X 0x%02X 0x%02X]",
+                 cmdBuffer[0], cmdBuffer[1], cmdBuffer[2]);
+        LOG_PERIPHERAL("%s", logText);
+
+        try
+        {
+            pChar->writeValue(cmdBuffer, sizeof(cmdBuffer), true);
+        }
+        catch (const std::exception &e)
+        {
+            LOG_PERIPHERAL("[Camera] Error sending command: %s", e.what());
+            return false;
+        }
+
+        return true;
+    }
+
     // State change handlers
     void handleFocusStateChange(uint8_t prevState, uint8_t newState)
     {
@@ -202,6 +242,90 @@ namespace CameraCommands
         return true;
     }
 
+    bool zoomOut(uint8_t amount)
+    {
+        // Send zoom out press command
+        if (!sendCommand24(Cmd::ZOOM_WIDE_PRESS, 0x7f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send zoom out press command");
+            return false;
+        }
+
+        delay(300); // Small delay to ensure command is processed
+
+        // Send zoom out release command
+        if (!sendCommand24(Cmd::ZOOM_WIDE_RELEASE, 0x0f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send zoom out release command");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool zoomIn(uint8_t amount)
+    {
+        // Send zoom in press command
+        if (!sendCommand24(Cmd::ZOOM_TELE_PRESS, 0x7f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send zoom in press command");
+            return false;
+        }
+
+        delay(300); // Small delay to ensure command is processed
+
+        // Send zoom in release command
+        if (!sendCommand24(Cmd::ZOOM_TELE_RELEASE, 0x0f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send zoom in release command");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool focusOut(uint8_t amount)
+    {
+        // Send zoom out press command
+        if (!sendCommand24(Cmd::FOCUS_OUT_PRESS, 0x7f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send focus out press command");
+            return false;
+        }
+
+        delay(300); // Small delay to ensure command is processed
+
+        // Send zoom out release command
+        if (!sendCommand24(Cmd::FOCUS_OUT_RELEASE, 0x0f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send focus out release command");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool focusIn(uint8_t amount)
+    {
+        // Send zoom in press command
+        if (!sendCommand24(Cmd::FOCUS_IN_PRESS, 0x7f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send focus in press command");
+            return false;
+        }
+
+        delay(300); // Small delay to ensure command is processed
+
+        // Send zoom in release command
+        if (!sendCommand24(Cmd::FOCUS_IN_RELEASE, 0x0f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send focus in release command");
+            return false;
+        }
+
+        return true;
+    }
+
     void init()
     {
         // Initialize status variables
@@ -314,15 +438,11 @@ namespace CameraCommands
                 {
                     LOG_PERIPHERAL("[Camera] Focus lost");
                     focusStatus = Status::FOCUS_LOST;
-                    // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
-                    // M5.Display.drawString("No Focus", 10, 200);
                 }
                 else if (statusValue == Status::FOCUS_ACQUIRED)
                 {
                     LOG_PERIPHERAL("[Camera] Focus acquired");
                     focusStatus = Status::FOCUS_ACQUIRED;
-                    // M5.Display.setTextColor(M5.Display.color565(0, 255, 0)); // Green
-                    // M5.Display.drawString("Focus OK", 10, 200);
                 }
                 break;
 
@@ -336,8 +456,6 @@ namespace CameraCommands
                 {
                     LOG_PERIPHERAL("[Camera] Shutter active");
                     shutterStatus = Status::SHUTTER_ACTIVE;
-                    // M5.Display.setTextColor(M5.Display.color565(255, 255, 0)); // Yellow
-                    // M5.Display.drawString("*CLICK*", 10, 220);
                 }
                 break;
 
@@ -346,14 +464,11 @@ namespace CameraCommands
                 {
                     LOG_PERIPHERAL("[Camera] Recording stopped");
                     recordingStatus = Status::RECORD_STOPPED;
-                    // M5.Display.fillRect(280, 10, 40, 20, M5.Display.color565(0, 0, 0)); // Clear REC indicator
                 }
                 else if (statusValue == Status::RECORD_STARTED)
                 {
                     LOG_PERIPHERAL("[Camera] Recording started");
                     recordingStatus = Status::RECORD_STARTED;
-                    // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
-                    // M5.Display.drawString("REC", 280, 10);
                 }
                 break;
 

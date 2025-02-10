@@ -11,6 +11,10 @@ enum class ManualMenuItem
     TakePhoto,
     TakeVideo,
     TakeBulb,
+    FocusIn,
+    FocusOut,
+    ZoomIn,
+    ZoomOut,
 };
 
 class ManualScreen : public BaseScreen<ManualMenuItem>

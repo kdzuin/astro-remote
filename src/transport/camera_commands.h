@@ -31,11 +31,11 @@ namespace CameraCommands
         constexpr uint16_t ZOOM_WIDE_RELEASE = 0x0246; // Release zoom wide
         constexpr uint16_t ZOOM_WIDE_PRESS = 0x0247;   // Press zoom wide
 
-        // Manual focus control (add parameter 0x00-0x0F for release, 0x10-0x7F for press)
-        constexpr uint16_t FOCUS_IN_RELEASE = 0x026A;  // Release focus in
-        constexpr uint16_t FOCUS_IN_PRESS = 0x026B;    // Press focus in
-        constexpr uint16_t FOCUS_OUT_RELEASE = 0x026C; // Release focus out
-        constexpr uint16_t FOCUS_OUT_PRESS = 0x026D;   // Press focus out
+        // Manual focus control
+        constexpr uint16_t FOCUS_IN_RELEASE = 0x026a;  // Focus In Up
+        constexpr uint16_t FOCUS_IN_PRESS = 0x026b;    // Focus In Down
+        constexpr uint16_t FOCUS_OUT_RELEASE = 0x026c; // Focus Out Up
+        constexpr uint16_t FOCUS_OUT_PRESS = 0x026d;   // Focus Out Down
     }
 
     // Status codes from camera (0xFF02)
@@ -75,11 +75,20 @@ namespace CameraCommands
     bool isShutterActive();
     bool isRecording();
 
+    // Focus control functions
+    bool focusIn(uint8_t amount = 0x10);  // amount: 0x10 (min) to 0x7F (max)
+    bool focusOut(uint8_t amount = 0x10); // amount: 0x10 (min) to 0x7F (max)
+
+    // Zoom control functions
+    bool zoomIn(uint8_t amount = 0x10);  // amount: 0x10 (min) to 0x7F (max)
+    bool zoomOut(uint8_t amount = 0x10); // amount: 0x10 (min) to 0x7F (max)
+
     // Status notification handler
     void onStatusNotification(BLERemoteCharacteristic *pChar, uint8_t *pData, size_t length, bool isNotify);
 
     // Internal functions
     bool sendCommand16(uint16_t cmd);
+    bool sendCommand24(uint16_t cmd, uint8_t param);
     void handleFocusStateChange(uint8_t prevState, uint8_t newState);
     void handleShutterStateChange(uint8_t prevState, uint8_t newState);
     void handleRecordingStateChange(uint8_t prevState, uint8_t newState);
