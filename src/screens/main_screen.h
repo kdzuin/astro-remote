@@ -32,4 +32,7 @@ public:
     void update() override;
     void updateMenuItems() override;
     void drawContent() override;
+    void selectMenuItem() override;
+    void nextMenuItem() override;
+    void prevMenuItem() override;
 };

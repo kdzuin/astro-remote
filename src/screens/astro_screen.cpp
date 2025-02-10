@@ -1,4 +1,5 @@
 #include "astro_screen.h"
+#include "../transport/encoder_device.h"
 
 AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro")
 {
@@ -29,10 +30,37 @@ void AstroScreen::drawContent()
 
 void AstroScreen::update()
 {
-    if (M5.BtnB.wasClicked())
+    EncoderDevice::update();
+    int16_t delta = EncoderDevice::getDelta();
+
+    if (M5.BtnB.wasClicked() || delta > 0)
     {
-        menuItems.selectNext();
-        selectedItem = menuItems.getSelectedIndex();
-        draw();
+        nextMenuItem();
     }
+
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    {
+        selectMenuItem();
+    }
+}
+
+void AstroScreen::selectMenuItem()
+{
+    EncoderDevice::indicateClick();
+}
+
+void AstroScreen::nextMenuItem()
+{
+    menuItems.selectNext();
+    selectedItem = menuItems.getSelectedIndex();
+    EncoderDevice::indicateNext();
+    draw();
+}
+
+void AstroScreen::prevMenuItem()
+{
+    // menuItems.selectPrev();
+    selectedItem = menuItems.getSelectedIndex();
+    EncoderDevice::indicatePrev();
+    draw();
 }

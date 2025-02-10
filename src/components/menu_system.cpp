@@ -29,11 +29,11 @@ namespace MenuSystem
         }
 
         // Handle power button to return to main menu
-        if (M5.BtnPWR.wasClicked())
+        if (M5.BtnPWR.wasClicked() || EncoderDevice::wasLongClicked())
         {
             if (strcmp(currentScreen->getName(), "Main") != 0)
             {
-                setScreen(new MainScreen());
+                goHome();
             }
         }
     }

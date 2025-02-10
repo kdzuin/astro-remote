@@ -5,6 +5,7 @@
 #include "settings_screen.h"
 #include "manual_screen.h"
 #include "../components/menu_system.h"
+#include "../transport/encoder_device.h"
 
 MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
 {
@@ -62,44 +63,76 @@ void MainScreen::drawContent()
 
 void MainScreen::update()
 {
-    if (M5.BtnA.wasClicked())
+    static unsigned long lastUpdate = 0;
+    unsigned long now = millis();
+
+    EncoderDevice::update();
+
+    // Handle encoder rotation
+    int16_t delta = EncoderDevice::getDelta();
+    if (delta > 0 || M5.BtnB.wasClicked())
     {
-        switch (menuItems.getSelectedId())
+        nextMenuItem();
+    }
+
+    // Handle clicks
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    {
+        Serial.printf("[MainScreen] Click at %lu\n", now);
+        selectMenuItem();
+    }
+
+    lastUpdate = now;
+}
+
+void MainScreen::selectMenuItem()
+{
+    Serial.printf("[MainScreen] selectMenuItem called at %lu\n", millis());
+    EncoderDevice::indicateClick();
+
+    switch (menuItems.getSelectedId())
+    {
+    case MainMenuItem::Connect:
+        if (BLEDeviceManager::isPaired())
         {
-        case MainMenuItem::Connect:
-            if (BLEDeviceManager::isPaired())
-            {
-                BLEDeviceManager::connectToSavedDevice();
-            }
-            updateMenuItems();
-            draw();
-            break;
-
-        case MainMenuItem::Settings:
-            MenuSystem::setScreen(new SettingsScreen());
-            break;
-
-        case MainMenuItem::Photo:
-            MenuSystem::setScreen(new PhotoScreen());
-            break;
-
-        case MainMenuItem::Video:
-            MenuSystem::setScreen(new VideoScreen());
-            break;
-
-        case MainMenuItem::Astro:
-            MenuSystem::setScreen(new AstroScreen());
-            break;
-
-        case MainMenuItem::Manual:
-            MenuSystem::setScreen(new ManualScreen());
-            break;
+            BLEDeviceManager::connectToSavedDevice();
         }
-    }
-
-    if (M5.BtnB.wasClicked())
-    {
-        menuItems.selectNext();
+        updateMenuItems();
         draw();
+        break;
+
+    case MainMenuItem::Settings:
+        MenuSystem::setScreen(new SettingsScreen());
+        break;
+
+    case MainMenuItem::Photo:
+        MenuSystem::setScreen(new PhotoScreen());
+        break;
+
+    case MainMenuItem::Video:
+        MenuSystem::setScreen(new VideoScreen());
+        break;
+
+    case MainMenuItem::Astro:
+        MenuSystem::setScreen(new AstroScreen());
+        break;
+
+    case MainMenuItem::Manual:
+        MenuSystem::setScreen(new ManualScreen());
+        break;
     }
+}
+
+void MainScreen::nextMenuItem()
+{
+    menuItems.selectNext();
+    EncoderDevice::indicateNext();
+    draw();
+}
+
+void MainScreen::prevMenuItem()
+{
+    // menuItems.selectPrev();
+    EncoderDevice::indicatePrev();
+    draw();
 }

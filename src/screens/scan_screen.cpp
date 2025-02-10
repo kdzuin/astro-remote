@@ -1,4 +1,5 @@
 #include "scan_screen.h"
+#include "../transport/encoder_device.h"
 
 ScanScreen::ScanScreen()
     : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false)
@@ -88,6 +89,9 @@ void ScanScreen::drawContent()
 
 void ScanScreen::update()
 {
+    EncoderDevice::update();
+    int16_t delta = EncoderDevice::getDelta();
+
     // Check if scanning state changed
     if (lastScanning != BLEDeviceManager::isScanning())
     {
@@ -102,47 +106,66 @@ void ScanScreen::update()
 
     if (!BLEDeviceManager::isScanning() && !isConnecting)
     {
-        const auto &discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
-
-        if (M5.BtnA.wasClicked() && !discoveredDevices.empty())
+        if ((M5.BtnA.wasClicked() || EncoderDevice::wasClicked()) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
-            size_t selectedIndex = menuItems.getSelectedIndex();
-            if (selectedIndex < discoveredDevices.size())
-            {
-                const auto &selectedDev = discoveredDevices[selectedIndex];
-                isConnecting = true;
-                draw();
-
-                if (BLEDeviceManager::connectToCamera(selectedDev.device))
-                {
-                    setStatusText("Connected!");
-                    setStatusBgColor(M5.Display.color565(0, 200, 0)); // Green for success
-                    draw();
-                    delay(500); // Show success message briefly
-                    isConnecting = false;
-                    MenuSystem::goHome(); // Return to previous screen
-                }
-                else
-                {
-                    isConnecting = false;
-                    setStatusText("Connection failed!");
-                    setStatusBgColor(M5.Display.color565(200, 0, 0)); // Red for failure
-                    BLEDeviceManager::clearDiscoveredDevices();
-                    draw();
-                    delay(1000); // Show error message
-
-                    if (!BLEDeviceManager::startScan(5))
-                    {
-                        setStatusText("Scan failed!");
-                    }
-                    draw();
-                }
-            }
+            selectMenuItem();
         }
-        else if (M5.BtnB.wasClicked() && !discoveredDevices.empty())
+
+        if ((delta > 0 || M5.BtnB.wasClicked()) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
-            menuItems.selectNext();
+            nextMenuItem();
+        }
+    }
+}
+
+void ScanScreen::selectMenuItem()
+{
+    EncoderDevice::indicateClick();
+
+    size_t selectedIndex = menuItems.getSelectedIndex();
+    if (selectedIndex < BLEDeviceManager::getDiscoveredDevices().size())
+    {
+        const auto &selectedDev = BLEDeviceManager::getDiscoveredDevices()[selectedIndex];
+        isConnecting = true;
+        draw();
+
+        if (BLEDeviceManager::connectToCamera(selectedDev.device))
+        {
+            setStatusText("Connected!");
+            setStatusBgColor(M5.Display.color565(0, 200, 0)); // Green for success
+            draw();
+            delay(500); // Show success message briefly
+            isConnecting = false;
+            MenuSystem::goHome(); // Return to previous screen
+        }
+        else
+        {
+            isConnecting = false;
+            setStatusText("Connection failed!");
+            setStatusBgColor(M5.Display.color565(200, 0, 0)); // Red for failure
+            BLEDeviceManager::clearDiscoveredDevices();
+            draw();
+            delay(1000); // Show error message
+
+            if (!BLEDeviceManager::startScan(5))
+            {
+                setStatusText("Scan failed!");
+            }
             draw();
         }
     }
+}
+
+void ScanScreen::nextMenuItem()
+{
+    menuItems.selectNext();
+    EncoderDevice::indicateNext();
+    draw();
+}
+
+void ScanScreen::prevMenuItem()
+{
+    // menuItems.selectPrev();
+    EncoderDevice::indicatePrev();
+    draw();
 }

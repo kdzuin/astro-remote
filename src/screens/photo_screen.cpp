@@ -1,4 +1,5 @@
 #include "photo_screen.h"
+#include "../transport/encoder_device.h"
 
 PhotoScreen::PhotoScreen() : BaseScreen<PhotoMenuItem>("Photo"), photoCount(0), flashStartTime(0)
 {
@@ -36,8 +37,12 @@ void PhotoScreen::drawContent()
 
 void PhotoScreen::update()
 {
-    if (M5.BtnA.wasClicked())
+    EncoderDevice::update();
+
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
+        EncoderDevice::indicateClick();
+
         if (CameraCommands::takePhoto())
         {
             photoCount++;
@@ -57,3 +62,10 @@ void PhotoScreen::update()
 void PhotoScreen::updateMenuItems()
 {
 }
+
+void PhotoScreen::selectMenuItem()
+{
+    EncoderDevice::indicateClick();
+}
+void PhotoScreen::nextMenuItem() {}
+void PhotoScreen::prevMenuItem() {}

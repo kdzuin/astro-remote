@@ -18,6 +18,9 @@ public:
     void drawContent() override;
     void update() override;
     void updateMenuItems() override;
+    void selectMenuItem() override;
+    void nextMenuItem() override;
+    void prevMenuItem() override;
 
 private:
     int photoCount;

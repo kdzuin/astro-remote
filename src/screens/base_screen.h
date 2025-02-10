@@ -24,6 +24,9 @@ public:
     virtual void update() = 0;
     virtual void beforeExit() {};
     virtual void updateMenuItems() = 0;
+    virtual void selectMenuItem() = 0;
+    virtual void nextMenuItem() = 0;
+    virtual void prevMenuItem() = 0;
 
     const int STATUS_BAR_HEIGHT = 20;
 

@@ -3,6 +3,7 @@
 #include <M5Unified.h>
 #include "base_screen.h"
 #include "../transport/camera_commands.h"
+#include "../transport/encoder_device.h"
 
 enum class VideoMenuItem
 {
@@ -17,6 +18,9 @@ public:
     void drawContent() override;
     void update() override;
     void updateMenuItems() override {}
+    void selectMenuItem() override {}
+    void nextMenuItem() override {}
+    void prevMenuItem() override {}
 
 private:
     unsigned long recordStartTime;
@@ -63,8 +67,10 @@ inline void VideoScreen::drawContent()
 
 inline void VideoScreen::update()
 {
-    if (M5.BtnA.wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
+        EncoderDevice::indicateClick();
+
         if (CameraCommands::isRecording() && CameraCommands::recordStop())
         {
             recordStartTime = 0;

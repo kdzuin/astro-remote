@@ -1,89 +1,11 @@
 #include <M5Unified.h>
 #include "components/menu_system.h"
 #include "transport/ble_device.h"
+#include "transport/encoder_device.h"
 #include "utils/preferences.h"
-#include "libraries/FairyEncoder/FairyEncoder.h"
-
-FairyEncoder fencoder;
 
 // Global variables for encoder state
-int16_t lastEncoderValue = 0;
-bool lastButtonState = false;
-bool encoderAvailable = false;
-
-// Function declarations
-bool initEncoder();
-void handleRotation();
-void handleButton();
-void setEncoderLED(uint32_t color);
-
-bool initEncoder()
-{
-    fencoder.begin();
-    // Check if encoder is available by trying to communicate with it
-    encoderAvailable = fencoder.avail();
-    if (encoderAvailable)
-    {
-        setEncoderLED(0x000000); // LED off initially
-        Serial.println("Encoder initialized successfully");
-    }
-    else
-    {
-        Serial.println("Encoder not found - check connections");
-    }
-    return encoderAvailable;
-}
-
-void handleRotation()
-{
-    if (!encoderAvailable)
-        return;
-
-    int16_t currentValue = fencoder.read();
-    if (currentValue != lastEncoderValue)
-    {
-        if (currentValue > lastEncoderValue)
-        {
-            Serial.println("Rotating clockwise");
-            setEncoderLED(0x00FF00); // Green for clockwise
-        }
-        else
-        {
-            Serial.println("Rotating counter-clockwise");
-            setEncoderLED(0x0000FF); // Blue for counter-clockwise
-        }
-        lastEncoderValue = currentValue;
-    }
-}
-
-void handleButton()
-{
-    if (!encoderAvailable)
-        return;
-
-    bool buttonState = fencoder.getButtonStatus();
-    if (buttonState != lastButtonState)
-    {
-        if (buttonState)
-        {
-            Serial.println("Button pressed");
-            setEncoderLED(0xFF0000); // Red when button pressed
-        }
-        else
-        {
-            Serial.println("Button released");
-            setEncoderLED(0x000000); // LED off when button released
-        }
-        lastButtonState = buttonState;
-    }
-}
-
-void setEncoderLED(uint32_t color)
-{
-    if (!encoderAvailable)
-        return;
-    fencoder.setLEDColor(0, color);
-}
+int32_t lastEncoderValue = 0;
 
 void setup()
 {
@@ -96,8 +18,8 @@ void setup()
     // Initialize preferences first
     PreferencesManager::init();
 
-    // Try to initialize encoder
-    initEncoder();
+    // Initialize encoder
+    EncoderDevice::init();
 
     M5.Display.setRotation(0);
     M5.Display.fillScreen(BLACK);
@@ -119,12 +41,9 @@ void setup()
 
 void loop()
 {
-    if (encoderAvailable)
+    if (EncoderDevice::isAvailable())
     {
-        // Update encoder state only if it's available
-        fencoder.task();
-        handleRotation();
-        handleButton();
+        EncoderDevice::update();
     }
 
     BLEDeviceManager::update(); // Update BLE state

@@ -22,6 +22,9 @@ public:
     void updateMenuItems() override;
     void drawContent() override;
     void update() override;
+    void selectMenuItem() override;
+    void nextMenuItem() override;
+    void prevMenuItem() override;
 
 private:
     uint16_t getStatusBgColor(int batteryLevel);

@@ -1,6 +1,7 @@
 #include "manual_screen.h"
 #include "../components/menu_system.h"
 #include "../transport/camera_commands.h"
+#include "../transport/encoder_device.h"
 
 ManualScreen::ManualScreen() : BaseScreen("Manual")
 {
@@ -11,39 +12,17 @@ ManualScreen::ManualScreen() : BaseScreen("Manual")
 
 void ManualScreen::update()
 {
-    if (M5.BtnA.wasClicked())
+    EncoderDevice::update();
+
+    int16_t delta = EncoderDevice::getDelta();
+    if (delta > 0 || M5.BtnB.wasClicked())
     {
-        auto selectedItem = menuItems.getSelectedId();
-        switch (selectedItem)
-        {
-        case ManualMenuItem::HalfDown:
-            CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_HALF_DOWN);
-            break;
-        case ManualMenuItem::FullDown:
-            CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_FULL_DOWN);
-            break;
-        case ManualMenuItem::HalfUp:
-            CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_HALF_UP);
-            break;
-        case ManualMenuItem::FullUp:
-            CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_FULL_UP);
-            break;
-        case ManualMenuItem::TakePhoto:
-            CameraCommands::takePhoto();
-            break;
-        case ManualMenuItem::TakeVideo:
-            CameraCommands::recordStart();
-            break;
-        case ManualMenuItem::TakeBulb:
-            CameraCommands::takeBulb();
-            break;
-        }
+        nextMenuItem();
     }
 
-    if (M5.BtnB.wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
-        menuItems.selectNext();
-        draw();
+        selectMenuItem();
     }
 }
 
@@ -61,5 +40,52 @@ void ManualScreen::updateMenuItems()
 
 void ManualScreen::drawContent()
 {
+    menuItems.setSelectedIndex(selectedItem);
     menuItems.draw();
+}
+
+void ManualScreen::selectMenuItem()
+{
+    EncoderDevice::indicateClick();
+
+    switch (menuItems.getSelectedId())
+    {
+    case ManualMenuItem::HalfDown:
+        CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_HALF_DOWN);
+        break;
+    case ManualMenuItem::FullDown:
+        CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_FULL_DOWN);
+        break;
+    case ManualMenuItem::HalfUp:
+        CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_HALF_UP);
+        break;
+    case ManualMenuItem::FullUp:
+        CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_FULL_UP);
+        break;
+    case ManualMenuItem::TakePhoto:
+        CameraCommands::takePhoto();
+        break;
+    case ManualMenuItem::TakeVideo:
+        CameraCommands::recordStart();
+        break;
+    case ManualMenuItem::TakeBulb:
+        CameraCommands::takeBulb();
+        break;
+    }
+}
+
+void ManualScreen::nextMenuItem()
+{
+    menuItems.selectNext();
+    selectedItem = menuItems.getSelectedIndex();
+    EncoderDevice::indicateNext();
+    draw();
+}
+
+void ManualScreen::prevMenuItem()
+{
+    // menuItems.selectPrev();
+    selectedItem = menuItems.getSelectedIndex();
+    EncoderDevice::indicatePrev();
+    draw();
 }
