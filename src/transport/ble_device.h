@@ -11,6 +11,7 @@
 #include <Preferences.h>
 #include <vector>
 #include <string>
+#include "../debug.h"
 
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D
@@ -30,13 +31,13 @@ class MySecurity : public BLESecurityCallbacks
 {
     uint32_t onPassKeyRequest()
     {
-        Serial.println("PassKey Request");
+        LOG_PERIPHERAL("[BLE] PassKey Request");
         return 123456;
     }
 
     void onPassKeyNotify(uint32_t pass_key)
     {
-        Serial.printf("PassKey Notify number:%d\n", pass_key);
+        LOG_PERIPHERAL("[BLE] PassKey Notify number:%d\n", pass_key);
         // Show pairing code on display
         M5.Display.fillScreen(M5.Display.color565(0, 0, 0)); // BLACK
         M5.Display.setCursor(0, 0);
@@ -47,13 +48,13 @@ class MySecurity : public BLESecurityCallbacks
 
     bool onConfirmPIN(uint32_t pass_key)
     {
-        Serial.printf("Confirm pin:%d\n", pass_key);
+        LOG_PERIPHERAL("[BLE] Confirm pin:%d\n", pass_key);
         return true;
     }
 
     bool onSecurityRequest()
     {
-        Serial.println("Security Request");
+        LOG_PERIPHERAL("[BLE] Security Request");
         return true;
     }
 
@@ -61,12 +62,12 @@ class MySecurity : public BLESecurityCallbacks
     {
         if (auth_cmpl.success)
         {
-            Serial.println("Authentication Success");
+            LOG_PERIPHERAL("[BLE] Authentication Success");
             delay(1000);
         }
         else
         {
-            Serial.println("Authentication Failure");
+            LOG_PERIPHERAL("[BLE] Authentication Failure");
             delay(1000);
         }
     }

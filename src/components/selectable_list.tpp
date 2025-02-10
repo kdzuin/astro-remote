@@ -108,6 +108,37 @@ bool SelectableList<IdType>::selectNext()
 }
 
 template <typename IdType>
+bool SelectableList<IdType>::selectPrev()
+{
+    if (items.empty())
+    {
+        return false;
+    }
+
+    size_t startIndex = selectedIndex;
+    do
+    {
+        selectedIndex = (selectedIndex + items.size() - 1) % items.size();
+        if (items[selectedIndex].enabled)
+        {
+            return true;
+        }
+    } while (selectedIndex != startIndex);
+
+    // If we got here, try to find any enabled item
+    for (size_t i = 0; i < items.size(); i++)
+    {
+        if (items[i].enabled)
+        {
+            selectedIndex = i;
+            return true;
+        }
+    }
+
+    return false; // No enabled items found
+}
+
+template <typename IdType>
 int SelectableList<IdType>::getSelectedIndex() const
 {
     return selectedIndex;

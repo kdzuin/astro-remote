@@ -1,18 +1,19 @@
 #include "ble_device.h"
 #include "camera_commands.h"
+#include "../debug.h"
 
 // Client callbacks implementation
 class ClientCallback : public BLEClientCallbacks
 {
     void onConnect(BLEClient *client)
     {
-        Serial.println("Client connected");
+        LOG_PERIPHERAL("[BLE] Client connected");
         BLEDeviceManager::onConnect(client);
     }
 
     void onDisconnect(BLEClient *client)
     {
-        Serial.println("Client disconnected");
+        LOG_PERIPHERAL("[BLE] Client disconnected");
         BLEDeviceManager::onDisconnect(client);
     }
 };
@@ -38,7 +39,7 @@ std::string BLEDeviceManager::cachedAddress = "";
 void BLEDeviceManager::onConnect(BLEClient *client)
 {
     connected = true;
-    Serial.println("BLEDeviceManager: Device connected");
+    LOG_PERIPHERAL("[BLE] Device connected");
 
     // Save the device address if it's not already saved
     if (pDevice && !cachedAddress.empty())
@@ -50,7 +51,7 @@ void BLEDeviceManager::onConnect(BLEClient *client)
 void BLEDeviceManager::onDisconnect(BLEClient *client)
 {
     connected = false;
-    Serial.println("BLEDeviceManager: Device disconnected");
+    LOG_PERIPHERAL("[BLE] Device disconnected");
 
     // Clean up characteristics
     pRemoteControlChar = nullptr;
@@ -72,7 +73,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
                 if (manufacturer == SONY_COMPANY_ID && type == SONY_CAMERA_TYPE)
                 {
-                    Serial.printf("Found Sony camera: %s\n", advertisedDevice.toString().c_str());
+                    LOG_PERIPHERAL("[BLE] Found Sony camera: %s\n", advertisedDevice.toString().c_str());
                     BLEDeviceManager::addDiscoveredDevice(new BLEAdvertisedDevice(advertisedDevice));
                 }
             }
@@ -145,16 +146,16 @@ void BLEDeviceManager::unpairCamera()
 
 bool BLEDeviceManager::startScan(int duration)
 {
-    Serial.println("Starting BLE scan...");
+    LOG_PERIPHERAL("[BLE] Starting BLE scan...");
     if (pBLEScan == nullptr)
     {
-        Serial.println("BLE Scan not initialized!");
+        LOG_PERIPHERAL("[BLE] BLE Scan not initialized!");
         return false;
     }
 
     if (scanning)
     {
-        Serial.println("Already scanning, stopping previous scan");
+        LOG_PERIPHERAL("[BLE] Already scanning, stopping previous scan");
         stopScan();
     }
 
@@ -164,7 +165,7 @@ bool BLEDeviceManager::startScan(int duration)
     scanEndTime = millis() + (duration * 1000);
 
     pBLEScan->start(duration, false);
-    Serial.println("Scan started");
+    LOG_PERIPHERAL("[BLE] Scan started");
     return true;
 }
 
@@ -185,7 +186,7 @@ void BLEDeviceManager::update()
 {
     if (scanning && millis() >= scanEndTime)
     {
-        Serial.println("Scan timeout reached");
+        LOG_PERIPHERAL("[BLE] Scan timeout reached");
         stopScan();
     }
 
@@ -194,7 +195,7 @@ void BLEDeviceManager::update()
     {
         if (!pRemoteService->getClient()->isConnected())
         {
-            Serial.println("Connection lost detected in update");
+            LOG_PERIPHERAL("[BLE] Connection lost detected in update");
             connected = false;
             pRemoteControlChar = nullptr;
             pRemoteStatusChar = nullptr;
@@ -242,16 +243,16 @@ bool BLEDeviceManager::connectToSavedDevice()
 {
     if (cachedAddress.empty())
     {
-        Serial.println("No saved device address");
+        LOG_PERIPHERAL("[BLE] No saved device address");
         return false;
     }
 
-    Serial.printf("Attempting to connect to saved device: %s\n", cachedAddress.c_str());
+    LOG_PERIPHERAL("[BLE] Attempting to connect to saved device: %s\n", cachedAddress.c_str());
 
     // Create a client
     if (pClient != nullptr)
     {
-        Serial.println("Cleaning up old client");
+        LOG_PERIPHERAL("[BLE] Cleaning up old client");
         delete pClient;
         pClient = nullptr;
     }
@@ -259,7 +260,7 @@ bool BLEDeviceManager::connectToSavedDevice()
     pClient = BLEDevice::createClient();
     if (!pClient)
     {
-        Serial.println("Failed to create client");
+        LOG_PERIPHERAL("[BLE] Failed to create client");
         return false;
     }
 
@@ -267,18 +268,18 @@ bool BLEDeviceManager::connectToSavedDevice()
     BLEAddress bleAddress(cachedAddress);
     if (!pClient->connect(bleAddress))
     {
-        Serial.println("Failed to connect to saved device");
+        LOG_PERIPHERAL("[BLE] Failed to connect to saved device");
         delete pClient;
         pClient = nullptr;
         return false;
     }
 
-    Serial.println("Connected to saved device!");
+    LOG_PERIPHERAL("[BLE] Connected to saved device!");
 
     // Initialize the connection (set up service and characteristics)
     if (!initConnection())
     {
-        Serial.println("Failed to initialize connection");
+        LOG_PERIPHERAL("[BLE] Failed to initialize connection");
         disconnectCamera();
         return false;
     }
@@ -290,7 +291,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice *device)
 {
     if (!device)
     {
-        Serial.println("No device provided for connection");
+        LOG_PERIPHERAL("[BLE] No device provided for connection");
         return false;
     }
 
@@ -298,12 +299,12 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice *device)
     disconnectCamera();
 
     BLEAddress address = const_cast<BLEAdvertisedDevice *>(device)->getAddress();
-    Serial.printf("Connecting to camera: %s\n", address.toString().c_str());
+    LOG_PERIPHERAL("[BLE] Connecting to camera: %s\n", address.toString().c_str());
 
     pClient = BLEDevice::createClient();
     if (!pClient)
     {
-        Serial.println("Failed to create client");
+        LOG_PERIPHERAL("[BLE] Failed to create client");
         return false;
     }
 
@@ -334,35 +335,35 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice *device)
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 
     // Connect with security
-    Serial.println("Attempting connection...");
+    LOG_PERIPHERAL("[BLE] Attempting connection...");
     if (!pClient->connect(address))
     {
-        Serial.println("Connection failed");
+        LOG_PERIPHERAL("[BLE] Connection failed");
         delete pClient;
         pClient = nullptr;
         return false;
     }
 
-    Serial.println("Connected to camera!");
+    LOG_PERIPHERAL("[BLE] Connected to camera!");
 
     // Set MTU and wait for completion
-    Serial.println("Setting MTU...");
+    LOG_PERIPHERAL("[BLE] Setting MTU...");
     pClient->setMTU(517); // Request maximum MTU
     delay(1000);          // Wait for MTU exchange
 
     // Set encryption using the correct address type
-    Serial.println("Setting up encryption...");
+    LOG_PERIPHERAL("[BLE] Setting up encryption...");
     esp_bd_addr_t bdAddr;
     memcpy(bdAddr, address.getNative(), sizeof(esp_bd_addr_t));
     esp_ble_set_encryption(bdAddr, ESP_BLE_SEC_ENCRYPT);
 
     // Give more time for pairing and service discovery
-    Serial.println("Waiting for pairing and service discovery...");
+    LOG_PERIPHERAL("[BLE] Waiting for pairing and service discovery...");
     delay(3000); // Reduced from 5000 since we have other delays
 
     if (!initConnection())
     {
-        Serial.println("Failed to initialize connection");
+        LOG_PERIPHERAL("[BLE] Failed to initialize connection");
         disconnectCamera();
         return false;
     }
@@ -374,7 +375,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice *device)
 
 void BLEDeviceManager::disconnectCamera()
 {
-    Serial.println("Disconnecting from camera...");
+    LOG_PERIPHERAL("[BLE] Disconnecting from camera...");
 
     if (pClient != nullptr)
     {
@@ -391,48 +392,48 @@ void BLEDeviceManager::disconnectCamera()
         pClient = nullptr;
     }
 
-    Serial.println("Disconnected and cleaned up");
+    LOG_PERIPHERAL("[BLE] Disconnected and cleaned up");
 }
 
 bool BLEDeviceManager::initConnection()
 {
     if (!pClient || !pClient->isConnected())
     {
-        Serial.println("Not connected to device");
+        LOG_PERIPHERAL("[BLE] Not connected to device");
         return false;
     }
 
-    Serial.println("Looking for Sony Remote service...");
+    LOG_PERIPHERAL("[BLE] Looking for Sony Remote service...");
     pRemoteService = pClient->getService(SONY_REMOTE_SERVICE_UUID);
     if (pRemoteService == nullptr)
     {
-        Serial.println("Failed to find Sony Remote service");
+        LOG_PERIPHERAL("[BLE] Failed to find Sony Remote service");
         return false;
     }
 
-    Serial.println("Looking for Remote Control characteristic...");
+    LOG_PERIPHERAL("[BLE] Looking for Remote Control characteristic...");
     pRemoteControlChar = pRemoteService->getCharacteristic(SONY_REMOTE_CONTROL_CHARACTERISTIC_UUID);
     if (pRemoteControlChar == nullptr)
     {
-        Serial.println("Failed to find Remote Control characteristic");
+        LOG_PERIPHERAL("[BLE] Failed to find Remote Control characteristic");
         return false;
     }
 
-    Serial.println("Looking for Remote Status characteristic...");
+    LOG_PERIPHERAL("[BLE] Looking for Remote Status characteristic...");
     pRemoteStatusChar = pRemoteService->getCharacteristic(SONY_REMOTE_STATUS_CHARACTERISTIC_UUID);
     if (pRemoteStatusChar == nullptr)
     {
-        Serial.println("Failed to find Status characteristic");
+        LOG_PERIPHERAL("[BLE] Failed to find Status characteristic");
         return false;
     }
 
-    Serial.println("Registering for status notifications...");
+    LOG_PERIPHERAL("[BLE] Registering for status notifications...");
     if (pRemoteStatusChar->canNotify())
     {
         pRemoteStatusChar->registerForNotify(CameraCommands::onStatusNotification);
     }
 
-    Serial.println("Reading initial camera status...");
+    LOG_PERIPHERAL("[BLE] Reading initial camera status...");
     BLERemoteCharacteristic *pStatusReadChar = pRemoteService->getCharacteristic(SONY_REMOTE_STATUS_READ_CHARACTERISTIC_UUID);
     if (pStatusReadChar && pStatusReadChar->canRead())
     {
@@ -445,7 +446,7 @@ bool BLEDeviceManager::initConnection()
         }
     }
 
-    Serial.println("Connection initialized successfully");
+    LOG_PERIPHERAL("[BLE] Connection initialized successfully");
     return true;
 }
 

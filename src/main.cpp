@@ -3,6 +3,7 @@
 #include "transport/ble_device.h"
 #include "transport/encoder_device.h"
 #include "utils/preferences.h"
+#include "debug.h"
 
 // Global variables for encoder state
 int32_t lastEncoderValue = 0;
@@ -13,7 +14,7 @@ void setup()
     M5.begin(cfg);
 
     Serial.begin(115200);
-    Serial.println("Starting Sony Camera Remote");
+    LOG_APP("Starting Sony Camera Remote");
 
     // Initialize preferences first
     PreferencesManager::init();

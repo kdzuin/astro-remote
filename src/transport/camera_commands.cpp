@@ -1,6 +1,7 @@
 #include "camera_commands.h"
 #include "ble_device.h"
 #include <Arduino.h>
+#include "../debug.h"
 
 namespace CameraCommands
 {
@@ -19,14 +20,14 @@ namespace CameraCommands
     {
         if (!BLEDeviceManager::isConnected())
         {
-            Serial.println("[Camera] Not connected");
+            LOG_PERIPHERAL("[Camera] Not connected");
             return false;
         }
 
         BLERemoteCharacteristic *pChar = BLEDeviceManager::getControlCharacteristic();
         if (!pChar)
         {
-            Serial.println("[Camera] Control characteristic not available");
+            LOG_PERIPHERAL("[Camera] Control characteristic not available");
             return false;
         }
 
@@ -37,23 +38,25 @@ namespace CameraCommands
         };
 
         // Debug output
-        Serial.print("[Camera] Sending command bytes: [");
+        char logText[64];
+        snprintf(logText, sizeof(logText), "[Camera] Sending command 0x%04X: [", cmd);
         for (size_t i = 0; i < sizeof(cmdBuffer); i++)
         {
-            Serial.printf("%02X%s", cmdBuffer[i], i < sizeof(cmdBuffer) - 1 ? " " : "");
+            snprintf(logText + strlen(logText), sizeof(logText) - strlen(logText), "%02X%s", cmdBuffer[i], i < sizeof(cmdBuffer) - 1 ? " " : "");
         }
-        Serial.println("]");
+        strcat(logText, "]");
+        LOG_PERIPHERAL("%s", logText);
 
         // Try writing with response
         try
         {
             pChar->writeValue(cmdBuffer, sizeof(cmdBuffer), true);
-            Serial.printf("[Camera] Command 0x%04X sent successfully\n", cmd);
+            LOG_PERIPHERAL("[Camera] Command 0x%04X sent successfully", cmd);
             return true;
         }
         catch (const std::exception &e)
         {
-            Serial.printf("[Camera] Failed to send command: %s\n", e.what());
+            LOG_PERIPHERAL("[Camera] Failed to send command: %s", e.what());
             return false;
         }
     }
@@ -89,24 +92,24 @@ namespace CameraCommands
     {
         if (newState == Status::RECORD_STARTED)
         {
-            Serial.println("[Camera] Recording started");
+            LOG_PERIPHERAL("[Camera] Recording started");
             recordingStatus = Status::RECORD_STARTED;
         }
         else
         {
-            Serial.println("[Camera] Recording stopped");
+            LOG_PERIPHERAL("[Camera] Recording stopped");
             recordingStatus = Status::RECORD_STOPPED;
         }
     }
 
     bool takePhoto()
     {
-        Serial.println("[Camera] Take photo");
+        LOG_PERIPHERAL("[Camera] Take photo");
 
         // Step 1: Press shutter
         if (!sendCommand16(Cmd::SHUTTER_FULL_DOWN))
         {
-            Serial.println("[Camera] Failed to press shutter");
+            LOG_PERIPHERAL("[Camera] Failed to press shutter");
             return false;
         }
 
@@ -125,22 +128,22 @@ namespace CameraCommands
         // Step 4: Release shutter
         if (!sendCommand16(Cmd::SHUTTER_FULL_UP))
         {
-            Serial.println("[Camera] Failed to release shutter");
+            LOG_PERIPHERAL("[Camera] Failed to release shutter");
             return false;
         }
 
-        Serial.println("[Camera] Photo taken successfully");
+        LOG_PERIPHERAL("[Camera] Photo taken successfully");
         return true;
     };
 
     bool takeBulb()
     {
-        Serial.println("[Camera] Take bulb photo");
+        LOG_PERIPHERAL("[Camera] Take bulb photo");
 
         // Step 1: Press shutter
         if (!sendCommand16(Cmd::SHUTTER_FULL_DOWN))
         {
-            Serial.println("[Camera] Failed to press shutter");
+            LOG_PERIPHERAL("[Camera] Failed to press shutter");
             return false;
         }
 
@@ -153,28 +156,28 @@ namespace CameraCommands
         // Step 4: Release shutter
         if (!sendCommand16(Cmd::SHUTTER_FULL_UP))
         {
-            Serial.println("[Camera] Failed to release shutter");
+            LOG_PERIPHERAL("[Camera] Failed to release shutter");
             return false;
         }
 
-        Serial.println("[Camera] Bulb Start/Stop command successful");
+        LOG_PERIPHERAL("[Camera] Bulb Start/Stop command successful");
         return true;
     };
 
     bool recordStart()
     {
-        Serial.println("[Camera] Starting recording");
+        LOG_PERIPHERAL("[Camera] Starting recording");
         // Press record button
         if (!sendCommand16(Cmd::RECORD_DOWN))
         {
-            Serial.println("[Camera] Failed to start recording - DOWN failed");
+            LOG_PERIPHERAL("[Camera] Failed to start recording - DOWN failed");
             return false;
         }
         delay(100); // Small delay between down and up
         // Release record button
         if (!sendCommand16(Cmd::RECORD_UP))
         {
-            Serial.println("[Camera] Failed to start recording - UP failed");
+            LOG_PERIPHERAL("[Camera] Failed to start recording - UP failed");
             return false;
         }
         return true;
@@ -182,18 +185,18 @@ namespace CameraCommands
 
     bool recordStop()
     {
-        Serial.println("[Camera] Stopping recording");
+        LOG_PERIPHERAL("[Camera] Stopping recording");
         // Press record button again
         if (!sendCommand16(Cmd::RECORD_DOWN))
         {
-            Serial.println("[Camera] Failed to stop recording - DOWN failed");
+            LOG_PERIPHERAL("[Camera] Failed to stop recording - DOWN failed");
             return false;
         }
         delay(100); // Small delay between down and up
         // Release record button
         if (!sendCommand16(Cmd::RECORD_UP))
         {
-            Serial.println("[Camera] Failed to stop recording - UP failed");
+            LOG_PERIPHERAL("[Camera] Failed to stop recording - UP failed");
             return false;
         }
         return true;
@@ -210,7 +213,7 @@ namespace CameraCommands
         currentMode = FocusMode::AUTO_FOCUS;
         lastMessageTime = 0;
 
-        Serial.println("[Camera] Initialized");
+        LOG_PERIPHERAL("[Camera] Initialized");
     }
 
     void update()
@@ -221,7 +224,7 @@ namespace CameraCommands
             lastCheck = millis();
             if (BLEDeviceManager::isConnected() && !statusNotificationEnabled)
             {
-                Serial.println("[Camera] Attempting to re-enable notifications...");
+                LOG_DEBUG("[Camera] Attempting to re-enable notifications...");
                 // Register for status notifications
                 BLERemoteCharacteristic *pChar = BLEDeviceManager::getStatusCharacteristic();
                 if (pChar)
@@ -229,12 +232,12 @@ namespace CameraCommands
                     // Enable notifications explicitly
                     if (pChar->canNotify())
                     {
-                        Serial.println("[Camera] Enabling notifications...");
+                        LOG_DEBUG("[Camera] Enabling notifications...");
 
                         // Try to enable notifications
                         if (!pChar->getDescriptor(BLEUUID((uint16_t)0x2902)))
                         {
-                            Serial.println("[Camera] Warning: Could not find CCCD descriptor");
+                            LOG_DEBUG("[Camera] Warning: Could not find CCCD descriptor");
                         }
 
                         // Register callback and enable
@@ -243,21 +246,21 @@ namespace CameraCommands
                         {
                             pChar->getDescriptor(BLEUUID((uint16_t)0x2902))->writeValue((uint8_t *)"\x01\x00", 2, true);
                             statusNotificationEnabled = true;
-                            Serial.println("[Camera] Status notifications enabled successfully");
+                            LOG_DEBUG("[Camera] Status notifications enabled successfully");
                         }
                         catch (const std::exception &e)
                         {
-                            Serial.printf("[Camera] Failed to enable notifications: %s\n", e.what());
+                            LOG_DEBUG("[Camera] Failed to enable notifications: %s", e.what());
                         }
                     }
                     else
                     {
-                        Serial.println("[Camera] Error: Status characteristic does not support notifications!");
+                        LOG_DEBUG("[Camera] Error: Status characteristic does not support notifications!");
                     }
                 }
                 else
                 {
-                    Serial.println("[Camera] Error: Status characteristic not available!");
+                    LOG_DEBUG("[Camera] Error: Status characteristic not available!");
                 }
             }
         }
@@ -286,14 +289,14 @@ namespace CameraCommands
     void onStatusNotification(BLERemoteCharacteristic *pChar, uint8_t *pData, size_t length, bool isNotify)
     {
         // Debug: Print raw notification data
-        Serial.print("[Camera] Raw notification received from ");
-        Serial.print(pChar->getUUID().toString().c_str());
-        Serial.print(": [");
+        char logText[128];
+        snprintf(logText, sizeof(logText), "[Camera] Raw notification received from %s: [", pChar->getUUID().toString().c_str());
         for (size_t i = 0; i < length; i++)
         {
-            Serial.printf("%02X%s", pData[i], i < length - 1 ? " " : "");
+            snprintf(logText + strlen(logText), sizeof(logText) - strlen(logText), "%02X%s", pData[i], i < length - 1 ? " " : "");
         }
-        Serial.println("]");
+        strcat(logText, "]");
+        LOG_DEBUG("%s", logText);
 
         // Update last message time
         lastMessageTime = millis();
@@ -309,14 +312,14 @@ namespace CameraCommands
             case Status::FOCUS_TYPE: // 0x3F
                 if (statusValue == Status::FOCUS_LOST)
                 {
-                    Serial.println("[Camera] Focus lost");
+                    LOG_PERIPHERAL("[Camera] Focus lost");
                     focusStatus = Status::FOCUS_LOST;
                     // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
                     // M5.Display.drawString("No Focus", 10, 200);
                 }
                 else if (statusValue == Status::FOCUS_ACQUIRED)
                 {
-                    Serial.println("[Camera] Focus acquired");
+                    LOG_PERIPHERAL("[Camera] Focus acquired");
                     focusStatus = Status::FOCUS_ACQUIRED;
                     // M5.Display.setTextColor(M5.Display.color565(0, 255, 0)); // Green
                     // M5.Display.drawString("Focus OK", 10, 200);
@@ -326,12 +329,12 @@ namespace CameraCommands
             case Status::SHUTTER_TYPE: // 0xA0
                 if (statusValue == Status::SHUTTER_READY)
                 {
-                    Serial.println("[Camera] Shutter ready");
+                    LOG_PERIPHERAL("[Camera] Shutter ready");
                     shutterStatus = Status::SHUTTER_READY;
                 }
                 else if (statusValue == Status::SHUTTER_ACTIVE)
                 {
-                    Serial.println("[Camera] Shutter active");
+                    LOG_PERIPHERAL("[Camera] Shutter active");
                     shutterStatus = Status::SHUTTER_ACTIVE;
                     // M5.Display.setTextColor(M5.Display.color565(255, 255, 0)); // Yellow
                     // M5.Display.drawString("*CLICK*", 10, 220);
@@ -341,13 +344,13 @@ namespace CameraCommands
             case Status::RECORD_TYPE: // 0xD5
                 if (statusValue == Status::RECORD_STOPPED)
                 {
-                    Serial.println("[Camera] Recording stopped");
+                    LOG_PERIPHERAL("[Camera] Recording stopped");
                     recordingStatus = Status::RECORD_STOPPED;
                     // M5.Display.fillRect(280, 10, 40, 20, M5.Display.color565(0, 0, 0)); // Clear REC indicator
                 }
                 else if (statusValue == Status::RECORD_STARTED)
                 {
-                    Serial.println("[Camera] Recording started");
+                    LOG_PERIPHERAL("[Camera] Recording started");
                     recordingStatus = Status::RECORD_STARTED;
                     // M5.Display.setTextColor(M5.Display.color565(255, 0, 0)); // Red
                     // M5.Display.drawString("REC", 280, 10);
@@ -355,15 +358,15 @@ namespace CameraCommands
                 break;
 
             default:
-                Serial.printf("[Camera] Unknown status type: 0x%02X value: 0x%02X\n", statusType, statusValue);
+                LOG_DEBUG("[Camera] Unknown status type: 0x%02X value: 0x%02X", statusType, statusValue);
                 break;
             }
         }
         else
         {
             // Just log other notifications for debugging
-            Serial.printf("[Camera] Other notification from %s, length=%d\n",
-                          pChar->getUUID().toString().c_str(), length);
+            LOG_DEBUG("[Camera] Other notification from %s, length=%d",
+                      pChar->getUUID().toString().c_str(), length);
         }
     }
 }

@@ -70,6 +70,7 @@ inline void VideoScreen::update()
     if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
         EncoderDevice::indicateClick();
+        LOG_PERIPHERAL("[VideoScreen] [Encoder|Btn] Confirm Button Clicked");
 
         if (CameraCommands::isRecording() && CameraCommands::recordStop())
         {

@@ -52,15 +52,15 @@ private:
     static bool buttonPressed;
     static bool prevButtonPressed;
     static unsigned long lastButtonChangeTime;
-    static const unsigned long BUTTON_DEBOUNCE = 50; // ms
     static unsigned long pressStartTime;
     static bool clickPending;
     static bool longClickPending;
-    static const unsigned long LONG_PRESS_DURATION = 600; // 1 second
 
     // Constants
-    static const uint8_t PIN_SDA = 32;               // G32
-    static const uint8_t PIN_SCL = 33;               // G33
-    static const uint32_t I2C_FREQ = 100000;         // 100kHz
-    static const unsigned long DEBOUNCE_DELAY = 300; // ms
+    static const uint8_t PIN_SDA = 32;                          // G32
+    static const uint8_t PIN_SCL = 33;                          // G33
+    static const uint32_t I2C_FREQ = 100000;                    // 100kHz
+    static const unsigned long DEBOUNCE_DELAY_ROTATION = 100;   // ms
+    static const unsigned long DEBOUNCE_DELAY_CLICK = 50;       // ms
+    static const unsigned long DEBOUNCE_DELAY_LONG_CLICK = 400; // ms
 };

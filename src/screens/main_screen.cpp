@@ -6,6 +6,7 @@
 #include "manual_screen.h"
 #include "../components/menu_system.h"
 #include "../transport/encoder_device.h"
+#include "../debug.h"
 
 MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
 {
@@ -63,31 +64,35 @@ void MainScreen::drawContent()
 
 void MainScreen::update()
 {
-    static unsigned long lastUpdate = 0;
-    unsigned long now = millis();
-
     EncoderDevice::update();
 
     // Handle encoder rotation
     int16_t delta = EncoderDevice::getDelta();
     if (delta > 0 || M5.BtnB.wasClicked())
     {
+        LOG_DEBUG("[MainScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
+    }
+
+    if (delta < 0)
+    {
+        LOG_DEBUG("[MainScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn] Prev Button Clicked");
+        prevMenuItem();
     }
 
     // Handle clicks
     if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
-        Serial.printf("[MainScreen] Click at %lu\n", now);
+        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn] Confirm Button Clicked");
         selectMenuItem();
     }
-
-    lastUpdate = now;
 }
 
 void MainScreen::selectMenuItem()
 {
-    Serial.printf("[MainScreen] selectMenuItem called at %lu\n", millis());
+    LOG_APP("[MainScreen] selectMenuItem called: %d", menuItems.getSelectedId());
     EncoderDevice::indicateClick();
 
     switch (menuItems.getSelectedId())
@@ -132,7 +137,7 @@ void MainScreen::nextMenuItem()
 
 void MainScreen::prevMenuItem()
 {
-    // menuItems.selectPrev();
+    menuItems.selectPrev();
     EncoderDevice::indicatePrev();
     draw();
 }

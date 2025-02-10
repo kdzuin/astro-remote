@@ -108,12 +108,22 @@ void ScanScreen::update()
     {
         if ((M5.BtnA.wasClicked() || EncoderDevice::wasClicked()) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
+            LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Confirm Button Clicked");
             selectMenuItem();
         }
 
         if ((delta > 0 || M5.BtnB.wasClicked()) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
+            LOG_DEBUG("[ScanScreen] [Encoder] Rotation: %d", delta);
+            LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Next Button Clicked");
             nextMenuItem();
+        }
+
+        if (delta < 0 && !BLEDeviceManager::getDiscoveredDevices().empty())
+        {
+            LOG_DEBUG("[ScanScreen] [Encoder] Rotation: %d", delta);
+            LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Prev Button Clicked");
+            prevMenuItem();
         }
     }
 }
@@ -165,7 +175,7 @@ void ScanScreen::nextMenuItem()
 
 void ScanScreen::prevMenuItem()
 {
-    // menuItems.selectPrev();
+    menuItems.selectPrev();
     EncoderDevice::indicatePrev();
     draw();
 }

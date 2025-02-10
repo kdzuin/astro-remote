@@ -41,6 +41,8 @@ void PhotoScreen::update()
 
     if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
+        LOG_PERIPHERAL("[PhotoScreen] [Encoder|Btn] Confirm Button Clicked");
+
         EncoderDevice::indicateClick();
 
         if (CameraCommands::takePhoto())

@@ -35,7 +35,16 @@ void AstroScreen::update()
 
     if (M5.BtnB.wasClicked() || delta > 0)
     {
+        LOG_DEBUG("[AstroScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
+    }
+
+    if (delta < 0)
+    {
+        LOG_DEBUG("[AstroScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Prev Button Clicked");
+        prevMenuItem();
     }
 
     if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
@@ -59,7 +68,7 @@ void AstroScreen::nextMenuItem()
 
 void AstroScreen::prevMenuItem()
 {
-    // menuItems.selectPrev();
+    menuItems.selectPrev();
     selectedItem = menuItems.getSelectedIndex();
     EncoderDevice::indicatePrev();
     draw();

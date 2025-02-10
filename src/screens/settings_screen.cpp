@@ -55,11 +55,21 @@ void SettingsScreen::update()
     int16_t delta = EncoderDevice::getDelta();
     if (delta > 0 || M5.BtnB.wasClicked())
     {
+        LOG_DEBUG("[SettingsScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[SettingsScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
+    }
+
+    if (delta < 0)
+    {
+        LOG_DEBUG("[SettingsScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[SettingsScreen] [Encoder|Btn] Prev Button Clicked");
+        prevMenuItem();
     }
 
     if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
     {
+        LOG_PERIPHERAL("[SettingsScreen] [Encoder|Btn] Confirm Button Clicked");
         selectMenuItem();
     }
 }
@@ -137,7 +147,7 @@ void SettingsScreen::nextMenuItem()
 
 void SettingsScreen::prevMenuItem()
 {
-    // menuItems.selectPrev();
+    menuItems.selectPrev();
     selectedItem = menuItems.getSelectedIndex();
     EncoderDevice::indicatePrev();
     draw();

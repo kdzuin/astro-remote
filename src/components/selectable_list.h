@@ -23,29 +23,36 @@ public:
     struct Info
     {
         std::string text;
-        uint16_t* color = nullptr;  // nullptr means use current text color
+        uint16_t *color = nullptr; // nullptr means use current text color
 
-        Info(const std::string& infoText) : text(infoText) {}
-        Info(const std::string& infoText, uint16_t infoColor) 
+        Info(const std::string &infoText) : text(infoText) {}
+        Info(const std::string &infoText, uint16_t infoColor)
             : text(infoText), color(new uint16_t(infoColor)) {}
-        
+
         ~Info() { delete color; }
-        
+
         // Copy constructor
-        Info(const Info& other) : text(other.text) {
-            if (other.color) {
+        Info(const Info &other) : text(other.text)
+        {
+            if (other.color)
+            {
                 color = new uint16_t(*other.color);
             }
         }
-        
+
         // Assignment operator
-        Info& operator=(const Info& other) {
-            if (this != &other) {
+        Info &operator=(const Info &other)
+        {
+            if (this != &other)
+            {
                 text = other.text;
                 delete color;
-                if (other.color) {
+                if (other.color)
+                {
                     color = new uint16_t(*other.color);
-                } else {
+                }
+                else
+                {
                     color = nullptr;
                 }
             }
@@ -128,6 +135,7 @@ public:
     bool isEmpty() const;
     size_t size() const;
     bool selectNext();
+    bool selectPrev();
     void draw();
     int getSelectedIndex() const;
 

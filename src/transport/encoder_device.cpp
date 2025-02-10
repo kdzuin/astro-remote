@@ -1,4 +1,5 @@
 #include "encoder_device.h"
+#include "../debug.h"
 
 // Static member initialization
 FairyEncoder EncoderDevice::encoder;
@@ -17,12 +18,12 @@ unsigned long EncoderDevice::pressStartTime = 0;
 
 void EncoderDevice::init()
 {
-    Serial.println("Starting I2C...");
+    LOG_PERIPHERAL("[Encoder] Starting I2C...");
     Wire.begin(PIN_SDA, PIN_SCL);
     Wire.setClock(I2C_FREQ);
     delay(100); // Give I2C time to stabilize
 
-    Serial.println("Initializing encoder...");
+    LOG_PERIPHERAL("[Encoder] Initializing encoder...");
     encoder.begin();
     delay(100); // Give encoder time to initialize
 
@@ -32,32 +33,27 @@ void EncoderDevice::init()
 
     // Check if encoder is available
     available = encoder.avail();
-    Serial.print("Encoder available: ");
-    Serial.println(available ? "YES" : "NO");
+    LOG_PERIPHERAL("[Encoder] Encoder available: %s", available ? "YES" : "NO");
 
     if (available)
     {
-        Serial.println("Encoder initialized successfully");
+        LOG_PERIPHERAL("[Encoder] Encoder initialized successfully");
         setLED(0x000000); // LED off initially
 
         // Initialize button state (inverted: true = pressed, false = released)
         lastButtonState = !encoder.getButtonStatus();
-        Serial.print("Initial button state: ");
-        Serial.println(lastButtonState ? "PRESSED" : "RELEASED");
+        LOG_DEBUG("[Encoder] Initial button state: %s", lastButtonState ? "PRESSED" : "RELEASED");
     }
     else
     {
-        Serial.println("Encoder not found - scanning I2C bus...");
+        LOG_PERIPHERAL("[Encoder] Encoder not found - scanning I2C bus...");
         for (byte i = 8; i < 120; i++)
         {
             Wire.beginTransmission(i);
             byte error = Wire.endTransmission();
             if (error == 0)
             {
-                Serial.print("I2C device found at address 0x");
-                if (i < 16)
-                    Serial.print("0");
-                Serial.println(i, HEX);
+                LOG_PERIPHERAL("[Encoder] I2C device found at address 0x%02X", i);
             }
         }
     }
@@ -76,6 +72,7 @@ void EncoderDevice::update()
     {
         accumulatedDelta += delta;
         lastActivityTime = millis();
+        LOG_DEBUG("[Encoder] Encoder delta: %d", delta);
     }
 
     // Button state tracking
@@ -84,11 +81,11 @@ void EncoderDevice::update()
 
     if (buttonRawState != lastRawState)
     {
-        if (millis() - lastButtonChangeTime > BUTTON_DEBOUNCE)
+        if (millis() - lastButtonChangeTime > DEBOUNCE_DELAY_CLICK)
         {
-            Serial.printf("[Encoder] State change: %s at %lu\n",
-                          buttonRawState ? "PRESSED" : "RELEASED",
-                          millis());
+            LOG_DEBUG("[Encoder] State change: %s at %lu",
+                      buttonRawState ? "PRESSED" : "RELEASED",
+                      millis());
 
             if (buttonRawState)
             { // Press
@@ -99,17 +96,17 @@ void EncoderDevice::update()
             else
             { // Release
                 unsigned long pressDuration = millis() - pressStartTime;
-                Serial.printf("[Encoder] Button held for %lu ms\n", pressDuration);
+                LOG_DEBUG("[Encoder] Button held for %lu ms", pressDuration);
 
-                if (pressDuration >= LONG_PRESS_DURATION)
+                if (pressDuration >= DEBOUNCE_DELAY_LONG_CLICK)
                 {
                     longClickPending = true;
-                    Serial.println("[Encoder] Long click detected");
+                    LOG_DEBUG("[Encoder] Long click detected");
                 }
                 else
                 {
                     clickPending = true;
-                    Serial.println("[Encoder] Short click detected");
+                    LOG_DEBUG("[Encoder] Short click detected");
                 }
 
                 buttonPressed = false;
@@ -127,7 +124,7 @@ bool EncoderDevice::wasClicked()
     if (clickPending)
     {
         clickPending = false;
-        Serial.printf("[Encoder] Click event fired at %lu\n", millis());
+        LOG_PERIPHERAL("[Encoder] Click event fired at %lu", millis());
         indicateClick();
         return true;
     }
@@ -139,8 +136,8 @@ bool EncoderDevice::wasLongClicked()
     if (longClickPending)
     {
         longClickPending = false;
-        Serial.printf("[Encoder] Long click event fired at %lu\n", millis());
-        indicateClick(); // Maybe use a different indication for long clicks?
+        LOG_PERIPHERAL("[Encoder] Long click event fired at %lu", millis());
+        indicateClick();
         return true;
     }
     return false;
@@ -207,7 +204,7 @@ void EncoderDevice::resetAccumulatedDelta()
 
 bool EncoderDevice::hasDebouncedEvent()
 {
-    return (millis() - lastActivityTime) > DEBOUNCE_DELAY &&
+    return (millis() - lastActivityTime) > DEBOUNCE_DELAY_ROTATION &&
            accumulatedDelta != 0;
 }
 

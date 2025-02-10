@@ -17,7 +17,16 @@ void ManualScreen::update()
     int16_t delta = EncoderDevice::getDelta();
     if (delta > 0 || M5.BtnB.wasClicked())
     {
+        LOG_DEBUG("[ManualScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[ManualScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
+    }
+
+    if (delta < 0)
+    {
+        LOG_DEBUG("[ManualScreen] [Encoder] Rotation: %d", delta);
+        LOG_PERIPHERAL("[ManualScreen] [Encoder|Btn] Prev Button Clicked");
+        prevMenuItem();
     }
 
     if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
@@ -84,7 +93,7 @@ void ManualScreen::nextMenuItem()
 
 void ManualScreen::prevMenuItem()
 {
-    // menuItems.selectPrev();
+    menuItems.selectPrev();
     selectedItem = menuItems.getSelectedIndex();
     EncoderDevice::indicatePrev();
     draw();

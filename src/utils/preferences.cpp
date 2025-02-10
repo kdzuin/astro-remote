@@ -1,42 +1,43 @@
 #include "preferences.h"
+#include "../debug.h"
 
 Preferences PreferencesManager::preferences;
 
 void PreferencesManager::init()
 {
     bool success = preferences.begin(NAMESPACE, false);
-    Serial.printf("Preferences init: %s\n", success ? "OK" : "FAILED");
+    LOG_DEBUG("[Preferences] Preferences init: %s\n", success ? "OK" : "FAILED");
 }
 
 void PreferencesManager::end()
 {
     preferences.end();
-    Serial.println("Preferences ended");
+    LOG_DEBUG("[Preferences] Preferences ended");
 }
 
 void PreferencesManager::setBrightness(uint8_t brightness)
 {
     size_t written = preferences.putUChar(KEY_BRIGHTNESS, brightness);
-    Serial.printf("Saving brightness: %d (written: %d bytes)\n", brightness, written);
+    LOG_DEBUG("[Preferences] Saving brightness: %d (written: %d bytes)\n", brightness, written);
 }
 
 uint8_t PreferencesManager::getBrightness()
 {
     uint8_t value = preferences.getUChar(KEY_BRIGHTNESS, DEFAULT_BRIGHTNESS);
-    Serial.printf("Loading brightness: %d (default: %d)\n", value, DEFAULT_BRIGHTNESS);
+    LOG_DEBUG("[Preferences] Loading brightness: %d (default: %d)\n", value, DEFAULT_BRIGHTNESS);
     return value;
 }
 
 void PreferencesManager::setAutoConnect(bool enabled)
 {
     size_t written = preferences.putBool(KEY_AUTO_CONNECT, enabled);
-    Serial.printf("Saving autoconnect: %d (written: %d bytes)\n", enabled, written);
+    LOG_DEBUG("[Preferences] Saving autoconnect: %d (written: %d bytes)\n", enabled, written);
 }
 
 bool PreferencesManager::getAutoConnect()
 {
     bool value = preferences.getBool(KEY_AUTO_CONNECT, DEFAULT_AUTO_CONNECT);
-    Serial.printf("Loading autoconnect: %d (default: %d)\n", value, DEFAULT_AUTO_CONNECT);
+    LOG_DEBUG("[Preferences] Loading autoconnect: %d (default: %d)\n", value, DEFAULT_AUTO_CONNECT);
     return value;
 }
 
