@@ -5,6 +5,7 @@
 
 enum class AstroMenuItem
 {
+    Focus,
     InitialDelay,
     ExposureTime,
     NumberOfExposures,

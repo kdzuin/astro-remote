@@ -1,5 +1,7 @@
 #include "astro_screen.h"
 #include "../transport/encoder_device.h"
+#include "focus_screen.h"
+#include "../components/menu_system.h"
 
 AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro")
 {
@@ -12,7 +14,7 @@ AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro")
 void AstroScreen::updateMenuItems()
 {
     menuItems.clear();
-
+    menuItems.addItem(AstroMenuItem::Focus, "Focus");
     menuItems.addItem(AstroMenuItem::InitialDelay, "Delay");
     menuItems.addItem(AstroMenuItem::ExposureTime, "Exp");
     menuItems.addItem(AstroMenuItem::NumberOfExposures, "Subs");
@@ -56,6 +58,34 @@ void AstroScreen::update()
 void AstroScreen::selectMenuItem()
 {
     EncoderDevice::indicateClick();
+    switch (menuItems.getSelectedId())
+    {
+    case AstroMenuItem::Focus:
+        LOG_PERIPHERAL("[AstroScreen] Select Focus");
+        MenuSystem::setScreen(new FocusScreen());
+        break;
+    case AstroMenuItem::InitialDelay:
+        LOG_PERIPHERAL("[AstroScreen] Select Initial Delay");
+        break;
+    case AstroMenuItem::ExposureTime:
+        LOG_PERIPHERAL("[AstroScreen] Select Exposure Time");
+        break;
+    case AstroMenuItem::NumberOfExposures:
+        LOG_PERIPHERAL("[AstroScreen] Select Number of Exposures");
+        break;
+    case AstroMenuItem::DelayBetweenExposures:
+        LOG_PERIPHERAL("[AstroScreen] Select Delay Between Exposures");
+        break;
+    case AstroMenuItem::Start:
+        LOG_PERIPHERAL("[AstroScreen] Start");
+        break;
+    case AstroMenuItem::Pause:
+        LOG_PERIPHERAL("[AstroScreen] Pause");
+        break;
+    case AstroMenuItem::Stop:
+        LOG_PERIPHERAL("[AstroScreen] Stop");
+        break;
+    }
 }
 
 void AstroScreen::nextMenuItem()

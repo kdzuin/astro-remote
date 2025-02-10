@@ -25,13 +25,13 @@ namespace CameraCommands
         constexpr uint16_t C1_UP = 0x0120;   // Release C1
         constexpr uint16_t C1_DOWN = 0x0121; // Press C1
 
-        // Zoom control (add parameter 0x00-0x0F for release, 0x10-0x8F for press)
+        // Zoom control (add parameter 0x00~0x0f for release, 0x10-0x8F for press)
         constexpr uint16_t ZOOM_TELE_RELEASE = 0x0244; // Release zoom tele
         constexpr uint16_t ZOOM_TELE_PRESS = 0x0245;   // Press zoom tele
         constexpr uint16_t ZOOM_WIDE_RELEASE = 0x0246; // Release zoom wide
         constexpr uint16_t ZOOM_WIDE_PRESS = 0x0247;   // Press zoom wide
 
-        // Manual focus control
+        // Manual focus control (add parameter 0x00~0x0f for release, 0x10-0x7F for press)
         constexpr uint16_t FOCUS_IN_RELEASE = 0x026a;  // Focus In Up
         constexpr uint16_t FOCUS_IN_PRESS = 0x026b;    // Focus In Down
         constexpr uint16_t FOCUS_OUT_RELEASE = 0x026c; // Focus Out Up
