@@ -242,7 +242,7 @@ namespace CameraCommands
         return true;
     }
 
-    bool zoomOut(uint8_t amount)
+    bool zoomOut(uint8_t sensitivity)
     {
         // Send zoom out press command
         if (!sendCommand24(Cmd::ZOOM_WIDE_PRESS, 0x7f))
@@ -251,7 +251,7 @@ namespace CameraCommands
             return false;
         }
 
-        delay(300); // Small delay to ensure command is processed
+        delay(300); // This delay determines the length of the change with the specified sensitivity
 
         // Send zoom out release command
         if (!sendCommand24(Cmd::ZOOM_WIDE_RELEASE, 0x00))
@@ -263,7 +263,7 @@ namespace CameraCommands
         return true;
     }
 
-    bool zoomIn(uint8_t amount)
+    bool zoomIn(uint8_t sensitivity)
     {
         // Send zoom in press command
         if (!sendCommand24(Cmd::ZOOM_TELE_PRESS, 0x7f))
@@ -272,7 +272,7 @@ namespace CameraCommands
             return false;
         }
 
-        delay(300); // Small delay to ensure command is processed
+        delay(300); // This delay determines the length of the change with the specified sensitivity
 
         // Send zoom in release command
         if (!sendCommand24(Cmd::ZOOM_TELE_RELEASE, 0x00))
@@ -284,17 +284,23 @@ namespace CameraCommands
         return true;
     }
 
-    bool focusIn(uint8_t amount)
+    bool focusIn(uint8_t sensitivity)
     {
         LOG_PERIPHERAL("[Camera] Sending focus in command");
 
-        if (!sendCommand24(Cmd::FOCUS_IN_PRESS, 0x7f))
+        if (!sendCommand16(Cmd::SHUTTER_HALF_DOWN))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send Shutter Half Down command");
+            return false;
+        }
+
+        if (!sendCommand24(Cmd::FOCUS_IN_PRESS, sensitivity))
         {
             LOG_PERIPHERAL("[Camera] Failed to send focus in press command");
             return false;
         }
 
-        delay(300);
+        delay(300); // This delay determines the length of the change with the specified sensitivity
 
         if (!sendCommand24(Cmd::FOCUS_IN_RELEASE, 0x00))
         {
@@ -302,24 +308,42 @@ namespace CameraCommands
             return false;
         }
 
+        if (!sendCommand16(Cmd::SHUTTER_HALF_UP))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send Shutter Half Up command");
+            return false;
+        }
+
         return true;
     }
 
-    bool focusOut(uint8_t amount)
+    bool focusOut(uint8_t sensitivity)
     {
         LOG_PERIPHERAL("[Camera] Sending focus out command");
 
-        if (!sendCommand24(Cmd::FOCUS_OUT_PRESS, 0x7f))
+        if (!sendCommand16(Cmd::SHUTTER_HALF_DOWN))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send Shutter Half Down command");
+            return false;
+        }
+
+        if (!sendCommand24(Cmd::FOCUS_OUT_PRESS, sensitivity))
         {
             LOG_PERIPHERAL("[Camera] Failed to send focus out press command");
             return false;
         }
 
-        delay(300);
+        delay(300); // This delay determines the length of the change with the specified sensitivity
 
         if (!sendCommand24(Cmd::FOCUS_OUT_RELEASE, 0x00))
         {
             LOG_PERIPHERAL("[Camera] Failed to send focus out release command");
+            return false;
+        }
+
+        if (!sendCommand16(Cmd::SHUTTER_HALF_UP))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send Shutter Half Up command");
             return false;
         }
 

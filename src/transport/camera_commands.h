@@ -76,12 +76,12 @@ namespace CameraCommands
     bool isRecording();
 
     // Focus control functions
-    bool focusIn(uint8_t amount = 0x25);  // amount: 0x10 (min) to 0x7F (max)
-    bool focusOut(uint8_t amount = 0x25); // amount: 0x10 (min) to 0x7F (max)
+    bool focusIn(uint8_t sensitivity = 0x25);  // sensitivity: 0x10 (min) to 0x7F (max)
+    bool focusOut(uint8_t sensitivity = 0x25); // sensitivity: 0x10 (min) to 0x7F (max)
 
     // Zoom control functions
-    bool zoomIn(uint8_t amount = 0x10);  // amount: 0x10 (min) to 0x7F (max)
-    bool zoomOut(uint8_t amount = 0x10); // amount: 0x10 (min) to 0x7F (max)
+    bool zoomIn(uint8_t sensitivity = 0x10);  // sensitivity: 0x10 (min) to 0x7F (max)
+    bool zoomOut(uint8_t sensitivity = 0x10); // sensitivity: 0x10 (min) to 0x7F (max)
 
     // Status notification handler
     void onStatusNotification(BLERemoteCharacteristic *pChar, uint8_t *pData, size_t length, bool isNotify);

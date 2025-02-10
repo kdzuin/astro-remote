@@ -91,10 +91,10 @@ void ManualScreen::selectMenuItem()
         CameraCommands::zoomOut(0x70);
         break;
     case ManualMenuItem::FocusIn:
-        CameraCommands::focusIn(0x70);
+        CameraCommands::focusIn(0x10);
         break;
     case ManualMenuItem::FocusOut:
-        CameraCommands::focusOut(0x70);
+        CameraCommands::focusOut(0x10);
         break;
     }
 }
