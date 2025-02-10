@@ -5,9 +5,6 @@
 #include "../transport/camera_commands.h"
 #include "../transport/encoder_device.h"
 
-// Forward declarations
-// class CameraCommands;
-
 enum class FocusSensitivity : uint8_t
 {
     Fine = 0x10,
