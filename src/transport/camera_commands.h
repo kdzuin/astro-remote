@@ -76,8 +76,8 @@ namespace CameraCommands
     bool isRecording();
 
     // Focus control functions
-    bool focusIn(uint8_t amount = 0x10);  // amount: 0x10 (min) to 0x7F (max)
-    bool focusOut(uint8_t amount = 0x10); // amount: 0x10 (min) to 0x7F (max)
+    bool focusIn(uint8_t amount = 0x25);  // amount: 0x10 (min) to 0x7F (max)
+    bool focusOut(uint8_t amount = 0x25); // amount: 0x10 (min) to 0x7F (max)
 
     // Zoom control functions
     bool zoomIn(uint8_t amount = 0x10);  // amount: 0x10 (min) to 0x7F (max)
@@ -92,4 +92,6 @@ namespace CameraCommands
     void handleFocusStateChange(uint8_t prevState, uint8_t newState);
     void handleShutterStateChange(uint8_t prevState, uint8_t newState);
     void handleRecordingStateChange(uint8_t prevState, uint8_t newState);
+
+    bool emergencyStop();
 };

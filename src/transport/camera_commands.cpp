@@ -254,7 +254,7 @@ namespace CameraCommands
         delay(300); // Small delay to ensure command is processed
 
         // Send zoom out release command
-        if (!sendCommand24(Cmd::ZOOM_WIDE_RELEASE, 0x0f))
+        if (!sendCommand24(Cmd::ZOOM_WIDE_RELEASE, 0x00))
         {
             LOG_PERIPHERAL("[Camera] Failed to send zoom out release command");
             return false;
@@ -275,7 +275,7 @@ namespace CameraCommands
         delay(300); // Small delay to ensure command is processed
 
         // Send zoom in release command
-        if (!sendCommand24(Cmd::ZOOM_TELE_RELEASE, 0x0f))
+        if (!sendCommand24(Cmd::ZOOM_TELE_RELEASE, 0x00))
         {
             LOG_PERIPHERAL("[Camera] Failed to send zoom in release command");
             return false;
@@ -284,19 +284,40 @@ namespace CameraCommands
         return true;
     }
 
+    bool focusIn(uint8_t amount)
+    {
+        LOG_PERIPHERAL("[Camera] Sending focus in command");
+
+        if (!sendCommand24(Cmd::FOCUS_IN_PRESS, 0x7f))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send focus in press command");
+            return false;
+        }
+
+        delay(300);
+
+        if (!sendCommand24(Cmd::FOCUS_IN_RELEASE, 0x00))
+        {
+            LOG_PERIPHERAL("[Camera] Failed to send focus in release command");
+            return false;
+        }
+
+        return true;
+    }
+
     bool focusOut(uint8_t amount)
     {
-        // Send zoom out press command
+        LOG_PERIPHERAL("[Camera] Sending focus out command");
+
         if (!sendCommand24(Cmd::FOCUS_OUT_PRESS, 0x7f))
         {
             LOG_PERIPHERAL("[Camera] Failed to send focus out press command");
             return false;
         }
 
-        delay(300); // Small delay to ensure command is processed
+        delay(300);
 
-        // Send zoom out release command
-        if (!sendCommand24(Cmd::FOCUS_OUT_RELEASE, 0x0f))
+        if (!sendCommand24(Cmd::FOCUS_OUT_RELEASE, 0x00))
         {
             LOG_PERIPHERAL("[Camera] Failed to send focus out release command");
             return false;
@@ -305,22 +326,31 @@ namespace CameraCommands
         return true;
     }
 
-    bool focusIn(uint8_t amount)
+    // Emergency stop for zoom/focus
+    bool emergencyStop()
     {
-        // Send zoom in press command
-        if (!sendCommand24(Cmd::FOCUS_IN_PRESS, 0x7f))
-        {
-            LOG_PERIPHERAL("[Camera] Failed to send focus in press command");
-            return false;
-        }
+        LOG_PERIPHERAL("[Camera] Emergency stop - sending all possible release commands");
 
-        delay(300); // Small delay to ensure command is processed
+        // Send all possible release commands
+        const uint16_t RELEASE_COMMANDS[] = {
+            Cmd::SHUTTER_HALF_UP,
+            Cmd::SHUTTER_FULL_UP,
+            Cmd::RECORD_UP,
+            Cmd::AF_ON_UP,
+            Cmd::C1_UP,
+            Cmd::ZOOM_TELE_RELEASE,
+            Cmd::ZOOM_WIDE_RELEASE,
+            Cmd::FOCUS_IN_RELEASE,
+            Cmd::FOCUS_OUT_RELEASE};
 
-        // Send zoom in release command
-        if (!sendCommand24(Cmd::FOCUS_IN_RELEASE, 0x0f))
+        for (uint16_t cmd : RELEASE_COMMANDS)
         {
-            LOG_PERIPHERAL("[Camera] Failed to send focus in release command");
-            return false;
+            LOG_PERIPHERAL("[Camera] Sending release command 0x%04X", cmd);
+            if (!sendCommand24(cmd, 0x00))
+            {
+                LOG_PERIPHERAL("[Camera] Failed to send release command");
+            }
+            delay(100);
         }
 
         return true;
