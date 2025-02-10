@@ -101,6 +101,7 @@ void EncoderDevice::update()
                 if (pressDuration >= DEBOUNCE_DELAY_LONG_CLICK)
                 {
                     longClickPending = true;
+                    resetAccumulatedDelta(); // Reset any accumulated rotation when long click is detected
                     LOG_DEBUG("[Encoder] Long click detected");
                 }
                 else
@@ -227,7 +228,7 @@ void EncoderDevice::indicateNext()
 {
     if (available)
     {
-        setLED(0x00FF00);
+        setLED(0x001000);
         delay(50);
         setLED(0x000000);
     }
@@ -237,7 +238,7 @@ void EncoderDevice::indicatePrev()
 {
     if (available)
     {
-        setLED(0x0000FF);
+        setLED(0x000010);
         delay(50);
         setLED(0x000000);
     }
@@ -247,7 +248,7 @@ void EncoderDevice::indicateClick()
 {
     if (available)
     {
-        setLED(0xFF0000);
+        setLED(0x100000);
         delay(50);
         setLED(0x000000);
     }
