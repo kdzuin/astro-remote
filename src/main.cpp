@@ -1,6 +1,7 @@
 #include <M5Unified.h>
 #include "components/menu_system.h"
 #include "transport/ble_device.h"
+#include "transport/ble_remote_server.h"
 #include "transport/encoder_device.h"
 #include "utils/preferences.h"
 #include "debug.h"
@@ -34,8 +35,38 @@ void setup()
     M5.Display.setTextSize(1.25);
     M5.Display.setBrightness(PreferencesManager::getBrightness());
 
+    // Initialize BLE components
     BLEDeviceManager::setAutoConnect(PreferencesManager::getAutoConnect());
     BLEDeviceManager::init();
+
+    // Initialize BLE Remote Server
+    BLERemoteServer::init("M5Remote");
+    BLERemoteServer::setCommandCallback([](RemoteCommand cmd, const uint8_t *params, size_t paramCount)
+                                        {
+        if (cmd == RemoteCommand::BUTTON_DOWN || cmd == RemoteCommand::BUTTON_UP) {
+            ButtonId button = static_cast<ButtonId>(params[0]);
+            bool isDown = (cmd == RemoteCommand::BUTTON_DOWN);
+            
+            switch (button) {
+                case ButtonId::CONFIRM:
+                    if (isDown) {
+                        // Simulate BtnA press
+                        LOG_PERIPHERAL("[MainScreen] [BLE_CONTROL] Confirm Button Clicked");
+                    }
+                    return CommandStatus::SUCCESS;
+                    
+                case ButtonId::BACK:
+                    if (isDown) {
+                        // Simulate Power button press
+                        LOG_PERIPHERAL("[MainScreen] [BLE_CONTROL] Back Button Clicked");
+                    }
+                    return CommandStatus::SUCCESS;
+                    
+                default:
+                    return CommandStatus::INVALID;
+            }
+        }
+        return CommandStatus::INVALID; });
 
     MenuSystem::init();
 }

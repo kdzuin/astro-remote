@@ -5,7 +5,12 @@
     "*.tcc": "cpp",
     "cmath": "cpp",
     "*.tpp": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "fstream": "cpp",
+    "istream": "cpp",
+    "ostream": "cpp",
+    "sstream": "cpp"
   },
   "cSpell.customDictionaries": {
     "custom-dictionary-workspace": {

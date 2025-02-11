@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M5 Remote Control</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .button-group {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background-color: #e6ffe6; color: #006600; }
+        .error { background-color: #ffe6e6; color: #660000; }
+        .info { background-color: #e6f3ff; color: #003366; }
+    </style>
+</head>
+<body>
+    <h1>M5 Remote Control</h1>
+    
+    <div class="button-group">
+        <button id="scanButton">Scan for Devices</button>
+        <button id="disconnectButton" disabled>Disconnect</button>
+    </div>
+
+    <div id="status" class="info">Ready to scan for devices.</div>
+
+    <div id="deviceList"></div>
+
+    <div class="button-group">
+        <button id="confirmButton" disabled>Send Confirm (Button A)</button>
+    </div>
+
+    <script src="ble.js"></script>
+</body>
+</html>

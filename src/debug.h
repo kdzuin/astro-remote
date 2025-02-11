@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 enum class DebugLevel
 {
     APP = 0,         // Application level (default)
