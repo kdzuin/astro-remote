@@ -41,32 +41,7 @@ void setup()
 
     // Initialize BLE Remote Server
     BLERemoteServer::init("M5Remote");
-    BLERemoteServer::setCommandCallback([](RemoteCommand cmd, const uint8_t *params, size_t paramCount)
-                                        {
-        if (cmd == RemoteCommand::BUTTON_DOWN || cmd == RemoteCommand::BUTTON_UP) {
-            ButtonId button = static_cast<ButtonId>(params[0]);
-            bool isDown = (cmd == RemoteCommand::BUTTON_DOWN);
-            
-            switch (button) {
-                case ButtonId::CONFIRM:
-                    if (isDown) {
-                        // Simulate BtnA press
-                        LOG_PERIPHERAL("[MainScreen] [BLE_CONTROL] Confirm Button Clicked");
-                    }
-                    return CommandStatus::SUCCESS;
-                    
-                case ButtonId::BACK:
-                    if (isDown) {
-                        // Simulate Power button press
-                        LOG_PERIPHERAL("[MainScreen] [BLE_CONTROL] Back Button Clicked");
-                    }
-                    return CommandStatus::SUCCESS;
-                    
-                default:
-                    return CommandStatus::INVALID;
-            }
-        }
-        return CommandStatus::INVALID; });
+    RemoteControlManager::init();
 
     MenuSystem::init();
 }
@@ -78,7 +53,8 @@ void loop()
         EncoderDevice::update();
     }
 
-    BLEDeviceManager::update(); // Update BLE state
-    MenuSystem::update();       // This will handle M5.update() internally
-    delay(10);                  // Small delay to prevent tight loop
+    BLEDeviceManager::update();     // Update BLE state
+    RemoteControlManager::update(); // Update remote control state (BLE connection from app)
+    MenuSystem::update();           // This will handle M5.update() internally
+    delay(10);                      // Small delay to prevent tight loop
 }

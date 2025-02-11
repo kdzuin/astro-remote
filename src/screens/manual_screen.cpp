@@ -2,6 +2,7 @@
 #include "../components/menu_system.h"
 #include "../transport/camera_commands.h"
 #include "../transport/encoder_device.h"
+#include "../transport/remote_control_manager.h"
 
 ManualScreen::ManualScreen() : BaseScreen("Manual")
 {
@@ -15,21 +16,21 @@ void ManualScreen::update()
     EncoderDevice::update();
 
     int16_t delta = EncoderDevice::getDelta();
-    if (delta > 0 || M5.BtnB.wasClicked())
+    if (delta > 0 || M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
     {
         LOG_DEBUG("[ManualScreen] [Encoder] Rotation: %d", delta);
         LOG_PERIPHERAL("[ManualScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
     }
 
-    if (delta < 0)
+    if (delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP))
     {
         LOG_DEBUG("[ManualScreen] [Encoder] Rotation: %d", delta);
         LOG_PERIPHERAL("[ManualScreen] [Encoder|Btn] Prev Button Clicked");
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
         selectMenuItem();
     }

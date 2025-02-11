@@ -2,6 +2,7 @@
 #include "scan_screen.h"
 #include "../utils/preferences.h"
 #include "../transport/encoder_device.h"
+#include "../transport/remote_control_manager.h"
 
 SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings")
 {
@@ -53,21 +54,21 @@ void SettingsScreen::update()
     EncoderDevice::update();
 
     int16_t delta = EncoderDevice::getDelta();
-    if (delta > 0 || M5.BtnB.wasClicked())
+    if (delta > 0 || M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
     {
         LOG_DEBUG("[SettingsScreen] [Encoder] Rotation: %d", delta);
         LOG_PERIPHERAL("[SettingsScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
     }
 
-    if (delta < 0)
+    if (delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP))
     {
         LOG_DEBUG("[SettingsScreen] [Encoder] Rotation: %d", delta);
         LOG_PERIPHERAL("[SettingsScreen] [Encoder|Btn] Prev Button Clicked");
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
         LOG_PERIPHERAL("[SettingsScreen] [Encoder|Btn] Confirm Button Clicked");
         selectMenuItem();

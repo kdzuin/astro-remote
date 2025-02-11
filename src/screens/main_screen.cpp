@@ -4,9 +4,10 @@
 #include "astro_screen.h"
 #include "settings_screen.h"
 #include "manual_screen.h"
-#include "../components/menu_system.h"
-#include "../transport/encoder_device.h"
 #include "../debug.h"
+#include "../transport/encoder_device.h"
+#include "../transport/remote_control_manager.h"
+#include "../components/menu_system.h"
 
 MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
 {
@@ -68,24 +69,24 @@ void MainScreen::update()
 
     // Handle encoder rotation
     int16_t delta = EncoderDevice::getDelta();
-    if (delta > 0 || M5.BtnB.wasClicked())
+    if (delta > 0 || M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
     {
         LOG_DEBUG("[MainScreen] [Encoder] Rotation: %d", delta);
-        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn] Next Button Clicked");
+        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn|BLE] Next Button Clicked");
         nextMenuItem();
     }
 
-    if (delta < 0)
+    if (delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP))
     {
         LOG_DEBUG("[MainScreen] [Encoder] Rotation: %d", delta);
-        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn] Prev Button Clicked");
+        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn|BLE] Prev Button Clicked");
         prevMenuItem();
     }
 
     // Handle clicks
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
-        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn] Confirm Button Clicked");
+        LOG_PERIPHERAL("[MainScreen] [Encoder|Btn|BLE] Confirm Button Clicked");
         selectMenuItem();
     }
 }

@@ -1,5 +1,6 @@
 #include "photo_screen.h"
 #include "../transport/encoder_device.h"
+#include "../transport/remote_control_manager.h"
 
 PhotoScreen::PhotoScreen() : BaseScreen<PhotoMenuItem>("Photo"), photoCount(0), flashStartTime(0)
 {
@@ -39,7 +40,7 @@ void PhotoScreen::update()
 {
     EncoderDevice::update();
 
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
         LOG_PERIPHERAL("[PhotoScreen] [Encoder|Btn] Confirm Button Clicked");
 

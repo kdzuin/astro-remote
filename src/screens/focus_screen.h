@@ -4,6 +4,7 @@
 #include "base_screen.h"
 #include "../transport/camera_commands.h"
 #include "../transport/encoder_device.h"
+#include "../transport/remote_control_manager.h"
 
 enum class FocusSensitivity : uint8_t
 {
@@ -84,14 +85,14 @@ inline void FocusScreen::drawContent()
 
 inline void FocusScreen::update()
 {
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
         EncoderDevice::indicateClick();
         LOG_APP("[FocusScreen] Toggle focus mode");
         updateFocusState(!focusing);
         draw();
     }
-    else if (M5.BtnB.wasClicked())
+    else if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN) || RemoteControlManager::wasButtonPressed(ButtonId::UP))
     {
         LOG_APP("[FocusScreen] Cycle sensitivity");
         cycleSensitivity();
@@ -99,10 +100,18 @@ inline void FocusScreen::update()
     }
 
     // Handle encoder rotation for focus when in focus mode
-    if (focusing && EncoderDevice::hasDebouncedEvent())
+    if (focusing && (EncoderDevice::hasDebouncedEvent() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN) || RemoteControlManager::wasButtonPressed(ButtonId::UP)))
     {
         int32_t rotation = EncoderDevice::getAccumulatedDelta();
-        if (rotation != 0)
+        if (rotation == 0 && RemoteControlManager::wasButtonPressed(ButtonId::UP))
+        {
+            rotation = 1;
+        }
+        else if (rotation == 0 && RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
+        {
+            rotation = -1;
+        }
+        else if (rotation != 0)
         {
             handleFocus(rotation);
             EncoderDevice::resetAccumulatedDelta();

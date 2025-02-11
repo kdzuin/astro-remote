@@ -2,6 +2,7 @@
 #include "../transport/encoder_device.h"
 #include "focus_screen.h"
 #include "../components/menu_system.h"
+#include "../transport/remote_control_manager.h"
 
 AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro")
 {
@@ -35,22 +36,23 @@ void AstroScreen::update()
     EncoderDevice::update();
     int16_t delta = EncoderDevice::getDelta();
 
-    if (M5.BtnB.wasClicked() || delta > 0)
+    if (M5.BtnB.wasClicked() || delta > 0 || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
     {
         LOG_DEBUG("[AstroScreen] [Encoder] Rotation: %d", delta);
         LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Next Button Clicked");
         nextMenuItem();
     }
 
-    if (delta < 0)
+    if (delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP))
     {
         LOG_DEBUG("[AstroScreen] [Encoder] Rotation: %d", delta);
         LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Prev Button Clicked");
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked())
+    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
+        LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Confirm Button Clicked");
         selectMenuItem();
     }
 }

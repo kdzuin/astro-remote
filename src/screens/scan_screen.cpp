@@ -1,5 +1,6 @@
 #include "scan_screen.h"
 #include "../transport/encoder_device.h"
+#include "../transport/remote_control_manager.h"
 
 ScanScreen::ScanScreen()
     : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false)
@@ -106,20 +107,20 @@ void ScanScreen::update()
 
     if (!BLEDeviceManager::isScanning() && !isConnecting)
     {
-        if ((M5.BtnA.wasClicked() || EncoderDevice::wasClicked()) && !BLEDeviceManager::getDiscoveredDevices().empty())
+        if ((M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
             LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Confirm Button Clicked");
             selectMenuItem();
         }
 
-        if ((delta > 0 || M5.BtnB.wasClicked()) && !BLEDeviceManager::getDiscoveredDevices().empty())
+        if ((delta > 0 || M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
             LOG_DEBUG("[ScanScreen] [Encoder] Rotation: %d", delta);
             LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Next Button Clicked");
             nextMenuItem();
         }
 
-        if (delta < 0 && !BLEDeviceManager::getDiscoveredDevices().empty())
+        if ((delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP)) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
             LOG_DEBUG("[ScanScreen] [Encoder] Rotation: %d", delta);
             LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Prev Button Clicked");

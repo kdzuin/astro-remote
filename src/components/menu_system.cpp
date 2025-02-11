@@ -1,10 +1,11 @@
+#include <M5Unified.h>
 #include "menu_system.h"
 #include "../screens/main_screen.h"
 #include "../screens/video_screen.h"
 #include "../screens/photo_screen.h"
 #include "../screens/astro_screen.h"
 #include "../screens/settings_screen.h"
-#include <M5Unified.h>
+#include "../transport/remote_control_manager.h"
 
 namespace MenuSystem
 {
@@ -29,7 +30,7 @@ namespace MenuSystem
         }
 
         // Handle power button to return to main menu
-        if (M5.BtnPWR.wasClicked() || EncoderDevice::wasLongClicked())
+        if (M5.BtnPWR.wasClicked() || EncoderDevice::wasLongClicked() || RemoteControlManager::wasButtonPressed(ButtonId::BACK))
         {
             if (strcmp(currentScreen->getName(), "Main") != 0)
             {

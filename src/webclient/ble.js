@@ -8,32 +8,194 @@ class M5RemoteClient {
     // Command constants
     this.BUTTON_DOWN = 0x01;
     this.BUTTON_UP = 0x02;
+
+    // Button IDs matching the M5 device's ButtonId enum
+    this.BUTTON_UP_ARROW = 0x01; // ButtonId::UP
+    this.BUTTON_DOWN_ARROW = 0x02; // ButtonId::DOWN
+    this.BUTTON_LEFT_ARROW = 0x03; // ButtonId::LEFT
+    this.BUTTON_RIGHT_ARROW = 0x04; // ButtonId::RIGHT
     this.BUTTON_CONFIRM = 0x05; // ButtonId::CONFIRM
+    this.BUTTON_BACK = 0x06; // ButtonId::BACK
 
     this.device = null;
     this.server = null;
     this.service = null;
     this.controlChar = null;
     this.feedbackChar = null;
-    this.isButtonPressed = false;  // Track button state
+    this.isButtonPressed = false; // Track button state
+    this.currentButtonId = null; // Track which button is currently pressed
 
     // UI elements
-    this.scanButton = document.getElementById("scanButton");
-    this.disconnectButton = document.getElementById("disconnectButton");
-    this.confirmButton = document.getElementById("confirmButton");
     this.deviceList = document.getElementById("deviceList");
     this.status = document.getElementById("status");
+    this.scanButton = document.getElementById("scanButton");
+    this.disconnectButton = document.getElementById("disconnectButton");
+    this.controlKeysContainer = document.getElementById("controlKeysContainer");
 
-    console.log("[BLE] Client initialized with service UUID:", this.SERVICE_UUID);
+    this.confirmButton = document.getElementById("confirmButton");
+    this.upButton = document.getElementById("upButton");
+    this.downButton = document.getElementById("downButton");
+    this.leftButton = document.getElementById("leftButton");
+    this.rightButton = document.getElementById("rightButton");
+    this.backButton = document.getElementById("backButton");
+
+    console.log(
+      "[BLE] Client initialized with service UUID:",
+      this.SERVICE_UUID
+    );
 
     // Bind event listeners
     this.scanButton.addEventListener("click", () => this.startScan());
     this.disconnectButton.addEventListener("click", () => this.disconnect());
-    this.confirmButton.addEventListener("mousedown", () => this.sendButtonDown());
-    this.confirmButton.addEventListener("mouseup", () => this.sendButtonUp());
-    this.confirmButton.addEventListener("mouseleave", () => {
-      if (this.isButtonPressed) {
-        this.sendButtonUp();
+
+    // Bind control button events
+    this.upButton.addEventListener("mousedown", () =>
+      this.sendButtonCommand(this.BUTTON_UP_ARROW)
+    );
+    this.upButton.addEventListener("mouseup", () => this.sendButtonRelease());
+    this.upButton.addEventListener("mouseleave", () =>
+      this.sendButtonRelease()
+    );
+
+    this.downButton.addEventListener("mousedown", () =>
+      this.sendButtonCommand(this.BUTTON_DOWN_ARROW)
+    );
+    this.downButton.addEventListener("mouseup", () => this.sendButtonRelease());
+    this.downButton.addEventListener("mouseleave", () =>
+      this.sendButtonRelease()
+    );
+
+    this.leftButton.addEventListener("mousedown", () =>
+      this.sendButtonCommand(this.BUTTON_LEFT_ARROW)
+    );
+    this.leftButton.addEventListener("mouseup", () => this.sendButtonRelease());
+    this.leftButton.addEventListener("mouseleave", () =>
+      this.sendButtonRelease()
+    );
+
+    this.rightButton.addEventListener("mousedown", () =>
+      this.sendButtonCommand(this.BUTTON_RIGHT_ARROW)
+    );
+    this.rightButton.addEventListener("mouseup", () =>
+      this.sendButtonRelease()
+    );
+    this.rightButton.addEventListener("mouseleave", () =>
+      this.sendButtonRelease()
+    );
+
+    this.confirmButton.addEventListener("mousedown", () =>
+      this.sendButtonCommand(this.BUTTON_CONFIRM)
+    );
+    this.confirmButton.addEventListener("mouseup", () =>
+      this.sendButtonRelease()
+    );
+    this.confirmButton.addEventListener("mouseleave", () =>
+      this.sendButtonRelease()
+    );
+
+    this.backButton.addEventListener("mousedown", () =>
+      this.sendButtonCommand(this.BUTTON_BACK)
+    );
+    this.backButton.addEventListener("mouseup", () => this.sendButtonRelease());
+    this.backButton.addEventListener("mouseleave", () =>
+      this.sendButtonRelease()
+    );
+
+    // Add touch events for mobile support
+    [
+      this.upButton,
+      this.downButton,
+      this.leftButton,
+      this.rightButton,
+      this.confirmButton,
+      this.backButton,
+    ].forEach((button) => {
+      button.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        const buttonId = {
+          [this.upButton.id]: this.BUTTON_UP_ARROW,
+          [this.downButton.id]: this.BUTTON_DOWN_ARROW,
+          [this.leftButton.id]: this.BUTTON_LEFT_ARROW,
+          [this.rightButton.id]: this.BUTTON_RIGHT_ARROW,
+          [this.confirmButton.id]: this.BUTTON_CONFIRM,
+          [this.backButton.id]: this.BUTTON_BACK,
+        }[button.id];
+        this.sendButtonCommand(buttonId);
+      });
+
+      button.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        this.sendButtonRelease();
+      });
+
+      button.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        this.sendButtonRelease();
+      });
+    });
+
+    // Add keyboard controls
+    document.addEventListener("keydown", (e) => {
+      // Prevent default behavior for arrow keys to avoid page scrolling
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      // Only process if we're not already pressing a key and we're connected
+      if (!this.isButtonPressed && this.controlChar) {
+        const buttonId = {
+          ArrowUp: this.BUTTON_UP_ARROW,
+          ArrowDown: this.BUTTON_DOWN_ARROW,
+          ArrowLeft: this.BUTTON_LEFT_ARROW,
+          ArrowRight: this.BUTTON_RIGHT_ARROW,
+          Enter: this.BUTTON_CONFIRM,
+          Escape: this.BUTTON_BACK
+        }[e.key];
+
+        if (buttonId) {
+          this.sendButtonCommand(buttonId);
+          // Add visual feedback by adding a pressed class
+          const buttonElement = {
+            [this.BUTTON_UP_ARROW]: this.upButton,
+            [this.BUTTON_DOWN_ARROW]: this.downButton,
+            [this.BUTTON_LEFT_ARROW]: this.leftButton,
+            [this.BUTTON_RIGHT_ARROW]: this.rightButton,
+            [this.BUTTON_CONFIRM]: this.confirmButton,
+            [this.BUTTON_BACK]: this.backButton
+          }[buttonId];
+          
+          if (buttonElement) {
+            buttonElement.classList.add("pressed");
+          }
+        }
+      }
+    });
+
+    document.addEventListener("keyup", (e) => {
+      const buttonId = {
+        ArrowUp: this.BUTTON_UP_ARROW,
+        ArrowDown: this.BUTTON_DOWN_ARROW,
+        ArrowLeft: this.BUTTON_LEFT_ARROW,
+        ArrowRight: this.BUTTON_RIGHT_ARROW,
+        Enter: this.BUTTON_CONFIRM,
+        Escape: this.BUTTON_BACK
+      }[e.key];
+
+      if (buttonId) {
+        this.sendButtonRelease();
+        // Remove visual feedback
+        const buttonElement = {
+          [this.BUTTON_UP_ARROW]: this.upButton,
+          [this.BUTTON_DOWN_ARROW]: this.downButton,
+          [this.BUTTON_LEFT_ARROW]: this.leftButton,
+          [this.BUTTON_RIGHT_ARROW]: this.rightButton,
+          [this.BUTTON_CONFIRM]: this.confirmButton,
+          [this.BUTTON_BACK]: this.backButton
+        }[buttonId];
+        
+        if (buttonElement) {
+          buttonElement.classList.remove("pressed");
+        }
       }
     });
 
@@ -55,7 +217,10 @@ class M5RemoteClient {
       this.scanButton.disabled = true;
       this.deviceList.innerHTML = "";
 
-      console.log("[BLE] Requesting Bluetooth device with service:", this.SERVICE_UUID);
+      console.log(
+        "[BLE] Requesting Bluetooth device with service:",
+        this.SERVICE_UUID
+      );
       const device = await navigator.bluetooth.requestDevice({
         filters: [
           {
@@ -127,6 +292,9 @@ class M5RemoteClient {
         this.scanButton.disabled = true;
         this.disconnectButton.disabled = false;
         this.confirmButton.disabled = false;
+        
+        // Show control keys container when connected
+        this.controlKeysContainer.classList.remove("hidden");
       } catch (error) {
         console.error("[BLE] Connection error:", error);
         this.updateStatus("Connection error: " + error.message, "error");
@@ -153,19 +321,23 @@ class M5RemoteClient {
   onDisconnected() {
     console.log("[BLE] Processing disconnect");
     this.updateStatus("Device disconnected", "info");
-    
+
     // Log connection state
     if (this.device) {
       console.log("[BLE] Device state:", {
         name: this.device.name,
         id: this.device.id,
-        gattConnected: this.device.gatt.connected
+        gattConnected: this.device.gatt.connected,
       });
     }
 
     this.scanButton.disabled = false;
     this.disconnectButton.disabled = true;
     this.confirmButton.disabled = true;
+    
+    // Hide control keys container when disconnected
+    this.controlKeysContainer.classList.add("hidden");
+
     this.device = null;
     this.server = null;
     this.service = null;
@@ -174,53 +346,71 @@ class M5RemoteClient {
     console.log("[BLE] Cleanup completed");
   }
 
-  async sendButtonDown() {
+  async sendButtonCommand(buttonId) {
     if (!this.controlChar) {
-      console.warn("[BLE] Attempted to send button down without control characteristic");
+      console.warn(
+        "[BLE] Attempted to send button command without control characteristic"
+      );
       return;
     }
 
     try {
-      console.log("[BLE] Sending button down command");
-      const data = new Uint8Array([this.BUTTON_DOWN, 1, this.BUTTON_CONFIRM]);
-      console.log("[BLE] Command data:", Array.from(data).map(b => "0x" + b.toString(16)));
+      console.log(`[BLE] Sending button command: 0x${buttonId.toString(16)}`);
+      const data = new Uint8Array([this.BUTTON_DOWN, 1, buttonId]);
+      console.log(
+        "[BLE] Command data:",
+        Array.from(data).map((b) => "0x" + b.toString(16))
+      );
       await this.controlChar.writeValue(data);
       this.isButtonPressed = true;
-      console.log("[BLE] Button down command sent successfully");
+      this.currentButtonId = buttonId; // Store the current button ID
+      console.log("[BLE] Button command sent successfully");
     } catch (error) {
-      console.error("[BLE] Error sending button down:", error);
-      this.updateStatus("Error sending button down: " + error.message, "error");
+      console.error("[BLE] Error sending button command:", error);
+      this.updateStatus(
+        "Error sending button command: " + error.message,
+        "error"
+      );
     }
   }
 
-  async sendButtonUp() {
-    if (!this.controlChar) {
-      console.warn("[BLE] Attempted to send button up without control characteristic");
-      return;
-    }
-
-    if (!this.isButtonPressed) {
-      console.log("[BLE] Ignoring button up - button was not pressed");
+  async sendButtonRelease() {
+    if (
+      !this.controlChar ||
+      !this.isButtonPressed ||
+      this.currentButtonId === null
+    ) {
       return;
     }
 
     try {
-      console.log("[BLE] Sending button up command");
-      const data = new Uint8Array([this.BUTTON_UP, 1, this.BUTTON_CONFIRM]);
-      console.log("[BLE] Command data:", Array.from(data).map(b => "0x" + b.toString(16)));
+      console.log(
+        `[BLE] Sending button release command for button: 0x${this.currentButtonId.toString(
+          16
+        )}`
+      );
+      const data = new Uint8Array([this.BUTTON_UP, 1, this.currentButtonId]); // Include the current button ID in release
+      console.log(
+        "[BLE] Release data:",
+        Array.from(data).map((b) => "0x" + b.toString(16))
+      );
       await this.controlChar.writeValue(data);
       this.isButtonPressed = false;
-      console.log("[BLE] Button up command sent successfully");
+      this.currentButtonId = null; // Clear the current button ID
+      console.log("[BLE] Button release command sent successfully");
     } catch (error) {
-      console.error("[BLE] Error sending button up:", error);
-      this.updateStatus("Error sending button up: " + error.message, "error");
+      console.error("[BLE] Error sending button release:", error);
+      this.updateStatus(
+        "Error sending button release: " + error.message,
+        "error"
+      );
     }
   }
 
   handleFeedback(value) {
     const status = value.getUint8(0);
     console.log("[BLE] Received feedback status:", status);
-    
+
     let message;
     let type;
 
@@ -266,7 +456,7 @@ window.addEventListener("load", () => {
     document.getElementById("scanButton").disabled = true;
     return;
   }
-  
+
   console.log("[BLE] Web Bluetooth supported, initializing client");
   new M5RemoteClient();
 });

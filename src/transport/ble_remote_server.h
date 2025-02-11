@@ -5,22 +5,13 @@
 #include <BLEUtils.h>
 #include <functional>
 #include <map>
+#include "button_id.h"
+#include "remote_control_manager.h"
 
 // Service and Characteristic UUIDs
 #define REMOTE_SERVICE_UUID "180F1000-1234-5678-90AB-CDEF12345678"
 #define CONTROL_CHAR_UUID "180F1001-1234-5678-90AB-CDEF12345678"
 #define FEEDBACK_CHAR_UUID "180F1002-1234-5678-90AB-CDEF12345678"
-
-// Button IDs
-enum class ButtonId : uint8_t
-{
-    UP = 0x01,
-    DOWN = 0x02,
-    LEFT = 0x03,
-    RIGHT = 0x04,
-    CONFIRM = 0x05,
-    BACK = 0x06
-};
 
 // Control commands
 enum class RemoteCommand : uint8_t
@@ -49,7 +40,7 @@ class BLERemoteServer
 {
 public:
     // Update callback to include parameters
-    using CommandCallback = std::function<CommandStatus(RemoteCommand, const uint8_t *, size_t)>;
+    using CommandCallback = std::function<void(RemoteCommand cmd, const uint8_t* params, size_t paramCount)>;
 
     static void init(const char *deviceName = "M5Remote");
     static void setCommandCallback(CommandCallback callback);

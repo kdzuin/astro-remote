@@ -175,36 +175,45 @@ void BLERemoteServer::ServerCallbacks::onDisconnect(BLEServer* pServer) {
 
 void BLERemoteServer::ControlCharCallbacks::onWrite(BLECharacteristic* pCharacteristic) {
     std::string value = pCharacteristic->getValue();
-    if (value.length() > 0 && onCommandReceived) {
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(value.data());
-        size_t length = value.length();
+    if (value.length() < 2) {
+        LOG_PERIPHERAL("[BLE Remote] Invalid command packet length");
+        BLERemoteServer::sendFeedback(CommandStatus::INVALID);
+        return;
+    }
+
+    CommandPacket packet = CommandPacket::parse((uint8_t*)value.data(), value.length());
+    if (packet.command == RemoteCommand::NONE) {
+        LOG_PERIPHERAL("[BLE Remote] Invalid command packet");
+        BLERemoteServer::sendFeedback(CommandStatus::INVALID);
+        return;
+    }
+
+    // Handle button commands
+    if (packet.command == RemoteCommand::BUTTON_DOWN || packet.command == RemoteCommand::BUTTON_UP) {
+        ButtonId button = packet.getButton();
+        bool isPressed = (packet.command == RemoteCommand::BUTTON_DOWN);
         
-        CommandPacket packet = CommandPacket::parse(data, length);
-        if (packet.command != RemoteCommand::NONE) {
-            // Handle button state validation for button commands
-            if (packet.command == RemoteCommand::BUTTON_DOWN || 
-                packet.command == RemoteCommand::BUTTON_UP) {
-                
-                if (packet.parameterCount < 1) {
-                    sendFeedback(CommandStatus::INVALID);
-                    return;
-                }
-                
-                ButtonId button = packet.getButton();
-                if (!validateButtonTransition(packet.command, button)) {
-                    sendFeedback(CommandStatus::BUTTON_STATE_ERROR);
-                    return;
-                }
-            }
-            
-            // Process the command
-            CommandStatus status = onCommandReceived(packet.command, 
-                                                  packet.parameters, 
-                                                  packet.parameterCount);
-            sendFeedback(status);
-        } else {
-            sendFeedback(CommandStatus::INVALID);
+        // Validate button transition
+        if (!BLERemoteServer::validateButtonTransition(packet.command, button)) {
+            LOG_PERIPHERAL("[BLE Remote] Invalid button state transition");
+            BLERemoteServer::sendFeedback(CommandStatus::BUTTON_STATE_ERROR);
+            return;
         }
+
+        // Update button state in RemoteControlManager
+        RemoteControlManager::setButtonState(button, isPressed);
+        
+        // Call the command callback if set
+        if (BLERemoteServer::onCommandReceived) {
+            BLERemoteServer::onCommandReceived(packet.command, packet.parameters, packet.parameterCount);
+        }
+        
+        BLERemoteServer::sendFeedback(CommandStatus::SUCCESS);
+    }
+    // Handle other commands
+    else if (BLERemoteServer::onCommandReceived) {
+        BLERemoteServer::onCommandReceived(packet.command, packet.parameters, packet.parameterCount);
+        BLERemoteServer::sendFeedback(CommandStatus::SUCCESS);
     }
 }
 
