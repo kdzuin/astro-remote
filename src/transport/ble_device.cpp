@@ -84,8 +84,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 void BLEDeviceManager::init()
 {
     // Set device name before initializing BLE
-    esp_ble_gap_set_device_name("AstroRemote");
-    BLEDevice::init("AstroRemote");
+    esp_ble_gap_set_device_name("M5Remote");
+    BLEDevice::init("M5Remote");
 
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
     esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;
