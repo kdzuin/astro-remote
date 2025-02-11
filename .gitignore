@@ -6,3 +6,4 @@
 .cspell
 .backup
 simulator/build
+.vscode
