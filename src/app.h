@@ -23,8 +23,8 @@ public:
         display.setRotation(0);
 
         // Show splash screen
-        display.fillScreen(display.color(0, 0, 0));
-        display.setTextColor(display.color(255, 255, 255));
+        display.fillScreen(display.getColor(0, 0, 0));
+        display.setTextColor(display.getColor(255, 255, 255));
         display.setTextSize(1.75);
         display.setTextAlignment(textAlign::middle_center);
         display.drawString("Astro Remote", display.width() / 2, display.height() / 2);

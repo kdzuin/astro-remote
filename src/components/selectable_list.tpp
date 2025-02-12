@@ -148,15 +148,15 @@ template <typename IdType>
 void SelectableList<IdType>::draw()
 {
     auto &display = MenuSystem::getHardware()->getDisplay();
-    const unifiedColor SELECTED_BG = display.color(255, 255, 255);
-    const unifiedColor SELECTED_FG = display.color(0, 0, 0);
-    const unifiedColor NORMAL_BG = display.color(0, 0, 0);
-    const unifiedColor NORMAL_FG = display.color(255, 255, 255);
-    const unifiedColor DISABLED_FG = display.color(128, 128, 128);
+    const unifiedColor SELECTED_BG = display.getColor(255, 255, 255);
+    const unifiedColor SELECTED_FG = display.getColor(0, 0, 0);
+    const unifiedColor NORMAL_BG = display.getColor(0, 0, 0);
+    const unifiedColor NORMAL_FG = display.getColor(255, 255, 255);
+    const unifiedColor DISABLED_FG = display.getColor(128, 128, 128);
 
     int y = 0;
 
-    display.fillScreen(display.color(0, 0, 0));
+    display.fillScreen(display.getColor(0, 0, 0));
 
     // Draw title if present
     if (!title.empty())

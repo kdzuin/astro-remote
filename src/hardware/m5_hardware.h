@@ -50,7 +50,7 @@ public:
     {
         M5.Display.fillRect(x, y, w, h, color);
     }
-    unifiedColor color(uint8_t r, uint8_t g, uint8_t b) override
+    unifiedColor getColor(uint8_t r, uint8_t g, uint8_t b) override
     {
         return M5.Display.color888(r, g, b);
     }

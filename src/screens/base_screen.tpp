@@ -4,8 +4,8 @@ template <typename MenuItemType>
 BaseScreen<MenuItemType>::BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(0)
 {
     auto &display = MenuSystem::getHardware()->getDisplay();
-    statusBgColor = display.color(55, 55, 55);
-    display.fillScreen(display.color(0, 0, 0));
+    statusBgColor = display.getColor(55, 55, 55);
+    display.fillScreen(display.getColor(0, 0, 0));
 }
 
 template <typename MenuItemType>
@@ -32,17 +32,17 @@ void BaseScreen<MenuItemType>::drawConnectionStatus() const
     if (BLEDeviceManager::isConnected())
     {
         // Connected - solid green line
-        display.drawLine(0, statusBarY, display.width(), statusBarY, display.color(0, 255, 0));
+        display.drawLine(0, statusBarY, display.width(), statusBarY, display.getColor(0, 255, 0));
     }
     else if (BLEDeviceManager::isPaired())
     {
         // Paired but not connected - yellow line
-        display.drawLine(0, statusBarY, display.width(), statusBarY, display.color(255, 255, 0));
+        display.drawLine(0, statusBarY, display.width(), statusBarY, display.getColor(255, 255, 0));
     }
     else
     {
         // Not paired - red line
-        display.drawLine(0, statusBarY, display.width(), statusBarY, display.color(255, 0, 0));
+        display.drawLine(0, statusBarY, display.width(), statusBarY, display.getColor(255, 0, 0));
     }
 }
 
@@ -60,7 +60,7 @@ void BaseScreen<MenuItemType>::drawStatusBar() const
     {
         display.setTextSize(1);
         display.setTextAlignment(textAlign::middle_center);
-        display.setTextColor(display.color(255, 255, 255));
+        display.setTextColor(display.getColor(255, 255, 255));
         display.drawString(statusText.c_str(), display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);
     }
 

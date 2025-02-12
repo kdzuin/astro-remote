@@ -17,25 +17,25 @@ MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
     if (BLEDeviceManager::isConnected())
     {
         setStatusText("Connected");
-        setStatusBgColor(display.color(0, 100, 0));
+        setStatusBgColor(display.getColor(0, 100, 0));
     }
     else
     {
         setStatusText("Select Option");
-        setStatusBgColor(display.color(0, 0, 100));
+        setStatusBgColor(display.getColor(0, 0, 100));
     }
 
     // Try to auto-connect on startup if enabled
     if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() && !BLEDeviceManager::wasManuallyDisconnected())
     {
         setStatusText("Auto-connecting...");
-        setStatusBgColor(display.color(128, 128, 0));
+        setStatusBgColor(display.getColor(128, 128, 0));
         drawStatusBar();
 
         if (BLEDeviceManager::connectToSavedDevice())
         {
             setStatusText("Connected");
-            setStatusBgColor(display.color(0, 200, 0));
+            setStatusBgColor(display.getColor(0, 200, 0));
             updateMenuItems();
             draw();
         }
@@ -100,20 +100,20 @@ void MainScreen::selectMenuItem()
         {
             BLEDeviceManager::disconnect();
             setStatusText("Disconnected");
-            setStatusBgColor(MenuSystem::getHardware()->getDisplay().color(100, 0, 0));
+            setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(100, 0, 0));
             updateMenuItems();
             draw();
         }
         else if (BLEDeviceManager::isPaired())
         {
             setStatusText("Connecting...");
-            setStatusBgColor(MenuSystem::getHardware()->getDisplay().color(128, 128, 0));
+            setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(128, 128, 0));
             drawStatusBar();
 
             if (BLEDeviceManager::connectToSavedDevice())
             {
                 setStatusText("Connected");
-                setStatusBgColor(MenuSystem::getHardware()->getDisplay().color(0, 200, 0));
+                setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(0, 200, 0));
                 updateMenuItems();
                 draw();
             }

@@ -39,7 +39,7 @@ public:
     virtual void drawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, unifiedColor color) = 0;
     virtual void fillScreen(unifiedColor color) = 0;
     virtual void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, unifiedColor color) = 0;
-    virtual unifiedColor color(uint8_t r, uint8_t g, uint8_t b) = 0;
+    virtual unifiedColor getColor(uint8_t r, uint8_t g, uint8_t b) = 0;
 };
 
 // Basic input interface

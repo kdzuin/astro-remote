@@ -23,7 +23,7 @@ private:
     // Helper function to create color
     static unifiedColor defaultColor()
     {
-        return MenuSystem::getHardware()->getDisplay().color(255, 255, 255);
+        return MenuSystem::getHardware()->getDisplay().getColor(255, 255, 255);
     }
 
 public:
