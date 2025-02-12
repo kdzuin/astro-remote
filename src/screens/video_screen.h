@@ -3,7 +3,6 @@
 #include <M5Unified.h>
 #include "base_screen.h"
 #include "../transport/camera_commands.h"
-#include "../transport/encoder_device.h"
 #include "../transport/remote_control_manager.h"
 
 enum class VideoMenuItem
@@ -68,10 +67,9 @@ inline void VideoScreen::drawContent()
 
 inline void VideoScreen::update()
 {
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
-        EncoderDevice::indicateClick();
-        LOG_PERIPHERAL("[VideoScreen] [Encoder|Btn] Confirm Button Clicked");
+        LOG_PERIPHERAL("[VideoScreen] [Btn] Confirm Button Clicked");
 
         if (CameraCommands::isRecording() && CameraCommands::recordStop())
         {

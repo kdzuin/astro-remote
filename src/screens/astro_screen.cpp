@@ -1,5 +1,4 @@
 #include "astro_screen.h"
-#include "../transport/encoder_device.h"
 #include "focus_screen.h"
 #include "../components/menu_system.h"
 #include "../transport/remote_control_manager.h"
@@ -33,33 +32,27 @@ void AstroScreen::drawContent()
 
 void AstroScreen::update()
 {
-    EncoderDevice::update();
-    int16_t delta = EncoderDevice::getDelta();
-
-    if (M5.BtnB.wasClicked() || delta > 0 || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
+    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
     {
-        LOG_DEBUG("[AstroScreen] [Encoder] Rotation: %d", delta);
-        LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Next Button Clicked");
+        LOG_PERIPHERAL("[AstroScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
 
-    if (delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP))
+    if (RemoteControlManager::wasButtonPressed(ButtonId::UP))
     {
-        LOG_DEBUG("[AstroScreen] [Encoder] Rotation: %d", delta);
-        LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Prev Button Clicked");
+        LOG_PERIPHERAL("[AstroScreen] [Btn] Prev Button Clicked");
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
     {
-        LOG_PERIPHERAL("[AstroScreen] [Encoder|Btn] Confirm Button Clicked");
+        LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }
 }
 
 void AstroScreen::selectMenuItem()
 {
-    EncoderDevice::indicateClick();
     switch (menuItems.getSelectedId())
     {
     case AstroMenuItem::Focus:
@@ -94,7 +87,6 @@ void AstroScreen::nextMenuItem()
 {
     menuItems.selectNext();
     selectedItem = menuItems.getSelectedIndex();
-    EncoderDevice::indicateNext();
     draw();
 }
 
@@ -102,6 +94,5 @@ void AstroScreen::prevMenuItem()
 {
     menuItems.selectPrev();
     selectedItem = menuItems.getSelectedIndex();
-    EncoderDevice::indicatePrev();
     draw();
 }

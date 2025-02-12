@@ -1,5 +1,4 @@
 #include "scan_screen.h"
-#include "../transport/encoder_device.h"
 #include "../transport/remote_control_manager.h"
 
 ScanScreen::ScanScreen()
@@ -90,9 +89,6 @@ void ScanScreen::drawContent()
 
 void ScanScreen::update()
 {
-    EncoderDevice::update();
-    int16_t delta = EncoderDevice::getDelta();
-
     // Check if scanning state changed
     if (lastScanning != BLEDeviceManager::isScanning())
     {
@@ -107,23 +103,21 @@ void ScanScreen::update()
 
     if (!BLEDeviceManager::isScanning() && !isConnecting)
     {
-        if ((M5.BtnA.wasClicked() || EncoderDevice::wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) && !BLEDeviceManager::getDiscoveredDevices().empty())
+        if ((M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
-            LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Confirm Button Clicked");
+            LOG_PERIPHERAL("[ScanScreen] [Btn] Confirm Button Clicked");
             selectMenuItem();
         }
 
-        if ((delta > 0 || M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) && !BLEDeviceManager::getDiscoveredDevices().empty())
+        if ((M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
-            LOG_DEBUG("[ScanScreen] [Encoder] Rotation: %d", delta);
-            LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Next Button Clicked");
+            LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
             nextMenuItem();
         }
 
-        if ((delta < 0 || RemoteControlManager::wasButtonPressed(ButtonId::UP)) && !BLEDeviceManager::getDiscoveredDevices().empty())
+        if (RemoteControlManager::wasButtonPressed(ButtonId::UP) && !BLEDeviceManager::getDiscoveredDevices().empty())
         {
-            LOG_DEBUG("[ScanScreen] [Encoder] Rotation: %d", delta);
-            LOG_PERIPHERAL("[ScanScreen] [Encoder|Btn] Prev Button Clicked");
+            LOG_PERIPHERAL("[ScanScreen] [Btn] Prev Button Clicked");
             prevMenuItem();
         }
     }
@@ -131,8 +125,6 @@ void ScanScreen::update()
 
 void ScanScreen::selectMenuItem()
 {
-    EncoderDevice::indicateClick();
-
     size_t selectedIndex = menuItems.getSelectedIndex();
     if (selectedIndex < BLEDeviceManager::getDiscoveredDevices().size())
     {
@@ -170,13 +162,11 @@ void ScanScreen::selectMenuItem()
 void ScanScreen::nextMenuItem()
 {
     menuItems.selectNext();
-    EncoderDevice::indicateNext();
     draw();
 }
 
 void ScanScreen::prevMenuItem()
 {
     menuItems.selectPrev();
-    EncoderDevice::indicatePrev();
     draw();
 }

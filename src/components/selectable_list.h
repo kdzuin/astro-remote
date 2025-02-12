@@ -1,8 +1,14 @@
 #pragma once
 
-#include <M5Unified.h>
 #include <vector>
 #include <string>
+#include "../hardware_interface.h"
+
+// Forward declaration
+namespace MenuSystem
+{
+    IHardware *getHardware();
+}
 
 template <typename IdType>
 class SelectableList
@@ -13,21 +19,22 @@ private:
     const int HORIZONTAL_PADDING = 8; // Space for selection marker
     const int ITEM_PADDING = 2;       // Padding between items
     const int TITLE_PADDING = 4;      // Extra padding below title
-    const uint16_t SELECTED_BG = WHITE;
-    const uint16_t SELECTED_FG = BLACK;
-    const uint16_t NORMAL_BG = BLACK;
-    const uint16_t NORMAL_FG = WHITE;
-    const uint16_t DISABLED_FG = M5.Display.color565(128, 128, 128); // Gray
+
+    // Helper function to create color
+    static unifiedColor defaultColor()
+    {
+        return MenuSystem::getHardware()->getDisplay().color(255, 255, 255);
+    }
 
 public:
     struct Info
     {
         std::string text;
-        uint16_t *color = nullptr; // nullptr means use current text color
+        unifiedColor *color = nullptr; // nullptr means use current text color
 
         Info(const std::string &infoText) : text(infoText) {}
-        Info(const std::string &infoText, uint16_t infoColor)
-            : text(infoText), color(new uint16_t(infoColor)) {}
+        Info(const std::string &infoText, unifiedColor infoColor)
+            : text(infoText), color(new unifiedColor(infoColor)) {}
 
         ~Info() { delete color; }
 
@@ -36,7 +43,7 @@ public:
         {
             if (other.color)
             {
-                color = new uint16_t(*other.color);
+                color = new unifiedColor(*other.color);
             }
         }
 
@@ -47,14 +54,7 @@ public:
             {
                 text = other.text;
                 delete color;
-                if (other.color)
-                {
-                    color = new uint16_t(*other.color);
-                }
-                else
-                {
-                    color = nullptr;
-                }
+                color = other.color ? new unifiedColor(*other.color) : nullptr;
             }
             return *this;
         }
@@ -70,7 +70,7 @@ public:
         Item(IdType itemId, const std::string &itemLabel, bool itemEnabled = true)
             : id(itemId), label(itemLabel), enabled(itemEnabled) {}
 
-        Item(IdType itemId, const std::string &itemLabel, const std::string &infoText, uint16_t infoColor = TFT_WHITE, bool itemEnabled = true)
+        Item(IdType itemId, const std::string &itemLabel, const std::string &infoText, unifiedColor infoColor, bool itemEnabled = true)
             : id(itemId), label(itemLabel), enabled(itemEnabled)
         {
             info = new Info(infoText, infoColor);
@@ -125,7 +125,7 @@ public:
 
     void clear();
     void addItem(IdType id, const std::string &label, bool enabled = true);
-    void addItem(IdType id, const std::string &label, const std::string &infoText, uint16_t infoColor = TFT_WHITE, bool enabled = true);
+    void addItem(IdType id, const std::string &label, const std::string &infoText, unifiedColor infoColor, bool enabled = true);
     void addItem(IdType id, const std::string &label, const std::string &infoText, bool enabled = true);
     void setTitle(const std::string &newTitle);
     void setSelectedIndex(int index);

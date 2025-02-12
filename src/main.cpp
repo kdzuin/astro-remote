@@ -1,60 +1,23 @@
-#include <M5Unified.h>
-#include "components/menu_system.h"
-#include "transport/ble_device.h"
-#include "transport/ble_remote_server.h"
-#include "transport/encoder_device.h"
-#include "utils/preferences.h"
+#include "hardware/m5_hardware.h"
+#include "app.h"
 #include "debug.h"
 
-// Global variables for encoder state
-int32_t lastEncoderValue = 0;
+// Global static instances to ensure they persist across Arduino loop calls
+static M5Hardware hardware;
+static Application *app = nullptr;
 
 void setup()
 {
-    auto cfg = M5.config();
-    M5.begin(cfg);
-
-    Serial.begin(115200);
-    LOG_APP("Starting Sony Camera Remote");
-
-    // Initialize preferences first
-    PreferencesManager::init();
-
-    // Initialize encoder
-    EncoderDevice::init();
-
-    M5.Display.setRotation(0);
-    M5.Display.fillScreen(BLACK);
-    M5.Display.setTextSize(1.75);
-    int x = (M5.Display.width() - M5.Display.textWidth("Astro Remote")) / 2;
-    int y = (M5.Display.height() - M5.Display.fontHeight()) / 2;
-    M5.Display.setCursor(x, y);
-    M5.Display.println("Astro Remote");
-    delay(1000);
-
-    M5.Display.setTextSize(1.25);
-    M5.Display.setBrightness(PreferencesManager::getBrightness());
-
-    // Initialize BLE components
-    BLEDeviceManager::setAutoConnect(PreferencesManager::getAutoConnect());
-    BLEDeviceManager::init();
-
-    // Initialize BLE Remote Server
-    BLERemoteServer::init("M5Remote");
-    RemoteControlManager::init();
-
-    MenuSystem::init();
+    hardware.begin();
+    app = new Application(hardware);
+    app->setup();
 }
 
 void loop()
 {
-    if (EncoderDevice::isAvailable())
+    if (app)
     {
-        EncoderDevice::update();
+        app->loop();
+        delay(10); // Small delay to prevent tight loop
     }
-
-    BLEDeviceManager::update();     // Update BLE state
-    RemoteControlManager::update(); // Update remote control state (BLE connection from app)
-    MenuSystem::update();           // This will handle M5.update() internally
-    delay(10);                      // Small delay to prevent tight loop
 }

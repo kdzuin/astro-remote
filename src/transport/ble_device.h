@@ -39,7 +39,7 @@ class MySecurity : public BLESecurityCallbacks
     {
         LOG_PERIPHERAL("[BLE] PassKey Notify number:%d\n", pass_key);
         // Show pairing code on display
-        M5.Display.fillScreen(M5.Display.color565(0, 0, 0)); // BLACK
+        M5.Display.fillScreen(BLACK); // BLACK
         M5.Display.setCursor(0, 0);
         M5.Display.println("Pairing with camera");
         M5.Display.printf("Code: %06d\n", pass_key);

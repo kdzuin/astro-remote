@@ -1,14 +1,18 @@
 #pragma once
 
 template <typename MenuItemType>
-BaseScreen<MenuItemType>::BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(M5.Display.color565(55, 55, 55))
+BaseScreen<MenuItemType>::BaseScreen(const char *name) : screenName(name), statusText(""), statusBgColor(0)
 {
-    M5.Display.fillScreen(BLACK);
+    auto &display = MenuSystem::getHardware()->getDisplay();
+    statusBgColor = display.color(55, 55, 55);
+    display.fillScreen(display.color(0, 0, 0));
 }
 
 template <typename MenuItemType>
 void BaseScreen<MenuItemType>::draw()
 {
+    auto &display = MenuSystem::getHardware()->getDisplay();
+
     // Draw main content in the upper area
     M5.Display.setClipRect(0, 0, M5.Display.width(), M5.Display.height() - STATUS_BAR_HEIGHT);
     drawContent();
@@ -21,40 +25,46 @@ void BaseScreen<MenuItemType>::draw()
 template <typename MenuItemType>
 void BaseScreen<MenuItemType>::drawConnectionStatus() const
 {
-    const int statusBarY = M5.Display.height() - STATUS_BAR_HEIGHT;
+    auto &display = MenuSystem::getHardware()->getDisplay();
+    const int statusBarY = display.height() - STATUS_BAR_HEIGHT;
 
     // Draw connection status indicator
     if (BLEDeviceManager::isConnected())
     {
         // Connected - solid green line
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color565(0, 255, 0));
+        display.drawLine(0, statusBarY, display.width(), statusBarY, display.color(0, 255, 0));
     }
     else if (BLEDeviceManager::isPaired())
     {
         // Paired but not connected - yellow line
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color565(255, 255, 0));
+        display.drawLine(0, statusBarY, display.width(), statusBarY, display.color(255, 255, 0));
     }
     else
     {
         // Not paired - red line
-        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY, M5.Display.color565(255, 0, 0));
+        display.drawLine(0, statusBarY, display.width(), statusBarY, display.color(255, 0, 0));
     }
 }
 
 template <typename MenuItemType>
 void BaseScreen<MenuItemType>::drawStatusBar() const
 {
-    const int statusBarY = M5.Display.height() - STATUS_BAR_HEIGHT;
+    auto &display = MenuSystem::getHardware()->getDisplay();
+    const int statusBarY = display.height() - STATUS_BAR_HEIGHT;
 
     // Draw status bar background
-    M5.Display.fillRect(0, statusBarY, M5.Display.width(), STATUS_BAR_HEIGHT, statusBgColor);
+    display.fillRect(0, statusBarY, display.width(), STATUS_BAR_HEIGHT, statusBgColor);
 
     // Draw status text
-    M5.Display.setTextSize(1);
-    M5.Display.setTextColor(M5.Display.color565(255, 255, 255));
-    M5.Display.setTextDatum(middle_center);
-    M5.Display.drawString(statusText.c_str(), M5.Display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);
+    if (!statusText.empty())
+    {
+        display.setTextSize(1);
+        display.setTextDatum(textAlign::middle_center);
+        display.setTextColor(display.color(255, 255, 255));
+        display.drawString(statusText.c_str(), display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);
+    }
 
+    // Draw connection status line at the top of status bar
     drawConnectionStatus();
 }
 

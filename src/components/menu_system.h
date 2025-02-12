@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "../hardware_interface.h"
 #include "screens/base_screen.h"
 
 // Forward declarations
@@ -44,11 +45,12 @@ private:
 namespace MenuSystem
 {
     // Function declarations
-    void init();
+    void init(IHardware *hardware);
     void update();
     void setScreenInternal(IScreen *screen);
     void goHome();
     IScreen *getCurrentScreen();
+    IHardware *getHardware();
 
     // Generic screen setter that can accept any screen type
     template <typename MenuType>
