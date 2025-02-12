@@ -1,17 +1,13 @@
 #pragma once
 
-#include "M5Unified.h"
-#include "base_screen.h"
 #include "../transport/camera_commands.h"
 #include "../transport/remote_control_manager.h"
+#include "M5Unified.h"
+#include "base_screen.h"
 
-enum class PhotoMenuItem
-{
-    None
-};
+enum class PhotoMenuItem { None };
 
-class PhotoScreen : public BaseScreen<PhotoMenuItem>
-{
+class PhotoScreen : public BaseScreen<PhotoMenuItem> {
 public:
     PhotoScreen() : BaseScreen<PhotoMenuItem>("Photo"), photoCount(0), flashStartTime(0) {}
 
@@ -27,19 +23,15 @@ private:
     unsigned long flashStartTime;
 };
 
-inline void PhotoScreen::drawContent()
-{
+inline void PhotoScreen::drawContent() {
     int centerX = M5.Display.width() / 2;
     int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
 
-    if (millis() - flashStartTime < 200)
-    {
+    if (millis() - flashStartTime < 200) {
         // Flash effect
         M5.Display.fillScreen(WHITE);
         M5.Display.setTextColor(BLACK);
-    }
-    else
-    {
+    } else {
         // Normal display
         M5.Display.fillScreen(BLACK);
         M5.Display.setTextColor(WHITE);
@@ -57,14 +49,11 @@ inline void PhotoScreen::drawContent()
     drawStatusBar();
 }
 
-inline void PhotoScreen::update()
-{
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
-    {
+inline void PhotoScreen::update() {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[PhotoScreen] [Btn] Confirm Button Clicked");
 
-        if (CameraCommands::takePhoto())
-        {
+        if (CameraCommands::takePhoto()) {
             photoCount++;
             flashStartTime = millis();
             draw();
@@ -72,8 +61,7 @@ inline void PhotoScreen::update()
     }
 
     // Redraw if we're in flash mode to clear it
-    if (millis() - flashStartTime > 200 && flashStartTime > 0)
-    {
+    if (millis() - flashStartTime > 200 && flashStartTime > 0) {
         flashStartTime = 0;
         draw();
     }

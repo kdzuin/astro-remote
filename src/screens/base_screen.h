@@ -1,23 +1,20 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <functional>
-#include "components/selectable_list.h"
+#include <string>
+#include <vector>
+
 #include "components/menu_system.h"
+#include "components/selectable_list.h"
 #include "transport/ble_device.h"
 
 // Base menu item type for screens that don't define their own
-enum class BaseMenuItem
-{
-    None
-};
+enum class BaseMenuItem { None };
 
 template <typename MenuItemType>
-class BaseScreen
-{
+class BaseScreen {
 public:
-    BaseScreen(const char *name);
+    BaseScreen(const char* name);
     virtual ~BaseScreen() = default;
 
     // Pure virtual functions that must be implemented by derived screens
@@ -39,25 +36,25 @@ public:
     // New pure virtual function for content drawing
     virtual void drawContent() = 0;
 
-    const char *getName() const { return screenName; }
+    const char* getName() const { return screenName; }
 
     // Status bar methods
-    void setStatusText(const std::string &text) { statusText = text; }
+    void setStatusText(const std::string& text) { statusText = text; }
     void setStatusBgColor(unifiedColor color) { statusBgColor = color; }
 
     void checkConnection();
 
 protected:
     SelectableList<MenuItemType> menuItems;
-    const char *screenName;
+    const char* screenName;
     std::string statusText;
     unifiedColor statusBgColor;
     unsigned long lastConnectionCheck = 0;
     bool wasConnected = false;
     int reconnectAttempts = 0;
 
-    IDisplay &display() { return MenuSystem::getHardware()->getDisplay(); }
-    IInput &input() { return MenuSystem::getHardware()->getInput(); }
+    IDisplay& display() { return MenuSystem::getHardware()->getDisplay(); }
+    IInput& input() { return MenuSystem::getHardware()->getInput(); }
 };
 
 #include "base_screen.tpp"

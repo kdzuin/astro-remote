@@ -2,8 +2,7 @@
 
 #include "base_screen.h"
 
-enum class ManualMenuItem
-{
+enum class ManualMenuItem {
     HalfDown,
     FullDown,
     HalfUp,
@@ -17,8 +16,7 @@ enum class ManualMenuItem
     ZoomOut,
 };
 
-class ManualScreen : public BaseScreen<ManualMenuItem>
-{
+class ManualScreen : public BaseScreen<ManualMenuItem> {
 public:
     ManualScreen();
 

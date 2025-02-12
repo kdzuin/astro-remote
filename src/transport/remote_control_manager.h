@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+
 #include "button_id.h"
 
 class RemoteControlManager {
@@ -11,11 +12,11 @@ private:
 public:
     static void init();
     static void update();
-    
+
     // Button state checkers (similar to M5.BtnA.wasClicked())
     static bool wasButtonPressed(ButtonId button);
     static bool isButtonPressed(ButtonId button);
-    
+
     // Convenience methods for common buttons
     static bool wasConfirmPressed() { return wasButtonPressed(ButtonId::CONFIRM); }
     static bool wasBackPressed() { return wasButtonPressed(ButtonId::BACK); }
@@ -23,7 +24,7 @@ public:
     static bool wasDownPressed() { return wasButtonPressed(ButtonId::DOWN); }
     static bool wasLeftPressed() { return wasButtonPressed(ButtonId::LEFT); }
     static bool wasRightPressed() { return wasButtonPressed(ButtonId::RIGHT); }
-    
+
     // Internal use - called by BLE notification handler
     static void setButtonState(ButtonId button, bool pressed);
 };

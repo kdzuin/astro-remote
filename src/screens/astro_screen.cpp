@@ -1,18 +1,17 @@
 #include "astro_screen.h"
-#include "focus_screen.h"
+
 #include "../components/menu_system.h"
 #include "../transport/remote_control_manager.h"
+#include "focus_screen.h"
 
-AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro")
-{
+AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro") {
     setStatusText("Select Option");
     setStatusBgColor(M5.Display.color565(0, 0, 100));
     menuItems.setTitle("Astro Menu");
     updateMenuItems();
 }
 
-void AstroScreen::updateMenuItems()
-{
+void AstroScreen::updateMenuItems() {
     menuItems.clear();
     menuItems.addItem(AstroMenuItem::Focus, "Focus");
     menuItems.addItem(AstroMenuItem::InitialDelay, "Delay");
@@ -24,74 +23,65 @@ void AstroScreen::updateMenuItems()
     menuItems.addItem(AstroMenuItem::Stop, "Stop");
 }
 
-void AstroScreen::drawContent()
-{
+void AstroScreen::drawContent() {
     menuItems.setSelectedIndex(selectedItem);
     menuItems.draw();
 }
 
-void AstroScreen::update()
-{
-    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
-    {
+void AstroScreen::update() {
+    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
 
-    if (RemoteControlManager::wasButtonPressed(ButtonId::UP))
-    {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::UP)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Prev Button Clicked");
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
-    {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }
 }
 
-void AstroScreen::selectMenuItem()
-{
-    switch (menuItems.getSelectedId())
-    {
-    case AstroMenuItem::Focus:
-        LOG_PERIPHERAL("[AstroScreen] Select Focus");
-        MenuSystem::setScreen(new FocusScreen());
-        break;
-    case AstroMenuItem::InitialDelay:
-        LOG_PERIPHERAL("[AstroScreen] Select Initial Delay");
-        break;
-    case AstroMenuItem::ExposureTime:
-        LOG_PERIPHERAL("[AstroScreen] Select Exposure Time");
-        break;
-    case AstroMenuItem::NumberOfExposures:
-        LOG_PERIPHERAL("[AstroScreen] Select Number of Exposures");
-        break;
-    case AstroMenuItem::DelayBetweenExposures:
-        LOG_PERIPHERAL("[AstroScreen] Select Delay Between Exposures");
-        break;
-    case AstroMenuItem::Start:
-        LOG_PERIPHERAL("[AstroScreen] Start");
-        break;
-    case AstroMenuItem::Pause:
-        LOG_PERIPHERAL("[AstroScreen] Pause");
-        break;
-    case AstroMenuItem::Stop:
-        LOG_PERIPHERAL("[AstroScreen] Stop");
-        break;
+void AstroScreen::selectMenuItem() {
+    switch (menuItems.getSelectedId()) {
+        case AstroMenuItem::Focus:
+            LOG_PERIPHERAL("[AstroScreen] Select Focus");
+            MenuSystem::setScreen(new FocusScreen());
+            break;
+        case AstroMenuItem::InitialDelay:
+            LOG_PERIPHERAL("[AstroScreen] Select Initial Delay");
+            break;
+        case AstroMenuItem::ExposureTime:
+            LOG_PERIPHERAL("[AstroScreen] Select Exposure Time");
+            break;
+        case AstroMenuItem::NumberOfExposures:
+            LOG_PERIPHERAL("[AstroScreen] Select Number of Exposures");
+            break;
+        case AstroMenuItem::DelayBetweenExposures:
+            LOG_PERIPHERAL("[AstroScreen] Select Delay Between Exposures");
+            break;
+        case AstroMenuItem::Start:
+            LOG_PERIPHERAL("[AstroScreen] Start");
+            break;
+        case AstroMenuItem::Pause:
+            LOG_PERIPHERAL("[AstroScreen] Pause");
+            break;
+        case AstroMenuItem::Stop:
+            LOG_PERIPHERAL("[AstroScreen] Stop");
+            break;
     }
 }
 
-void AstroScreen::nextMenuItem()
-{
+void AstroScreen::nextMenuItem() {
     menuItems.selectNext();
     selectedItem = menuItems.getSelectedIndex();
     draw();
 }
 
-void AstroScreen::prevMenuItem()
-{
+void AstroScreen::prevMenuItem() {
     menuItems.selectPrev();
     selectedItem = menuItems.getSelectedIndex();
     draw();

@@ -1,17 +1,14 @@
 #pragma once
 
 #include <M5Unified.h>
-#include "base_screen.h"
+
 #include "../transport/camera_commands.h"
 #include "../transport/remote_control_manager.h"
+#include "base_screen.h"
 
-enum class VideoMenuItem
-{
-    None
-};
+enum class VideoMenuItem { None };
 
-class VideoScreen : public BaseScreen<VideoMenuItem>
-{
+class VideoScreen : public BaseScreen<VideoMenuItem> {
 public:
     VideoScreen() : BaseScreen<VideoMenuItem>("Video"), recordStartTime(0) {}
 
@@ -26,13 +23,11 @@ private:
     unsigned long recordStartTime;
 };
 
-inline void VideoScreen::drawContent()
-{
+inline void VideoScreen::drawContent() {
     int centerX = M5.Display.width() / 2;
     int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
 
-    if (CameraCommands::isRecording())
-    {
+    if (CameraCommands::isRecording()) {
         // Red background when recording
         M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(), RED);
         M5.Display.setTextColor(WHITE);
@@ -48,9 +43,7 @@ inline void VideoScreen::drawContent()
         M5.Display.setTextSize(3);
         M5.Display.setTextDatum(middle_center);
         M5.Display.drawString(timeStr, centerX, centerY);
-    }
-    else
-    {
+    } else {
         // Normal display
         M5.Display.fillScreen(BLACK);
 
@@ -65,29 +58,22 @@ inline void VideoScreen::drawContent()
     drawStatusBar();
 }
 
-inline void VideoScreen::update()
-{
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
-    {
+inline void VideoScreen::update() {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[VideoScreen] [Btn] Confirm Button Clicked");
 
-        if (CameraCommands::isRecording() && CameraCommands::recordStop())
-        {
+        if (CameraCommands::isRecording() && CameraCommands::recordStop()) {
             recordStartTime = 0;
-        }
-        else if (CameraCommands::recordStart())
-        {
+        } else if (CameraCommands::recordStart()) {
             recordStartTime = millis();
         }
         draw();
     }
 
     // Update recording time display
-    if (CameraCommands::isRecording())
-    {
+    if (CameraCommands::isRecording()) {
         static unsigned long lastUpdate = 0;
-        if (millis() - lastUpdate > 1000)
-        {
+        if (millis() - lastUpdate > 1000) {
             lastUpdate = millis();
             draw();
         }

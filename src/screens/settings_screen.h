@@ -1,22 +1,17 @@
 #pragma once
 
-#include <M5Unified.h>
-#include "base_screen.h"
-#include "../transport/ble_device.h"
+#include "hardware_interface.h"
+#include "screens/base_screen.h"
+#include "transport/ble_device.h"
 
-enum class SettingsMenuItem
-{
-    Connect,
-    Disconnect,
-    Forget,
-    Scan,
-    AutoConnect,
-    Brightness,
-    Battery
-};
+enum class SettingsMenuItem { Connect, Disconnect, Forget, Scan, AutoConnect, Brightness, Battery };
 
-class SettingsScreen : public BaseScreen<SettingsMenuItem>
-{
+class SettingsScreen : public BaseScreen<SettingsMenuItem> {
+private:
+    IDisplay& display;  // Store display reference
+    uint16_t getStatusBgColor(int batteryLevel);
+    int selectedItem = 0;
+
 public:
     SettingsScreen();
     void updateMenuItems() override;
@@ -25,8 +20,4 @@ public:
     void selectMenuItem() override;
     void nextMenuItem() override;
     void prevMenuItem() override;
-
-private:
-    uint16_t getStatusBgColor(int batteryLevel);
-    int selectedItem = 0;
 };

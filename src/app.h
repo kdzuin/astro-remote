@@ -1,25 +1,23 @@
 #pragma once
 
-#include "hardware_interface.h"
 #include "components/menu_system.h"
+#include "hardware_interface.h"
 #include "transport/ble_device.h"
 #include "transport/ble_remote_server.h"
 #include "utils/preferences.h"
 
-class Application
-{
+class Application {
 public:
-    explicit Application(IHardware &hw) : hardware(hw) {}
+    explicit Application(IHardware& hw) : hardware(hw) {}
 
-    void setup()
-    {
+    void setup() {
         LOG_APP("Starting Sony Camera Remote");
 
         // Initialize preferences first
         PreferencesManager::init();
 
         // Setup display
-        auto &display = hardware.getDisplay();
+        auto& display = hardware.getDisplay();
         display.setRotation(0);
 
         // Show splash screen
@@ -45,17 +43,16 @@ public:
         MenuSystem::init(&hardware);
     }
 
-    void loop()
-    {
+    void loop() {
         // Update hardware state
         hardware.update();
 
         // Update BLE and menu
-        BLEDeviceManager::update();     // Update BLE state
-        RemoteControlManager::update(); // Update remote control state
-        MenuSystem::update();           // This will handle input internally
+        BLEDeviceManager::update();      // Update BLE state
+        RemoteControlManager::update();  // Update remote control state
+        MenuSystem::update();            // This will handle input internally
     }
 
 private:
-    IHardware &hardware;
+    IHardware& hardware;
 };

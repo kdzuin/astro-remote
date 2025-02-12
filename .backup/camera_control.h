@@ -1,11 +1,11 @@
 #pragma once
 
-#include <M5Unified.h>
-#include <BLEDevice.h>
-#include <BLEClient.h>
-#include <BLEUtils.h>
-#include <Preferences.h>
 #include <Arduino.h>
+#include <BLEClient.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <M5Unified.h>
+#include <Preferences.h>
 
 #define SONY_SERVICE_UUID "8000FF00-FF00-FF00-FF00-FF00FF00FF00"
 #define SONY_CHARACTERISTIC_UUID "8000FF01-FF00-FF00-FF00-FF00FF00FF00"

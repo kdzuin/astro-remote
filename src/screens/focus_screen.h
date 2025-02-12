@@ -1,30 +1,21 @@
 #pragma once
 
 #include <M5Unified.h>
-#include "base_screen.h"
+
 #include "../transport/camera_commands.h"
 #include "../transport/remote_control_manager.h"
+#include "base_screen.h"
 
-enum class FocusSensitivity : uint8_t
-{
-    Fine = 0x10,
-    Medium = 0x25,
-    High = 0x50,
-    Coarse = 0x7F
-};
+enum class FocusSensitivity : uint8_t { Fine = 0x10, Medium = 0x25, High = 0x50, Coarse = 0x7F };
 
-enum class FocusMenuItem
-{
-    None
-};
+enum class FocusMenuItem { None };
 
-class FocusScreen : public BaseScreen<FocusMenuItem>
-{
+class FocusScreen : public BaseScreen<FocusMenuItem> {
 public:
     FocusScreen()
-        : BaseScreen<FocusMenuItem>("Focus"), focusing(false), sensitivity(FocusSensitivity::Medium)
-    {
-    }
+        : BaseScreen<FocusMenuItem>("Focus"),
+          focusing(false),
+          sensitivity(FocusSensitivity::Medium) {}
 
     void drawContent() override;
     void update() override;
@@ -42,8 +33,7 @@ private:
     void handleFocus(int32_t increment);
 };
 
-inline void FocusScreen::drawContent()
-{
+inline void FocusScreen::drawContent() {
     int centerX = M5.Display.width() / 2;
     int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
 
@@ -57,21 +47,20 @@ inline void FocusScreen::drawContent()
 
     // Draw sensitivity below
     M5.Display.setTextSize(1.25);
-    const char *sensText;
-    switch (sensitivity)
-    {
-    case FocusSensitivity::Fine:
-        sensText = "Fine";
-        break;
-    case FocusSensitivity::Medium:
-        sensText = "Medium";
-        break;
-    case FocusSensitivity::High:
-        sensText = "High";
-        break;
-    case FocusSensitivity::Coarse:
-        sensText = "Coarse";
-        break;
+    const char* sensText;
+    switch (sensitivity) {
+        case FocusSensitivity::Fine:
+            sensText = "Fine";
+            break;
+        case FocusSensitivity::Medium:
+            sensText = "Medium";
+            break;
+        case FocusSensitivity::High:
+            sensText = "High";
+            break;
+        case FocusSensitivity::Coarse:
+            sensText = "Coarse";
+            break;
     }
     M5.Display.drawString(sensText, centerX, centerY + 30);
 
@@ -81,80 +70,65 @@ inline void FocusScreen::drawContent()
     drawStatusBar();
 }
 
-inline void FocusScreen::update()
-{
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
-    {
+inline void FocusScreen::update() {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_APP("[FocusScreen] Toggle focus mode");
         updateFocusState(!focusing);
         draw();
-    }
-    else if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN) || RemoteControlManager::wasButtonPressed(ButtonId::UP))
-    {
+    } else if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN) ||
+               RemoteControlManager::wasButtonPressed(ButtonId::UP)) {
         LOG_APP("[FocusScreen] Cycle sensitivity");
         cycleSensitivity();
         draw();
     }
 
-    if (focusing)
-    {
-        if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT))
-        {
+    if (focusing) {
+        if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT)) {
             handleFocus(1);
-        }
-        else if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT))
-        {
+        } else if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT)) {
             handleFocus(-1);
         }
     }
 }
 
-inline void FocusScreen::updateFocusState(bool newState)
-{
+inline void FocusScreen::updateFocusState(bool newState) {
     focusing = newState;
-    if (focusing)
-    {
+    if (focusing) {
         CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_HALF_DOWN);
-    }
-    else
-    {
+    } else {
         CameraCommands::sendCommand16(CameraCommands::Cmd::SHUTTER_HALF_UP);
     }
 }
 
-inline void FocusScreen::cycleSensitivity()
-{
-    switch (sensitivity)
-    {
-    case FocusSensitivity::Fine:
-        sensitivity = FocusSensitivity::Medium;
-        break;
-    case FocusSensitivity::Medium:
-        sensitivity = FocusSensitivity::High;
-        break;
-    case FocusSensitivity::High:
-        sensitivity = FocusSensitivity::Coarse;
-        break;
-    case FocusSensitivity::Coarse:
-        sensitivity = FocusSensitivity::Fine;
-        break;
+inline void FocusScreen::cycleSensitivity() {
+    switch (sensitivity) {
+        case FocusSensitivity::Fine:
+            sensitivity = FocusSensitivity::Medium;
+            break;
+        case FocusSensitivity::Medium:
+            sensitivity = FocusSensitivity::High;
+            break;
+        case FocusSensitivity::High:
+            sensitivity = FocusSensitivity::Coarse;
+            break;
+        case FocusSensitivity::Coarse:
+            sensitivity = FocusSensitivity::Fine;
+            break;
     }
 }
 
-inline void FocusScreen::handleFocus(int32_t increment)
-{
+inline void FocusScreen::handleFocus(int32_t increment) {
     if (!focusing)
         return;
 
-    if (increment > 0)
-    {
-        CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_OUT_PRESS, static_cast<uint8_t>(sensitivity));
+    if (increment > 0) {
+        CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_OUT_PRESS,
+                                      static_cast<uint8_t>(sensitivity));
         delay(30);
         CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_OUT_RELEASE, 0x00);
-    }
-    else if (increment < 0)
-    {
-        CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_IN_PRESS, static_cast<uint8_t>(sensitivity));
+    } else if (increment < 0) {
+        CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_IN_PRESS,
+                                      static_cast<uint8_t>(sensitivity));
         delay(30);
         CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_IN_RELEASE, 0x00);
     }

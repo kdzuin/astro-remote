@@ -1,39 +1,35 @@
-#include "components/menu_system.h"
 #include "screens/main_screen.h"
-#include "screens/video_screen.h"
-#include "screens/photo_screen.h"
+
+#include "components/menu_system.h"
 #include "screens/astro_screen.h"
-#include "screens/settings_screen.h"
 #include "screens/manual_screen.h"
+#include "screens/photo_screen.h"
+#include "screens/settings_screen.h"
+#include "screens/video_screen.h"
 #include "transport/remote_control_manager.h"
 
-MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
-{
-    auto &display = MenuSystem::getHardware()->getDisplay();
+MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main") {
+    auto& display = MenuSystem::getHardware()->getDisplay();
 
     menuItems.setTitle("Main Menu");
     updateMenuItems();
 
-    if (BLEDeviceManager::isConnected())
-    {
+    if (BLEDeviceManager::isConnected()) {
         setStatusText("Connected");
         setStatusBgColor(display.getColor(0, 100, 0));
-    }
-    else
-    {
+    } else {
         setStatusText("Select Option");
         setStatusBgColor(display.getColor(0, 0, 100));
     }
 
     // Try to auto-connect on startup if enabled
-    if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() && !BLEDeviceManager::wasManuallyDisconnected())
-    {
+    if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() &&
+        !BLEDeviceManager::wasManuallyDisconnected()) {
         setStatusText("Auto-connecting...");
         setStatusBgColor(display.getColor(128, 128, 0));
         drawStatusBar();
 
-        if (BLEDeviceManager::connectToSavedDevice())
-        {
+        if (BLEDeviceManager::connectToSavedDevice()) {
             setStatusText("Connected");
             setStatusBgColor(display.getColor(0, 200, 0));
             updateMenuItems();
@@ -42,18 +38,14 @@ MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
     }
 }
 
-void MainScreen::updateMenuItems()
-{
+void MainScreen::updateMenuItems() {
     const bool isConnected = BLEDeviceManager::isConnected();
 
     menuItems.clear();
-    if (!isConnected)
-    {
+    if (!isConnected) {
         menuItems.addItem(MainMenuItem::Connect, "Connect");
         menuItems.addItem(MainMenuItem::Settings, "Settings");
-    }
-    else
-    {
+    } else {
         menuItems.addItem(MainMenuItem::Photo, "Photo");
         menuItems.addItem(MainMenuItem::Video, "Video");
         menuItems.addItem(MainMenuItem::Astro, "Astro");
@@ -62,28 +54,23 @@ void MainScreen::updateMenuItems()
     }
 }
 
-void MainScreen::drawContent()
-{
+void MainScreen::drawContent() {
     menuItems.draw();
 }
 
-void MainScreen::update()
-{
-    auto &input = MenuSystem::getHardware()->getInput();
+void MainScreen::update() {
+    auto& input = MenuSystem::getHardware()->getInput();
 
     // Check for button presses
-    if (input.wasButtonPressed(ButtonId::BTN_A) || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM))
-    {
+    if (input.wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[MainScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
-    }
-    else if (input.wasButtonPressed(ButtonId::BTN_B) || RemoteControlManager::wasButtonPressed(ButtonId::DOWN))
-    {
+    } else if (input.wasButtonPressed(ButtonId::BTN_B) ||
+               RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[MainScreen] [Btn] Next Button Clicked");
         nextMenuItem();
-    }
-    else if (RemoteControlManager::wasButtonPressed(ButtonId::UP))
-    {
+    } else if (RemoteControlManager::wasButtonPressed(ButtonId::UP)) {
         LOG_PERIPHERAL("[MainScreen] [Btn] Prev Button Clicked");
         prevMenuItem();
     }
@@ -91,62 +78,54 @@ void MainScreen::update()
     checkConnection();
 }
 
-void MainScreen::selectMenuItem()
-{
-    switch (menuItems.getSelectedId())
-    {
-    case MainMenuItem::Connect:
-        if (BLEDeviceManager::isConnected())
-        {
-            BLEDeviceManager::disconnect();
-            setStatusText("Disconnected");
-            setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(100, 0, 0));
-            updateMenuItems();
-            draw();
-        }
-        else if (BLEDeviceManager::isPaired())
-        {
-            setStatusText("Connecting...");
-            setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(128, 128, 0));
-            drawStatusBar();
-
-            if (BLEDeviceManager::connectToSavedDevice())
-            {
-                setStatusText("Connected");
-                setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(0, 200, 0));
+void MainScreen::selectMenuItem() {
+    switch (menuItems.getSelectedId()) {
+        case MainMenuItem::Connect:
+            if (BLEDeviceManager::isConnected()) {
+                BLEDeviceManager::disconnect();
+                setStatusText("Disconnected");
+                setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(100, 0, 0));
                 updateMenuItems();
                 draw();
+            } else if (BLEDeviceManager::isPaired()) {
+                setStatusText("Connecting...");
+                setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(128, 128, 0));
+                drawStatusBar();
+
+                if (BLEDeviceManager::connectToSavedDevice()) {
+                    setStatusText("Connected");
+                    setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(0, 200, 0));
+                    updateMenuItems();
+                    draw();
+                }
             }
-        }
-        break;
-    case MainMenuItem::Settings:
-        MenuSystem::setScreen(new SettingsScreen());
-        break;
-    case MainMenuItem::Photo:
-        MenuSystem::setScreen(new PhotoScreen());
-        break;
-    case MainMenuItem::Video:
-        MenuSystem::setScreen(new VideoScreen());
-        break;
-    case MainMenuItem::Astro:
-        MenuSystem::setScreen(new AstroScreen());
-        break;
-    case MainMenuItem::Manual:
-        MenuSystem::setScreen(new ManualScreen());
-        break;
-    default:
-        break;
+            break;
+        case MainMenuItem::Settings:
+            MenuSystem::setScreen(new SettingsScreen());
+            break;
+        case MainMenuItem::Photo:
+            MenuSystem::setScreen(new PhotoScreen());
+            break;
+        case MainMenuItem::Video:
+            MenuSystem::setScreen(new VideoScreen());
+            break;
+        case MainMenuItem::Astro:
+            MenuSystem::setScreen(new AstroScreen());
+            break;
+        case MainMenuItem::Manual:
+            MenuSystem::setScreen(new ManualScreen());
+            break;
+        default:
+            break;
     }
 }
 
-void MainScreen::nextMenuItem()
-{
+void MainScreen::nextMenuItem() {
     menuItems.selectNext();
     draw();
 }
 
-void MainScreen::prevMenuItem()
-{
+void MainScreen::prevMenuItem() {
     menuItems.selectPrev();
     draw();
 }

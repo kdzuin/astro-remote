@@ -6,7 +6,7 @@ std::map<ButtonId, bool> RemoteControlManager::buttonProcessed;
 void RemoteControlManager::init() {
     buttonStates.clear();
     buttonProcessed.clear();
-    
+
     // Initialize all buttons as released
     buttonStates[ButtonId::UP] = false;
     buttonStates[ButtonId::DOWN] = false;
@@ -14,7 +14,7 @@ void RemoteControlManager::init() {
     buttonStates[ButtonId::RIGHT] = false;
     buttonStates[ButtonId::CONFIRM] = false;
     buttonStates[ButtonId::BACK] = false;
-    
+
     // Initialize all buttons as processed
     buttonProcessed[ButtonId::UP] = true;
     buttonProcessed[ButtonId::DOWN] = true;

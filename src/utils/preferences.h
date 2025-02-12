@@ -2,11 +2,9 @@
 
 #include <Preferences.h>
 
-class PreferencesManager
-{
+class PreferencesManager {
 public:
-    enum class BrightnessLevel : uint8_t
-    {
+    enum class BrightnessLevel : uint8_t {
         Level1 = 32,
         Level2 = 64,
         Level3 = 128,
@@ -26,9 +24,9 @@ public:
 
 private:
     static Preferences preferences;
-    static constexpr const char *NAMESPACE = "m5remote";
-    static constexpr const char *KEY_BRIGHTNESS = "brightness";
-    static constexpr const char *KEY_AUTO_CONNECT = "autoconnect";
+    static constexpr const char* NAMESPACE = "m5remote";
+    static constexpr const char* KEY_BRIGHTNESS = "brightness";
+    static constexpr const char* KEY_AUTO_CONNECT = "autoconnect";
     static constexpr uint8_t DEFAULT_BRIGHTNESS = static_cast<uint8_t>(BrightnessLevel::Level3);
     static constexpr bool DEFAULT_AUTO_CONNECT = true;
 };

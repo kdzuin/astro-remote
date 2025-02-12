@@ -1,8 +1,8 @@
 #include "sdl_hardware.h"
+
 #include <stdexcept>
 
-SDLDisplay::SDLDisplay(SDL_Renderer* renderer, TTF_Font* font)
-    : renderer(renderer), font(font) {}
+SDLDisplay::SDLDisplay(SDL_Renderer* renderer, TTF_Font* font) : renderer(renderer), font(font) {}
 
 void SDLDisplay::fillScreen(uint32_t color) {
     uint8_t r = (color >> 16) & 0xFF;
@@ -23,19 +23,18 @@ void SDLDisplay::setTextSize(float size) {
 
 void SDLDisplay::println(const char* text) {
     print(text);
-    cursorY += 20 * textSize; // Approximate line height
+    cursorY += 20 * textSize;  // Approximate line height
     cursorX = 0;
 }
 
 void SDLDisplay::print(const char* text) {
-    SDL_Color textColor = {255, 255, 255, 255}; // White text
+    SDL_Color textColor = {255, 255, 255, 255};  // White text
     SDL_Surface* surface = TTF_RenderText_Solid(font, text, textColor);
     if (surface) {
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
         if (texture) {
-            SDL_Rect dest = {cursorX, cursorY, 
-                           static_cast<int>(surface->w * textSize), 
-                           static_cast<int>(surface->h * textSize)};
+            SDL_Rect dest = {cursorX, cursorY, static_cast<int>(surface->w * textSize),
+                             static_cast<int>(surface->h * textSize)};
             SDL_RenderCopy(renderer, texture, NULL, &dest);
             cursorX += dest.w;
             SDL_DestroyTexture(texture);
@@ -118,10 +117,9 @@ SDLHardware::SDLHardware() {
         throw std::runtime_error("SDL_ttf initialization failed");
     }
 
-    window = SDL_CreateWindow("M5StickC Simulator",
-                            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                            160, 80,  // M5StickC display size
-                            SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("M5StickC Simulator", SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED, 160, 80,  // M5StickC display size
+                              SDL_WINDOW_SHOWN);
     if (!window) {
         TTF_Quit();
         SDL_Quit();

@@ -12,38 +12,31 @@ Preferences CameraControl::preferences;
 unsigned long CameraControl::exposureStartTime = 0;
 unsigned long CameraControl::currentExposureTime = 30000;
 
-class ConnectionCallback : public BLEClientCallbacks
-{
-    void onConnect(BLEClient* pclient) override
-    {
+class ConnectionCallback : public BLEClientCallbacks {
+    void onConnect(BLEClient* pclient) override {
         CameraControl::deviceConnected = true;
         Serial.println("Connected!");
     }
 
-    void onDisconnect(BLEClient* pclient) override
-    {
+    void onDisconnect(BLEClient* pclient) override {
         CameraControl::deviceConnected = false;
         Serial.println("Disconnected!");
     }
 };
 
-void CameraControl::init()
-{
+void CameraControl::init() {
     preferences.begin("camera", true);
     pairedDeviceAddress = preferences.getString("addr", "");
     preferences.end();
 }
 
-void CameraControl::connect()
-{
-    if (pairedDeviceAddress.isEmpty())
-    {
+void CameraControl::connect() {
+    if (pairedDeviceAddress.isEmpty()) {
         Serial.println("No paired device address");
         return;
     }
 
-    if (pClient == nullptr)
-    {
+    if (pClient == nullptr) {
         pClient = BLEDevice::createClient();
         pClient->setClientCallbacks(new ConnectionCallback());
     }
@@ -52,16 +45,14 @@ void CameraControl::connect()
     pClient->connect(BLEAddress(pairedDeviceAddress.c_str()));
 
     pRemoteService = pClient->getService(BLEUUID(SONY_SERVICE_UUID));
-    if (pRemoteService != nullptr)
-    {
-        pRemoteCharacteristic = pRemoteService->getCharacteristic(BLEUUID(SONY_CHARACTERISTIC_UUID));
+    if (pRemoteService != nullptr) {
+        pRemoteCharacteristic =
+            pRemoteService->getCharacteristic(BLEUUID(SONY_CHARACTERISTIC_UUID));
     }
 }
 
-void CameraControl::disconnect()
-{
-    if (pClient)
-    {
+void CameraControl::disconnect() {
+    if (pClient) {
         pClient->disconnect();
         delete pClient;
         pClient = nullptr;
@@ -69,30 +60,29 @@ void CameraControl::disconnect()
     deviceConnected = false;
 }
 
-void CameraControl::startBulbExposure()
-{
-    if (!deviceConnected || pRemoteCharacteristic == nullptr) return;
-    
+void CameraControl::startBulbExposure() {
+    if (!deviceConnected || pRemoteCharacteristic == nullptr)
+        return;
+
     Serial.println("Starting exposure");
-    uint8_t cmd[] = {0x01}; // Placeholder command
+    uint8_t cmd[] = {0x01};  // Placeholder command
     pRemoteCharacteristic->writeValue(cmd, sizeof(cmd));
     shooting = true;
     exposureStartTime = millis();
 }
 
-void CameraControl::stopBulbExposure()
-{
-    if (!deviceConnected || pRemoteCharacteristic == nullptr) return;
-    
+void CameraControl::stopBulbExposure() {
+    if (!deviceConnected || pRemoteCharacteristic == nullptr)
+        return;
+
     Serial.println("Stopping exposure");
-    uint8_t cmd[] = {0x00}; // Placeholder command
+    uint8_t cmd[] = {0x00};  // Placeholder command
     pRemoteCharacteristic->writeValue(cmd, sizeof(cmd));
     shooting = false;
     exposureCount++;
 }
 
-void CameraControl::forgetDevice()
-{
+void CameraControl::forgetDevice() {
     disconnect();
     pairedDeviceAddress = "";
     preferences.begin("camera", false);

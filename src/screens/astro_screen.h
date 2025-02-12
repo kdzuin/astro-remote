@@ -1,10 +1,10 @@
 #pragma once
 
 #include <M5Unified.h>
+
 #include "base_screen.h"
 
-enum class AstroMenuItem
-{
+enum class AstroMenuItem {
     Focus,
     InitialDelay,
     ExposureTime,
@@ -15,8 +15,7 @@ enum class AstroMenuItem
     Stop
 };
 
-class AstroScreen : public BaseScreen<AstroMenuItem>
-{
+class AstroScreen : public BaseScreen<AstroMenuItem> {
 public:
     AstroScreen();
     void updateMenuItems() override;

@@ -1,17 +1,16 @@
 #pragma once
 
 #include <M5Unified.h>
-#include "base_screen.h"
-#include "../transport/ble_device.h"
-#include "../components/menu_system.h"
 
-enum class ScanMenuItem
-{
-    Device // Each menu item will be a discovered device
+#include "../components/menu_system.h"
+#include "../transport/ble_device.h"
+#include "base_screen.h"
+
+enum class ScanMenuItem {
+    Device  // Each menu item will be a discovered device
 };
 
-class ScanScreen : public BaseScreen<ScanMenuItem>
-{
+class ScanScreen : public BaseScreen<ScanMenuItem> {
 public:
     ScanScreen();
     void updateMenuItems() override;

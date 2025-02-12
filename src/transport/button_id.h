@@ -1,8 +1,7 @@
 #pragma once
 
 // Button IDs
-enum class ButtonId : uint8_t
-{
+enum class ButtonId : uint8_t {
     // Remote control buttons
     UP = 0x01,
     DOWN = 0x02,
