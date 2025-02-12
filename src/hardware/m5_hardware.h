@@ -1,8 +1,7 @@
 #pragma once
 
 #include <M5Unified.h>
-#include "../hardware_interface.h"
-#include "../debug.h"
+#include "hardware_interface.h"
 
 class M5DisplayWrapper : public IDisplay
 {
@@ -35,7 +34,7 @@ public:
     {
         return M5.Display.height();
     }
-    void setTextDatum(textAlign::TextDatum datum) override
+    void setTextAlignment(textAlign::TextDatum datum) override
     {
         M5.Display.setTextDatum(static_cast<lgfx::v1::textdatum::textdatum_t>(datum));
     }
@@ -81,15 +80,18 @@ public:
         {
         case ButtonId::BTN_A:
             result = M5.BtnA.wasClicked();
-            if (result) LOG_DEBUG("[M5Input] BTN_A wasClicked event!");
+            if (result)
+                LOG_DEBUG("[M5Input] BTN_A wasClicked event!");
             break;
         case ButtonId::BTN_B:
             result = M5.BtnB.wasClicked();
-            if (result) LOG_DEBUG("[M5Input] BTN_B wasClicked event!");
+            if (result)
+                LOG_DEBUG("[M5Input] BTN_B wasClicked event!");
             break;
         case ButtonId::BTN_PWR:
             result = M5.BtnPWR.wasClicked();
-            if (result) LOG_DEBUG("[M5Input] BTN_PWR wasClicked event!");
+            if (result)
+                LOG_DEBUG("[M5Input] BTN_PWR wasClicked event!");
             break;
         default:
             break;
@@ -106,13 +108,13 @@ public:
         if (now - lastDebugTime >= 2000)
         {
             bool anyPressed = M5.BtnA.isPressed() || M5.BtnB.isPressed() || M5.BtnPWR.isPressed();
-            
+
             if (anyPressed)
             {
                 LOG_DEBUG("[M5Input] Held - A:%d B:%d PWR:%d",
-                    M5.BtnA.isPressed(),
-                    M5.BtnB.isPressed(),
-                    M5.BtnPWR.isPressed());
+                          M5.BtnA.isPressed(),
+                          M5.BtnB.isPressed(),
+                          M5.BtnPWR.isPressed());
             }
             lastDebugTime = now;
         }

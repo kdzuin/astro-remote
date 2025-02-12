@@ -3,9 +3,9 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "../components/selectable_list.h"
-#include "../transport/ble_device.h"
-#include "../components/menu_system.h"
+#include "components/selectable_list.h"
+#include "components/menu_system.h"
+#include "transport/ble_device.h"
 
 // Base menu item type for screens that don't define their own
 enum class BaseMenuItem

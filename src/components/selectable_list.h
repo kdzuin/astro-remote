@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <string>
-#include "../hardware_interface.h"
+#include "hardware_interface.h"
 
 // Forward declaration
 namespace MenuSystem

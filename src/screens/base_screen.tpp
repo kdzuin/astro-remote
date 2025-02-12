@@ -59,7 +59,7 @@ void BaseScreen<MenuItemType>::drawStatusBar() const
     if (!statusText.empty())
     {
         display.setTextSize(1);
-        display.setTextDatum(textAlign::middle_center);
+        display.setTextAlignment(textAlign::middle_center);
         display.setTextColor(display.color(255, 255, 255));
         display.drawString(statusText.c_str(), display.width() / 2, statusBarY + STATUS_BAR_HEIGHT / 2);
     }

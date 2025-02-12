@@ -1,7 +1,6 @@
 #include "camera_commands.h"
 #include "ble_device.h"
 #include <Arduino.h>
-#include "../debug.h"
 
 namespace CameraCommands
 {

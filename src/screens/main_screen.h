@@ -1,13 +1,12 @@
 #pragma once
 
-#include <M5Unified.h>
-#include "base_screen.h"
-#include "../transport/ble_device.h"
-#include "../components/menu_system.h"
-#include "settings_screen.h"
-#include "photo_screen.h"
-#include "video_screen.h"
-#include "astro_screen.h"
+#include "screens/base_screen.h"
+#include "transport/ble_device.h"
+#include "components/menu_system.h"
+#include "screens/settings_screen.h"
+#include "screens/photo_screen.h"
+#include "screens/video_screen.h"
+#include "screens/astro_screen.h"
 
 // Forward declare screens we'll create
 class SettingsScreen;

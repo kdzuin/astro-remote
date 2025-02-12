@@ -1,12 +1,11 @@
-#include "main_screen.h"
-#include "video_screen.h"
-#include "photo_screen.h"
-#include "astro_screen.h"
-#include "settings_screen.h"
-#include "manual_screen.h"
-#include "../debug.h"
-#include "../transport/remote_control_manager.h"
-#include "../components/menu_system.h"
+#include "components/menu_system.h"
+#include "screens/main_screen.h"
+#include "screens/video_screen.h"
+#include "screens/photo_screen.h"
+#include "screens/astro_screen.h"
+#include "screens/settings_screen.h"
+#include "screens/manual_screen.h"
+#include "transport/remote_control_manager.h"
 
 MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main")
 {

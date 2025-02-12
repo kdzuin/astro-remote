@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include "../hardware_interface.h"
+#include "hardware_interface.h"
 #include "screens/base_screen.h"
 
 // Forward declarations

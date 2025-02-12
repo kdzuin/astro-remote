@@ -5,7 +5,6 @@
 #include "transport/ble_device.h"
 #include "transport/ble_remote_server.h"
 #include "utils/preferences.h"
-#include "debug.h"
 
 class Application
 {
@@ -27,7 +26,7 @@ public:
         display.fillScreen(display.color(0, 0, 0));
         display.setTextColor(display.color(255, 255, 255));
         display.setTextSize(1.75);
-        display.setTextDatum(textAlign::middle_center);
+        display.setTextAlignment(textAlign::middle_center);
         display.drawString("Astro Remote", display.width() / 2, display.height() / 2);
 
         delay(1000);

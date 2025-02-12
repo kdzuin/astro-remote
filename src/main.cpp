@@ -1,6 +1,5 @@
 #include "hardware/m5_hardware.h"
 #include "app.h"
-#include "debug.h"
 
 // Global static instances to ensure they persist across Arduino loop calls
 static M5Hardware hardware;

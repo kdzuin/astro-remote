@@ -11,7 +11,6 @@
 #include <Preferences.h>
 #include <vector>
 #include <string>
-#include "../debug.h"
 
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D

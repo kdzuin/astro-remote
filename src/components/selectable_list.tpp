@@ -162,7 +162,7 @@ void SelectableList<IdType>::draw()
     if (!title.empty())
     {
         display.setTextSize(1.25);
-        display.setTextDatum(textAlign::middle_center);
+        display.setTextAlignment(textAlign::middle_center);
         display.setTextColor(NORMAL_FG);
         display.drawString(title.c_str(), display.width() / 2, y + ITEM_HEIGHT / 2);
         y += ITEM_HEIGHT + TITLE_PADDING;
@@ -182,7 +182,7 @@ void SelectableList<IdType>::draw()
         display.fillRect(0, y, display.width(), ITEM_HEIGHT, bgColor);
 
         // Draw item text
-        display.setTextDatum(textAlign::middle_left);
+        display.setTextAlignment(textAlign::middle_left);
         display.setTextColor(fgColor);
         display.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
 
@@ -190,7 +190,7 @@ void SelectableList<IdType>::draw()
         if (item.info)
         {
             display.setTextColor(item.info->color ? *item.info->color : fgColor);
-            display.setTextDatum(textAlign::middle_right);
+            display.setTextAlignment(textAlign::middle_right);
             display.drawString(item.info->text.c_str(), display.width() - HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
         }
 

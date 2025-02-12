@@ -32,7 +32,7 @@ public:
     virtual int32_t width() const = 0;
     virtual int32_t height() const = 0;
     virtual void setBrightness(uint8_t brightness) = 0;
-    virtual void setTextDatum(textAlign::TextDatum datum) = 0;
+    virtual void setTextAlignment(textAlign::TextDatum datum) = 0;
     virtual void setTextSize(float size) = 0;
     virtual void setTextColor(unifiedColor color) = 0;
     virtual void drawString(const char *text, int32_t x, int32_t y) = 0;

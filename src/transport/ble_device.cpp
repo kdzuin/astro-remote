@@ -1,6 +1,5 @@
 #include "ble_device.h"
 #include "camera_commands.h"
-#include "../debug.h"
 
 // Client callbacks implementation
 class ClientCallback : public BLEClientCallbacks
