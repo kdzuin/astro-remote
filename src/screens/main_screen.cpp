@@ -16,22 +16,22 @@ MainScreen::MainScreen() : BaseScreen<MainMenuItem>("Main") {
 
     if (BLEDeviceManager::isConnected()) {
         setStatusText("Connected");
-        setStatusBgColor(display.getColor(0, 100, 0));
+        setStatusBgColor(display.getColor(display::colors::SUCCESS));
     } else {
         setStatusText("Select Option");
-        setStatusBgColor(display.getColor(0, 0, 100));
+        setStatusBgColor(display.getColor(display::colors::GRAY_800));
     }
 
     // Try to auto-connect on startup if enabled
     if (BLEDeviceManager::isAutoConnectEnabled() && BLEDeviceManager::isPaired() &&
         !BLEDeviceManager::wasManuallyDisconnected()) {
         setStatusText("Auto-connecting...");
-        setStatusBgColor(display.getColor(128, 128, 0));
+        setStatusBgColor(display.getColor(display::colors::WARNING));
         drawStatusBar();
 
         if (BLEDeviceManager::connectToSavedDevice()) {
             setStatusText("Connected");
-            setStatusBgColor(display.getColor(0, 200, 0));
+            setStatusBgColor(display.getColor(display::colors::SUCCESS));
             updateMenuItems();
             draw();
         }
@@ -84,17 +84,20 @@ void MainScreen::selectMenuItem() {
             if (BLEDeviceManager::isConnected()) {
                 BLEDeviceManager::disconnect();
                 setStatusText("Disconnected");
-                setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(100, 0, 0));
+                setStatusBgColor(
+                    MenuSystem::getHardware()->getDisplay().getColor(display::colors::DANGER));
                 updateMenuItems();
                 draw();
             } else if (BLEDeviceManager::isPaired()) {
                 setStatusText("Connecting...");
-                setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(128, 128, 0));
+                setStatusBgColor(
+                    MenuSystem::getHardware()->getDisplay().getColor(display::colors::WARNING));
                 drawStatusBar();
 
                 if (BLEDeviceManager::connectToSavedDevice()) {
                     setStatusText("Connected");
-                    setStatusBgColor(MenuSystem::getHardware()->getDisplay().getColor(0, 200, 0));
+                    setStatusBgColor(
+                        MenuSystem::getHardware()->getDisplay().getColor(display::colors::SUCCESS));
                     updateMenuItems();
                     draw();
                 }

@@ -10,6 +10,10 @@ public:
     void setTextSize(float size) override { M5.Display.setTextSize(size); }
     void setTextColor(unifiedColor color) override { M5.Display.setTextColor(color); }
     void setBrightness(uint8_t brightness) override { M5.Display.setBrightness(brightness); }
+    void setClipRect(int32_t x, int32_t y, int32_t w, int32_t h) override {
+        M5.Display.setClipRect(x, y, w, h);
+    }
+    void clearClipRect() override { M5.Display.clearClipRect(); }
     void setRotation(uint8_t r) override { M5.Display.setRotation(r); }
     int32_t width() const override { return M5.Display.width(); }
     int32_t height() const override { return M5.Display.height(); }

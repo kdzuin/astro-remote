@@ -5,7 +5,7 @@
 
 typedef uint32_t unifiedColor;
 
-struct StatusRGBColor {
+struct RGBColorTriple {
     uint8_t r;
     uint8_t g;
     uint8_t b;
@@ -36,6 +36,8 @@ public:
     virtual int32_t width() const = 0;
     virtual int32_t height() const = 0;
     virtual void setBrightness(uint8_t brightness) = 0;
+    virtual void setClipRect(int32_t x, int32_t y, int32_t w, int32_t h) = 0;
+    virtual void clearClipRect() = 0;
     virtual void setTextAlignment(textAlign::TextDatum datum) = 0;
     virtual void setTextSize(float size) = 0;
     virtual void setTextColor(unifiedColor color) = 0;
@@ -44,7 +46,7 @@ public:
     virtual void fillScreen(unifiedColor color) = 0;
     virtual void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, unifiedColor color) = 0;
     virtual unifiedColor getColor(uint8_t r, uint8_t g, uint8_t b) = 0;
-    virtual unifiedColor getColor(const StatusRGBColor& color) {
+    virtual unifiedColor getColor(const RGBColorTriple& color) {
         return getColor(color.r, color.g, color.b);
     };
 };

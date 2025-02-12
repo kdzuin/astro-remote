@@ -75,7 +75,8 @@ inline void FocusScreen::update() {
         LOG_APP("[FocusScreen] Toggle focus mode");
         updateFocusState(!focusing);
         draw();
-    } else if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN) ||
+    } else if (input().wasButtonPressed(ButtonId::BTN_B) ||
+               RemoteControlManager::wasButtonPressed(ButtonId::DOWN) ||
                RemoteControlManager::wasButtonPressed(ButtonId::UP)) {
         LOG_APP("[FocusScreen] Cycle sensitivity");
         cycleSensitivity();

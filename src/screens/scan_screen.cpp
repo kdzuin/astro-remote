@@ -88,22 +88,24 @@ void ScanScreen::update() {
     }
 
     if (!BLEDeviceManager::isScanning() && !isConnecting) {
-        if ((M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
+        if ((input().wasButtonPressed(ButtonId::BTN_A) ||
+             RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
             !BLEDeviceManager::getDiscoveredDevices().empty()) {
             LOG_PERIPHERAL("[ScanScreen] [Btn] Confirm Button Clicked");
             selectMenuItem();
-        }
 
-        if ((M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
-            !BLEDeviceManager::getDiscoveredDevices().empty()) {
-            LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
-            nextMenuItem();
-        }
+            if ((input().wasButtonPressed(ButtonId::BTN_B) ||
+                 RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
+                !BLEDeviceManager::getDiscoveredDevices().empty()) {
+                LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
+                nextMenuItem();
+            }
 
-        if (RemoteControlManager::wasButtonPressed(ButtonId::UP) &&
-            !BLEDeviceManager::getDiscoveredDevices().empty()) {
-            LOG_PERIPHERAL("[ScanScreen] [Btn] Prev Button Clicked");
-            prevMenuItem();
+            if (RemoteControlManager::wasButtonPressed(ButtonId::UP) &&
+                !BLEDeviceManager::getDiscoveredDevices().empty()) {
+                LOG_PERIPHERAL("[ScanScreen] [Btn] Prev Button Clicked");
+                prevMenuItem();
+            }
         }
     }
 }

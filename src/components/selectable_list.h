@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "hardware_interface.h"
+#include "utils/display_constants.h"
 
 // Forward declaration
 namespace MenuSystem {
@@ -21,7 +22,7 @@ private:
 
     // Helper function to create color
     static unifiedColor defaultColor() {
-        return MenuSystem::getHardware()->getDisplay().getColor(255, 255, 255);
+        return MenuSystem::getHardware()->getDisplay().getColor(display::colors::WHITE);
     }
 
 public:

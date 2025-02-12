@@ -1,17 +1,19 @@
 #include "manual_screen.h"
 
-#include "../components/menu_system.h"
-#include "../transport/camera_commands.h"
-#include "../transport/remote_control_manager.h"
+#include "components/menu_system.h"
+#include "transport/camera_commands.h"
+#include "transport/remote_control_manager.h"
+#include "utils/display_constants.h"
 
 ManualScreen::ManualScreen() : BaseScreen("Manual") {
     setStatusText("Manual Control");
-    setStatusBgColor(M5.Display.color565(0, 0, 100));
+    setStatusBgColor(display().getColor(display::colors::GRAY_800));
     updateMenuItems();
 }
 
 void ManualScreen::update() {
-    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
+    if (input().wasButtonPressed(ButtonId::BTN_B) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[ManualScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
@@ -21,7 +23,8 @@ void ManualScreen::update() {
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (input().wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[ManualScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }

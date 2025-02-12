@@ -4,6 +4,7 @@
 #include "hardware_interface.h"
 #include "transport/ble_device.h"
 #include "transport/ble_remote_server.h"
+#include "utils/display_constants.h"
 #include "utils/preferences.h"
 
 class Application {
@@ -21,8 +22,8 @@ public:
         display.setRotation(0);
 
         // Show splash screen
-        display.fillScreen(display.getColor(0, 0, 0));
-        display.setTextColor(display.getColor(255, 255, 255));
+        display.fillScreen(display.getColor(display::colors::BLACK));
+        display.setTextColor(display.getColor(display::colors::WHITE));
         display.setTextSize(1.75);
         display.setTextAlignment(textAlign::middle_center);
         display.drawString("Astro Remote", display.width() / 2, display.height() / 2);

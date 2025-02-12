@@ -50,7 +50,8 @@ inline void PhotoScreen::drawContent() {
 }
 
 inline void PhotoScreen::update() {
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (input().wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[PhotoScreen] [Btn] Confirm Button Clicked");
 
         if (CameraCommands::takePhoto()) {

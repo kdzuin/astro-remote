@@ -10,7 +10,7 @@ using namespace display::colors;
 
 SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings") {
     setStatusText("Select Option");
-    setStatusBgColor(display().getColor(StatusColors::NORMAL));
+    setStatusBgColor(display().getColor(display::colors::NORMAL));
     menuItems.setTitle("Settings Menu");
     updateMenuItems();
 }
@@ -46,7 +46,8 @@ void SettingsScreen::drawContent() {
 }
 
 void SettingsScreen::update() {
-    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
+    if (input().wasButtonPressed(ButtonId::BTN_B) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[SettingsScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
@@ -56,7 +57,8 @@ void SettingsScreen::update() {
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (input().wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[SettingsScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }
@@ -67,10 +69,10 @@ void SettingsScreen::selectMenuItem() {
         case SettingsMenuItem::Connect:
             if (BLEDeviceManager::connectToSavedDevice()) {
                 setStatusText("Connected!");
-                setStatusBgColor(display().getColor(StatusColors::SUCCESS));
+                setStatusBgColor(display().getColor(display::colors::SUCCESS));
             } else {
                 setStatusText("Failed to connect!");
-                setStatusBgColor(display().getColor(StatusColors::ERROR));
+                setStatusBgColor(display().getColor(display::colors::ERROR));
             }
             updateMenuItems();
             draw();
@@ -80,7 +82,7 @@ void SettingsScreen::selectMenuItem() {
             BLEDeviceManager::unpairCamera();
             BLEDeviceManager::setManuallyDisconnected(true);
             setStatusText("Select Option");
-            setStatusBgColor(display().getColor(StatusColors::NORMAL));
+            setStatusBgColor(display().getColor(display::colors::NORMAL));
             updateMenuItems();
             draw();
             break;
@@ -110,7 +112,7 @@ void SettingsScreen::selectMenuItem() {
             BLEDeviceManager::disconnect();
             BLEDeviceManager::setManuallyDisconnected(true);
             setStatusText("Select Option");
-            setStatusBgColor(display().getColor(StatusColors::NORMAL));
+            setStatusBgColor(display().getColor(display::colors::NORMAL));
             updateMenuItems();
             draw();
             break;
@@ -131,10 +133,10 @@ void SettingsScreen::prevMenuItem() {
 
 uint16_t SettingsScreen::getStatusBgColor(int batteryLevel) {
     if (batteryLevel < 20) {
-        return display().getColor(StatusColors::ERROR);  // Critical
+        return display().getColor(display::colors::ERROR);  // Critical
     }
     if (batteryLevel < 50) {
-        return display().getColor(StatusColors::WARNING);  // Warning
+        return display().getColor(display::colors::WARNING);  // Warning
     }
-    return display().getColor(StatusColors::SUCCESS);  // Good
+    return display().getColor(display::colors::SUCCESS);  // Good
 }
