@@ -1,6 +1,6 @@
-#include "ble_device.h"
+#include "transport/ble_device.h"
 
-#include "camera_commands.h"
+#include "transport/camera_commands.h"
 
 // Client callbacks implementation
 class ClientCallback : public BLEClientCallbacks {
@@ -329,7 +329,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device) {
         return false;
     }
 
-    // Save the device address if connection was successful
+    // Save the device address
     saveDeviceAddress(address.toString());
     return true;
 }

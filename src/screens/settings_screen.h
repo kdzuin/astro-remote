@@ -8,7 +8,6 @@ enum class SettingsMenuItem { Connect, Disconnect, Forget, Scan, AutoConnect, Br
 
 class SettingsScreen : public BaseScreen<SettingsMenuItem> {
 private:
-    IDisplay& display;  // Store display reference
     uint16_t getStatusBgColor(int batteryLevel);
     int selectedItem = 0;
 

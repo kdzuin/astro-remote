@@ -1,5 +1,14 @@
 #pragma once
 
+#include "hardware_interface.h"
+
+namespace StatusColors {
+constexpr StatusRGBColor NORMAL = {0, 0, 100};
+constexpr StatusRGBColor SUCCESS = {0, 200, 0};
+constexpr StatusRGBColor ERROR = {200, 0, 0};
+constexpr StatusRGBColor WARNING = {200, 200, 0};
+}  // namespace StatusColors
+
 namespace display {
 namespace colors {
 // Status colors

@@ -8,12 +8,9 @@
 
 using namespace display::colors;
 
-SettingsScreen::SettingsScreen()
-    : BaseScreen<SettingsMenuItem>("Settings"),
-      display(MenuSystem::getHardware()->getDisplay())  // Initialize display reference
-{
+SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings") {
     setStatusText("Select Option");
-    setStatusBgColor(display.getColor(STATUS_NORMAL_R, STATUS_NORMAL_G, STATUS_NORMAL_B));
+    setStatusBgColor(display().getColor(StatusColors::NORMAL));
     menuItems.setTitle("Settings Menu");
     updateMenuItems();
 }
@@ -70,11 +67,10 @@ void SettingsScreen::selectMenuItem() {
         case SettingsMenuItem::Connect:
             if (BLEDeviceManager::connectToSavedDevice()) {
                 setStatusText("Connected!");
-                setStatusBgColor(
-                    display.getColor(STATUS_SUCCESS_R, STATUS_SUCCESS_G, STATUS_SUCCESS_B));
+                setStatusBgColor(display().getColor(StatusColors::SUCCESS));
             } else {
                 setStatusText("Failed to connect!");
-                setStatusBgColor(display.getColor(STATUS_ERROR_R, STATUS_ERROR_G, STATUS_ERROR_B));
+                setStatusBgColor(display().getColor(StatusColors::ERROR));
             }
             updateMenuItems();
             draw();
@@ -84,7 +80,7 @@ void SettingsScreen::selectMenuItem() {
             BLEDeviceManager::unpairCamera();
             BLEDeviceManager::setManuallyDisconnected(true);
             setStatusText("Select Option");
-            setStatusBgColor(display.getColor(STATUS_NORMAL_R, STATUS_NORMAL_G, STATUS_NORMAL_B));
+            setStatusBgColor(display().getColor(StatusColors::NORMAL));
             updateMenuItems();
             draw();
             break;
@@ -114,9 +110,7 @@ void SettingsScreen::selectMenuItem() {
             BLEDeviceManager::disconnect();
             BLEDeviceManager::setManuallyDisconnected(true);
             setStatusText("Select Option");
-            setStatusBgColor(display.getColor(display::colors::STATUS_NORMAL_R,
-                                              display::colors::STATUS_NORMAL_G,
-                                              display::colors::STATUS_NORMAL_B));
+            setStatusBgColor(display().getColor(StatusColors::NORMAL));
             updateMenuItems();
             draw();
             break;
@@ -137,10 +131,10 @@ void SettingsScreen::prevMenuItem() {
 
 uint16_t SettingsScreen::getStatusBgColor(int batteryLevel) {
     if (batteryLevel < 20) {
-        return display.getColor(STATUS_ERROR_R, STATUS_ERROR_G, STATUS_ERROR_B);  // Critical
+        return display().getColor(StatusColors::ERROR);  // Critical
     }
     if (batteryLevel < 50) {
-        return display.getColor(STATUS_WARNING_R, STATUS_WARNING_G, STATUS_WARNING_B);  // Warning
+        return display().getColor(StatusColors::WARNING);  // Warning
     }
-    return display.getColor(STATUS_SUCCESS_R, STATUS_SUCCESS_G, STATUS_SUCCESS_B);  // Good
+    return display().getColor(StatusColors::SUCCESS);  // Good
 }
