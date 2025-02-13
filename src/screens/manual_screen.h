@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_screen.h"
+#include "screens/base_screen.h"
 
 enum class ManualMenuItem {
     HalfDown,

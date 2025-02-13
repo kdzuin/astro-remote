@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ble_device.h"
+#include "transport/ble_device.h"
 
 namespace CameraCommands {
 // Command codes (2-byte format)

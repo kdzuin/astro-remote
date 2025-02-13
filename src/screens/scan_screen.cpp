@@ -1,6 +1,6 @@
-#include "scan_screen.h"
+#include "screens/scan_screen.h"
 
-#include "../transport/remote_control_manager.h"
+#include "transport/remote_control_manager.h"
 
 ScanScreen::ScanScreen()
     : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false) {

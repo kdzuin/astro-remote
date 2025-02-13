@@ -1,8 +1,8 @@
-#include "camera_commands.h"
+#include "transport/camera_commands.h"
 
 #include <Arduino.h>
 
-#include "ble_device.h"
+#include "transport/ble_device.h"
 
 namespace CameraCommands {
 // Static variables

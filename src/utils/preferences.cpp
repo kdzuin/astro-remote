@@ -1,4 +1,4 @@
-#include "preferences.h"
+#include "utils/preferences.h"
 
 Preferences PreferencesManager::preferences;
 
