@@ -17,6 +17,7 @@ SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings") {
 
 void SettingsScreen::updateMenuItems() {
     menuItems.clear();
+    auto& power = MenuSystem::getHardware()->getPower();
 
     if (BLEDeviceManager::isConnected()) {
         menuItems.addItem(SettingsMenuItem::Disconnect, "Disconnect");
@@ -36,8 +37,8 @@ void SettingsScreen::updateMenuItems() {
     menuItems.addItem(SettingsMenuItem::Brightness, "Brightness",
                       std::to_string(PreferencesManager::getBrightness()), true);
     menuItems.addItem(SettingsMenuItem::Battery, "Battery",
-                      std::to_string(M5.Power.getBatteryLevel()) + "%",
-                      getStatusBgColor(M5.Power.getBatteryLevel()), false);
+                      std::to_string(power.getBatteryLevel()) + "%",
+                      getStatusBgColor(power.getBatteryLevel()), false);
 }
 
 void SettingsScreen::drawContent() {
@@ -102,7 +103,7 @@ void SettingsScreen::selectMenuItem() {
         case SettingsMenuItem::Brightness: {
             auto nextLevel =
                 PreferencesManager::getNextBrightnessLevel(PreferencesManager::getBrightness());
-            M5.Display.setBrightness(static_cast<uint8_t>(nextLevel));
+            display().setBrightness(static_cast<uint8_t>(nextLevel));
             PreferencesManager::setBrightness(static_cast<uint8_t>(nextLevel));
             updateMenuItems();
             draw();

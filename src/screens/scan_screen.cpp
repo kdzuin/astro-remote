@@ -36,7 +36,7 @@ void ScanScreen::updateMenuItems() {
 }
 
 void ScanScreen::drawContent() {
-    display().fillScreen(BLACK);
+    display().fillScreen(display().getColor(display::colors::BLACK));
 
     if (isConnecting) {
         display().setTextAlignment(textAlign::middle_center);

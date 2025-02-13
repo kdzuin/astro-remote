@@ -1,10 +1,8 @@
 #pragma once
 
-#include <M5Unified.h>
-
-#include "../transport/camera_commands.h"
-#include "../transport/remote_control_manager.h"
-#include "base_screen.h"
+#include "screens/base_screen.h"
+#include "transport/camera_commands.h"
+#include "transport/remote_control_manager.h"
 
 enum class VideoMenuItem { None };
 
@@ -24,13 +22,14 @@ private:
 };
 
 inline void VideoScreen::drawContent() {
-    int centerX = M5.Display.width() / 2;
-    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+    int centerX = display().width() / 2;
+    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
     if (CameraCommands::isRecording()) {
         // Red background when recording
-        M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(), RED);
-        M5.Display.setTextColor(WHITE);
+        display().fillRect(0, 0, display().width(), display().height(),
+                           display().getColor(display::colors::RED));
+        display().setTextColor(display().getColor(display::colors::WHITE));
 
         // Show recording time
         unsigned long recordTime = (millis() - recordStartTime) / 1000;
@@ -40,20 +39,21 @@ inline void VideoScreen::drawContent() {
         char timeStr[10];
         sprintf(timeStr, "%02d:%02d", minutes, seconds);
 
-        M5.Display.setTextSize(3);
-        M5.Display.setTextDatum(middle_center);
-        M5.Display.drawString(timeStr, centerX, centerY);
+        display().setTextSize(3);
+        display().setTextAlignment(textAlign::middle_center);
+        display().drawString(timeStr, centerX, centerY);
     } else {
         // Normal display
-        M5.Display.fillScreen(BLACK);
+        display().fillScreen(display().getColor(display::colors::BLACK));
 
         // Draw record symbol
         int radius = 20;
-        M5.Display.fillCircle(centerX, centerY, radius, RED);
-        M5.Display.drawCircle(centerX, centerY, radius + 2, WHITE);
+        display().fillCircle(centerX, centerY, radius, display().getColor(display::colors::RED));
+        display().drawCircle(centerX, centerY, radius + 2,
+                             display().getColor(display::colors::WHITE));
     }
 
-    setStatusBgColor(M5.Display.color565(32, 32, 32));
+    setStatusBgColor(display().getColor(display::colors::GRAY_800));
     setStatusText(CameraCommands::isRecording() ? "Recording" : "Ready");
     drawStatusBar();
 }

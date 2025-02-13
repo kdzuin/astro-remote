@@ -1,8 +1,6 @@
 #pragma once
 
-#include <M5Unified.h>
-
-#include "base_screen.h"
+#include "screens/base_screen.h"
 
 enum class AstroMenuItem {
     Focus,

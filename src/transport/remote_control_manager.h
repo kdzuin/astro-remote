@@ -13,7 +13,6 @@ public:
     static void init();
     static void update();
 
-    // Button state checkers (similar to M5.BtnA.wasClicked())
     static bool wasButtonPressed(ButtonId button);
     static bool isButtonPressed(ButtonId button);
 

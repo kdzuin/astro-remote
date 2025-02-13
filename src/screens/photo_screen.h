@@ -1,9 +1,8 @@
 #pragma once
 
-#include "../transport/camera_commands.h"
-#include "../transport/remote_control_manager.h"
-#include "M5Unified.h"
-#include "base_screen.h"
+#include "screens/base_screen.h"
+#include "transport/camera_commands.h"
+#include "transport/remote_control_manager.h"
 
 enum class PhotoMenuItem { None };
 

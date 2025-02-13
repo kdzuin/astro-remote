@@ -43,8 +43,10 @@ public:
     virtual void setTextColor(unifiedColor color) = 0;
     virtual void drawString(const char* text, int32_t x, int32_t y) = 0;
     virtual void drawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, unifiedColor color) = 0;
+    virtual void drawCircle(int32_t x, int32_t y, int32_t r, unifiedColor color) = 0;
     virtual void fillScreen(unifiedColor color) = 0;
     virtual void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, unifiedColor color) = 0;
+    virtual void fillCircle(int32_t x, int32_t y, int32_t r, unifiedColor color) = 0;
     virtual unifiedColor getColor(uint8_t r, uint8_t g, uint8_t b) = 0;
     virtual unifiedColor getColor(const RGBColorTriple& color) {
         return getColor(color.r, color.g, color.b);
@@ -60,6 +62,13 @@ public:
     virtual void update() = 0;
 };
 
+// Power and Power Management
+class IPower {
+public:
+    virtual ~IPower() = default;
+    virtual int32_t getBatteryLevel() const = 0;  // 0-100
+};
+
 // Hardware manager interface
 class IHardware {
 public:
@@ -67,5 +76,6 @@ public:
     virtual void begin() = 0;
     virtual IDisplay& getDisplay() = 0;
     virtual IInput& getInput() = 0;
+    virtual IPower& getPower() = 0;
     virtual void update() = 0;
 };

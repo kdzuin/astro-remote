@@ -35,8 +35,8 @@ inline void FocusScreen::drawContent() {
     int centerX = display().width() / 2;
     int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
-    display().fillScreen(BLACK);
-    display().setTextColor(WHITE);
+    display().fillScreen(display().getColor(display::colors::BLACK));
+    display().setTextColor(display().getColor(display::colors::WHITE));
 
     // Draw main focus status
     display().setTextSize(2);

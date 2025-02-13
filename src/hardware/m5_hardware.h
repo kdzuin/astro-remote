@@ -15,6 +15,9 @@ public:
     }
     void clearClipRect() override { M5.Display.clearClipRect(); }
     void setRotation(uint8_t r) override { M5.Display.setRotation(r); }
+    unifiedColor getColor(uint8_t r, uint8_t g, uint8_t b) override {
+        return M5.Display.color888(r, g, b);
+    }
     int32_t width() const override { return M5.Display.width(); }
     int32_t height() const override { return M5.Display.height(); }
     void setTextAlignment(textAlign::TextDatum datum) override {
@@ -29,8 +32,11 @@ public:
     void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, unifiedColor color) override {
         M5.Display.fillRect(x, y, w, h, color);
     }
-    unifiedColor getColor(uint8_t r, uint8_t g, uint8_t b) override {
-        return M5.Display.color888(r, g, b);
+    void drawCircle(int32_t x, int32_t y, int32_t r, unifiedColor color) override {
+        M5.Display.drawCircle(x, y, r, color);
+    }
+    void fillCircle(int32_t x, int32_t y, int32_t r, unifiedColor color) override {
+        M5.Display.fillCircle(x, y, r, color);
     }
 };
 
@@ -89,6 +95,11 @@ public:
     }
 };
 
+class M5PowerWrapper : public IPower {
+public:
+    int32_t getBatteryLevel() const override { return M5.Power.getBatteryLevel(); }
+};
+
 class M5Hardware : public IHardware {
 public:
     void begin() override {
@@ -99,6 +110,7 @@ public:
 
     IDisplay& getDisplay() override { return display; }
     IInput& getInput() override { return input; }
+    IPower& getPower() override { return power; }
     void update() override {
         M5.update();     // Single source of truth for M5 updates
         input.update();  // Just for debug logging
@@ -107,4 +119,5 @@ public:
 private:
     M5DisplayWrapper display;
     M5InputWrapper input;
+    M5PowerWrapper power;
 };

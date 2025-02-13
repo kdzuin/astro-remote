@@ -1,10 +1,8 @@
 #pragma once
 
-#include <M5Unified.h>
-
-#include "../components/menu_system.h"
-#include "../transport/ble_device.h"
-#include "base_screen.h"
+#include "components/menu_system.h"
+#include "screens/base_screen.h"
+#include "transport/ble_device.h"
 
 enum class ScanMenuItem {
     Device  // Each menu item will be a discovered device
