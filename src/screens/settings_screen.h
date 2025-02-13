@@ -1,14 +1,12 @@
 #pragma once
 
-#include "hardware_interface.h"
+#include "processes/settings.h"
 #include "screens/base_screen.h"
-#include "transport/ble_device.h"
 
 enum class SettingsMenuItem { Connect, Disconnect, Forget, Scan, AutoConnect, Brightness, Battery };
 
 class SettingsScreen : public BaseScreen<SettingsMenuItem> {
 private:
-    uint16_t getStatusBgColor(int batteryLevel);
     int selectedItem = 0;
 
 public:

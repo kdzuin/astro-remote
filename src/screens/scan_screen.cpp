@@ -1,5 +1,4 @@
 #include "screens/scan_screen.h"
-
 #include "transport/remote_control_manager.h"
 
 ScanScreen::ScanScreen()
@@ -9,14 +8,14 @@ ScanScreen::ScanScreen()
     int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
     display().drawString("Wait...", centerX, centerY);
 
-    setStatusText("Scanning...");
-    setStatusBgColor(display().getColor(display::colors::YELLOW));  // Yellow for scanning
+    auto state = ScanProcess::getState();
+    setStatusText(ScanProcess::getStatusText(state.status));
+    setStatusBgColor(ScanProcess::getStatusColor(state.status));
 
     // Start scanning immediately when screen is created
-    if (!BLEDeviceManager::startScan(5))  // 5-second scan
-    {
-        setStatusText("Scan failed!");
-        setStatusBgColor(display().getColor(display::colors::RED));
+    if (!ScanProcess::startScan(5)) {  // 5-second scan
+        setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Failed));
+        setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::Failed));
     }
 
     updateMenuItems();
@@ -25,8 +24,8 @@ ScanScreen::ScanScreen()
 void ScanScreen::updateMenuItems() {
     menuItems.clear();
 
-    const auto& discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
-    for (const auto& deviceInfo : discoveredDevices) {
+    auto state = ScanProcess::getState();
+    for (const auto& deviceInfo : state.discoveredDevices) {
         std::string displayName = deviceInfo.getName();
         if (displayName.empty()) {
             displayName = deviceInfo.getAddress();
@@ -38,105 +37,100 @@ void ScanScreen::updateMenuItems() {
 void ScanScreen::drawContent() {
     display().fillScreen(display().getColor(display::colors::BLACK));
 
+    auto state = ScanProcess::getState();
+    if (isConnecting) {
+        state.status = ScanProcess::Status::Connecting;
+    }
+
     if (isConnecting) {
         display().setTextAlignment(textAlign::middle_center);
         int centerX = display().width() / 2;
         int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
         display().drawString("Wait...", centerX, centerY);
+    } else if (state.discoveredDevices.empty()) {
+        display().setTextAlignment(textAlign::middle_center);
+        int centerX = display().width() / 2;
+        int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
-        setStatusText("Connecting...");
-        setStatusBgColor(display().getColor(display::colors::YELLOW));  // Yellow for connecting
-    } else {
-        const auto& discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
-        if (!discoveredDevices.empty()) {
-            // Reset text alignment for menu drawing
-            menuItems.draw();
+        display().drawString("Not found", centerX, centerY - 10);
+        display().drawString("Restarting...", centerX, centerY + 10);
 
-            setStatusText("Select camera");
-            setStatusBgColor(display().getColor(display::colors::GRAY_800));
-        } else {
-            display().setTextAlignment(textAlign::middle_center);
-            int centerX = display().width() / 2;
-            int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
-
-            display().drawString("Not found", centerX, centerY - 10);
-            display().drawString("Restarting...", centerX, centerY + 10);
-
-            setStatusText("No devices");
-            setStatusBgColor(display().getColor(display::colors::RED));  // Red for no devices
-
-            // Restart scan after a brief delay if not already scanning
-            if (!BLEDeviceManager::isScanning()) {
-                if (!BLEDeviceManager::startScan(5)) {
-                    setStatusText("Scan failed!");
-                }
+        // Restart scan after a brief delay if not already scanning
+        if (!state.isScanning) {
+            if (!ScanProcess::startScan(5)) {
+                setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Failed));
+                setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::Failed));
             }
         }
+    } else {
+        // Reset text alignment for menu drawing
+        menuItems.draw();
     }
+
+    setStatusText(ScanProcess::getStatusText(state.status));
+    setStatusBgColor(ScanProcess::getStatusColor(state.status));
 }
 
 void ScanScreen::update() {
+    auto state = ScanProcess::getState();
+
     // Check if scanning state changed
-    if (lastScanning != BLEDeviceManager::isScanning()) {
-        lastScanning = BLEDeviceManager::isScanning();
-        if (!lastScanning)  // Scan just finished
-        {
+    if (lastScanning != state.isScanning) {
+        lastScanning = state.isScanning;
+        if (!lastScanning) {  // Scan just finished
             updateMenuItems();  // Update the menu with any found devices
         }
         draw();
         return;
     }
 
-    if (!BLEDeviceManager::isScanning() && !isConnecting) {
+    if (!state.isScanning && !isConnecting) {
         if ((input().wasButtonPressed(ButtonId::BTN_A) ||
              RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
-            !BLEDeviceManager::getDiscoveredDevices().empty()) {
+            !state.discoveredDevices.empty()) {
             LOG_PERIPHERAL("[ScanScreen] [Btn] Confirm Button Clicked");
             selectMenuItem();
+        }
 
-            if ((input().wasButtonPressed(ButtonId::BTN_B) ||
-                 RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
-                !BLEDeviceManager::getDiscoveredDevices().empty()) {
-                LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
-                nextMenuItem();
-            }
+        if ((input().wasButtonPressed(ButtonId::BTN_B) ||
+             RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
+            !state.discoveredDevices.empty()) {
+            LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
+            nextMenuItem();
+        }
 
-            if (RemoteControlManager::wasButtonPressed(ButtonId::UP) &&
-                !BLEDeviceManager::getDiscoveredDevices().empty()) {
-                LOG_PERIPHERAL("[ScanScreen] [Btn] Prev Button Clicked");
-                prevMenuItem();
-            }
+        if (RemoteControlManager::wasButtonPressed(ButtonId::UP) &&
+            !state.discoveredDevices.empty()) {
+            LOG_PERIPHERAL("[ScanScreen] [Btn] Prev Button Clicked");
+            prevMenuItem();
         }
     }
 }
 
 void ScanScreen::selectMenuItem() {
     size_t selectedIndex = menuItems.getSelectedIndex();
-    if (selectedIndex < BLEDeviceManager::getDiscoveredDevices().size()) {
-        const auto& selectedDev = BLEDeviceManager::getDiscoveredDevices()[selectedIndex];
-        isConnecting = true;
+    isConnecting = true;
+    draw();
+
+    if (ScanProcess::connectToDevice(selectedIndex)) {
+        setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Connected));
+        setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::Connected));
         draw();
+        delay(500);  // Show success message briefly
+        isConnecting = false;
+        MenuSystem::goHome();  // Return to previous screen
+    } else {
+        isConnecting = false;
+        setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Failed));
+        setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::Failed));
+        ScanProcess::clearDevices();
+        draw();
+        delay(1000);  // Show error message
 
-        if (BLEDeviceManager::connectToCamera(selectedDev.device)) {
-            setStatusText("Connected!");
-            setStatusBgColor(display().getColor(display::colors::GREEN));  // Green for success
-            draw();
-            delay(500);  // Show success message briefly
-            isConnecting = false;
-            MenuSystem::goHome();  // Return to previous screen
-        } else {
-            isConnecting = false;
-            setStatusText("Connection failed!");
-            setStatusBgColor(display().getColor(display::colors::RED));  // Red for failure
-            BLEDeviceManager::clearDiscoveredDevices();
-            draw();
-            delay(1000);  // Show error message
-
-            if (!BLEDeviceManager::startScan(5)) {
-                setStatusText("Scan failed!");
-            }
-            draw();
+        if (!ScanProcess::startScan(5)) {
+            setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Failed));
         }
+        draw();
     }
 }
 
