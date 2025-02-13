@@ -4,19 +4,19 @@
 
 ScanScreen::ScanScreen()
     : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false) {
-    M5.Display.setTextDatum(middle_center);
-    int centerX = M5.Display.width() / 2;
-    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
-    M5.Display.drawString("Wait...", centerX, centerY);
+    display().setTextAlignment(textAlign::middle_center);
+    int centerX = display().width() / 2;
+    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+    display().drawString("Wait...", centerX, centerY);
 
     setStatusText("Scanning...");
-    setStatusBgColor(M5.Display.color565(128, 128, 0));  // Yellow for scanning
+    setStatusBgColor(display().getColor(display::colors::YELLOW));  // Yellow for scanning
 
     // Start scanning immediately when screen is created
     if (!BLEDeviceManager::startScan(5))  // 5-second scan
     {
         setStatusText("Scan failed!");
-        setStatusBgColor(M5.Display.color565(200, 0, 0));
+        setStatusBgColor(display().getColor(display::colors::RED));
     }
 
     updateMenuItems();
@@ -36,16 +36,16 @@ void ScanScreen::updateMenuItems() {
 }
 
 void ScanScreen::drawContent() {
-    M5.Display.fillScreen(BLACK);
+    display().fillScreen(BLACK);
 
     if (isConnecting) {
-        M5.Display.setTextDatum(middle_center);
-        int centerX = M5.Display.width() / 2;
-        int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
-        M5.Display.drawString("Wait...", centerX, centerY);
+        display().setTextAlignment(textAlign::middle_center);
+        int centerX = display().width() / 2;
+        int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+        display().drawString("Wait...", centerX, centerY);
 
         setStatusText("Connecting...");
-        setStatusBgColor(M5.Display.color565(128, 128, 0));  // Yellow for connecting
+        setStatusBgColor(display().getColor(display::colors::YELLOW));  // Yellow for connecting
     } else {
         const auto& discoveredDevices = BLEDeviceManager::getDiscoveredDevices();
         if (!discoveredDevices.empty()) {
@@ -53,17 +53,17 @@ void ScanScreen::drawContent() {
             menuItems.draw();
 
             setStatusText("Select camera");
-            setStatusBgColor(M5.Display.color565(0, 0, 100));  // Blue for selection
+            setStatusBgColor(display().getColor(display::colors::GRAY_800));
         } else {
-            M5.Display.setTextDatum(middle_center);
-            int centerX = M5.Display.width() / 2;
-            int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+            display().setTextAlignment(textAlign::middle_center);
+            int centerX = display().width() / 2;
+            int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
-            M5.Display.drawString("Not found", centerX, centerY - 10);
-            M5.Display.drawString("Restarting...", centerX, centerY + 10);
+            display().drawString("Not found", centerX, centerY - 10);
+            display().drawString("Restarting...", centerX, centerY + 10);
 
             setStatusText("No devices");
-            setStatusBgColor(M5.Display.color565(200, 0, 0));  // Red for no devices
+            setStatusBgColor(display().getColor(display::colors::RED));  // Red for no devices
 
             // Restart scan after a brief delay if not already scanning
             if (!BLEDeviceManager::isScanning()) {
@@ -119,7 +119,7 @@ void ScanScreen::selectMenuItem() {
 
         if (BLEDeviceManager::connectToCamera(selectedDev.device)) {
             setStatusText("Connected!");
-            setStatusBgColor(M5.Display.color565(0, 200, 0));  // Green for success
+            setStatusBgColor(display().getColor(display::colors::GREEN));  // Green for success
             draw();
             delay(500);  // Show success message briefly
             isConnecting = false;
@@ -127,7 +127,7 @@ void ScanScreen::selectMenuItem() {
         } else {
             isConnecting = false;
             setStatusText("Connection failed!");
-            setStatusBgColor(M5.Display.color565(200, 0, 0));  // Red for failure
+            setStatusBgColor(display().getColor(display::colors::RED));  // Red for failure
             BLEDeviceManager::clearDiscoveredDevices();
             draw();
             delay(1000);  // Show error message

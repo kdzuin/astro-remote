@@ -10,6 +10,7 @@ constexpr RGBColorTriple SUCCESS = {0, 200, 0};
 constexpr RGBColorTriple ERROR = {200, 0, 0};
 constexpr RGBColorTriple WARNING = {200, 200, 0};
 constexpr RGBColorTriple DANGER = {200, 200, 0};
+constexpr RGBColorTriple IN_PROGRESS = {0, 50, 0};  // faded green
 
 constexpr RGBColorTriple WHITE = {255, 255, 255};
 constexpr RGBColorTriple BLACK = {0, 0, 0};

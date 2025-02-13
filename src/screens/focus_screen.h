@@ -1,10 +1,8 @@
 #pragma once
 
-#include <M5Unified.h>
-
-#include "../transport/camera_commands.h"
-#include "../transport/remote_control_manager.h"
-#include "base_screen.h"
+#include "screens/base_screen.h"
+#include "transport/camera_commands.h"
+#include "transport/remote_control_manager.h"
 
 enum class FocusSensitivity : uint8_t { Fine = 0x10, Medium = 0x25, High = 0x50, Coarse = 0x7F };
 
@@ -34,19 +32,19 @@ private:
 };
 
 inline void FocusScreen::drawContent() {
-    int centerX = M5.Display.width() / 2;
-    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+    int centerX = display().width() / 2;
+    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
-    M5.Display.fillScreen(BLACK);
-    M5.Display.setTextColor(WHITE);
+    display().fillScreen(BLACK);
+    display().setTextColor(WHITE);
 
     // Draw main focus status
-    M5.Display.setTextSize(2);
-    M5.Display.setTextDatum(middle_center);
-    M5.Display.drawString(focusing ? "FOCUSING" : "Ready", centerX, centerY);
+    display().setTextSize(2);
+    display().setTextAlignment(textAlign::middle_center);
+    display().drawString(focusing ? "FOCUSING" : "Ready", centerX, centerY);
 
     // Draw sensitivity below
-    M5.Display.setTextSize(1.25);
+    display().setTextSize(1.25);
     const char* sensText;
     switch (sensitivity) {
         case FocusSensitivity::Fine:
@@ -62,16 +60,18 @@ inline void FocusScreen::drawContent() {
             sensText = "Coarse";
             break;
     }
-    M5.Display.drawString(sensText, centerX, centerY + 30);
+    display().drawString(sensText, centerX, centerY + 30);
 
     // Update status bar
-    setStatusBgColor(focusing ? RED : M5.Display.color565(32, 32, 32));
-    setStatusText(focusing ? "Focusing - Rotate to Adjust" : "Press A to Focus");
+    setStatusBgColor(focusing ? display().getColor(display::colors::RED)
+                              : display().getColor(display::colors::GRAY_800));
+    setStatusText(focusing ? "Focusing" : "Ready To Focus");
     drawStatusBar();
 }
 
 inline void FocusScreen::update() {
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (input().wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_APP("[FocusScreen] Toggle focus mode");
         updateFocusState(!focusing);
         draw();

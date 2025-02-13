@@ -24,27 +24,27 @@ private:
 };
 
 inline void PhotoScreen::drawContent() {
-    int centerX = M5.Display.width() / 2;
-    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+    int centerX = display().width() / 2;
+    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
     if (millis() - flashStartTime < 200) {
         // Flash effect
-        M5.Display.fillScreen(WHITE);
-        M5.Display.setTextColor(BLACK);
+        display().fillScreen(display().getColor(display::colors::WHITE));
+        display().setTextColor(display().getColor(display::colors::BLACK));
     } else {
         // Normal display
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setTextColor(WHITE);
+        display().fillScreen(display().getColor(display::colors::BLACK));
+        display().setTextColor(display().getColor(display::colors::WHITE));
 
         // Draw photo counter
-        M5.Display.setTextSize(3);
-        M5.Display.setTextDatum(middle_center);
+        display().setTextSize(3);
+        display().setTextAlignment(textAlign::middle_center);
         char countStr[10];
         sprintf(countStr, "%d", photoCount);
-        M5.Display.drawString(countStr, centerX, centerY);
+        display().drawString(countStr, centerX, centerY);
     }
 
-    setStatusBgColor(M5.Display.color565(32, 32, 32));
+    setStatusBgColor(display().getColor(display::colors::GRAY_800));
     setStatusText("Ready");
     drawStatusBar();
 }

@@ -7,7 +7,6 @@
 #include <BLESecurity.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
-#include <M5Unified.h>
 #include <Preferences.h>
 
 #include <string>
@@ -37,11 +36,11 @@ class MySecurity : public BLESecurityCallbacks {
     void onPassKeyNotify(uint32_t pass_key) {
         LOG_PERIPHERAL("[BLE] PassKey Notify number:%d\n", pass_key);
         // Show pairing code on display
-        M5.Display.fillScreen(BLACK);  // BLACK
-        M5.Display.setCursor(0, 0);
-        M5.Display.println("Pairing with camera");
-        M5.Display.printf("Code: %06d\n", pass_key);
-        M5.Display.println("\nPlease confirm on camera");
+        // M5.Display.fillScreen(BLACK);  // BLACK
+        // M5.Display.setCursor(0, 0);
+        // M5.Display.println("Pairing with camera");
+        // M5.Display.printf("Code: %06d\n", pass_key);
+        // M5.Display.println("\nPlease confirm on camera");
     }
 
     bool onConfirmPIN(uint32_t pass_key) {

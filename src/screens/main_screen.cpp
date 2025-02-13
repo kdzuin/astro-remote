@@ -81,27 +81,23 @@ void MainScreen::update() {
 void MainScreen::selectMenuItem() {
     switch (menuItems.getSelectedId()) {
         case MainMenuItem::Connect:
-            if (BLEDeviceManager::isConnected()) {
-                BLEDeviceManager::disconnect();
-                setStatusText("Disconnected");
-                setStatusBgColor(
-                    MenuSystem::getHardware()->getDisplay().getColor(display::colors::DANGER));
-                updateMenuItems();
-                draw();
-            } else if (BLEDeviceManager::isPaired()) {
-                setStatusText("Connecting...");
-                setStatusBgColor(
-                    MenuSystem::getHardware()->getDisplay().getColor(display::colors::WARNING));
+
+            setStatusText("Connecting...");
+            setStatusBgColor(display().getColor(display::colors::IN_PROGRESS));
+            drawStatusBar();
+
+            if (BLEDeviceManager::connectToSavedDevice()) {
+                setStatusText("Connected!");
+                setStatusBgColor(display().getColor(display::colors::SUCCESS));
                 drawStatusBar();
 
-                if (BLEDeviceManager::connectToSavedDevice()) {
-                    setStatusText("Connected");
-                    setStatusBgColor(
-                        MenuSystem::getHardware()->getDisplay().getColor(display::colors::SUCCESS));
-                    updateMenuItems();
-                    draw();
-                }
+            } else {
+                setStatusText("Failed to connect!");
+                setStatusBgColor(display().getColor(display::colors::ERROR));
+                drawStatusBar();
             }
+            updateMenuItems();
+            draw();
             break;
         case MainMenuItem::Settings:
             MenuSystem::setScreen(new SettingsScreen());
