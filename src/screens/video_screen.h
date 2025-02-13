@@ -1,14 +1,14 @@
 #pragma once
 
 #include "screens/base_screen.h"
-#include "transport/camera_commands.h"
 #include "transport/remote_control_manager.h"
+#include "processes/video.h"
 
 enum class VideoMenuItem { None };
 
 class VideoScreen : public BaseScreen<VideoMenuItem> {
 public:
-    VideoScreen() : BaseScreen<VideoMenuItem>("Video"), recordStartTime(0) {}
+    VideoScreen() : BaseScreen<VideoMenuItem>("Video") {}
 
     void drawContent() override;
     void update() override;
@@ -18,26 +18,22 @@ public:
     void prevMenuItem() override {}
 
 private:
-    unsigned long recordStartTime;
+    VideoProcess videoProcess;
 };
 
 inline void VideoScreen::drawContent() {
     int centerX = display().width() / 2;
     int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
 
-    if (CameraCommands::isRecording()) {
+    if (videoProcess.isRecording()) {
         // Red background when recording
         display().fillRect(0, 0, display().width(), display().height(),
                            display().getColor(display::colors::RED));
         display().setTextColor(display().getColor(display::colors::WHITE));
 
         // Show recording time
-        unsigned long recordTime = (millis() - recordStartTime) / 1000;
-        int minutes = recordTime / 60;
-        int seconds = recordTime % 60;
-
         char timeStr[10];
-        sprintf(timeStr, "%02d:%02d", minutes, seconds);
+        videoProcess.getFormattedTime(timeStr, sizeof(timeStr));
 
         display().setTextSize(3);
         display().setTextAlignment(textAlign::middle_center);
@@ -54,7 +50,7 @@ inline void VideoScreen::drawContent() {
     }
 
     setStatusBgColor(display().getColor(display::colors::GRAY_800));
-    setStatusText(CameraCommands::isRecording() ? "Recording" : "Ready");
+    setStatusText(videoProcess.isRecording() ? "Recording" : "Ready");
     drawStatusBar();
 }
 
@@ -63,16 +59,16 @@ inline void VideoScreen::update() {
         RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[VideoScreen] [Btn] Confirm Button Clicked");
 
-        if (CameraCommands::isRecording() && CameraCommands::recordStop()) {
-            recordStartTime = 0;
-        } else if (CameraCommands::recordStart()) {
-            recordStartTime = millis();
+        if (videoProcess.isRecording()) {
+            videoProcess.stopRecording();
+        } else {
+            videoProcess.startRecording();
         }
         draw();
     }
 
     // Update recording time display
-    if (CameraCommands::isRecording()) {
+    if (videoProcess.isRecording()) {
         static unsigned long lastUpdate = 0;
         if (millis() - lastUpdate > 1000) {
             lastUpdate = millis();
