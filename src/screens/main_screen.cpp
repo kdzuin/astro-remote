@@ -44,7 +44,6 @@ void MainScreen::updateMenuItems() {
     menuItems.clear();
     if (!isConnected) {
         menuItems.addItem(MainMenuItem::Connect, "Connect");
-        menuItems.addSeparator();
         menuItems.addItem(MainMenuItem::Settings, "Settings");
     } else {
         menuItems.addItem(MainMenuItem::Photo, "Photo");
@@ -52,6 +51,7 @@ void MainScreen::updateMenuItems() {
         menuItems.addItem(MainMenuItem::Astro, "Astro");
         menuItems.addItem(MainMenuItem::Manual, "Manual");
         menuItems.addSeparator();
+        menuItems.addItem(MainMenuItem::Disconnect, "Disconnect");
         menuItems.addItem(MainMenuItem::Settings, "Settings");
     }
 }
@@ -98,6 +98,14 @@ void MainScreen::selectMenuItem() {
                 setStatusBgColor(display().getColor(display::colors::ERROR));
                 drawStatusBar();
             }
+            updateMenuItems();
+            draw();
+            break;
+        case MainMenuItem::Disconnect:
+            BLEDeviceManager::disconnect();
+            setStatusText("Disconnected!");
+            setStatusBgColor(display().getColor(display::colors::SUCCESS));
+            drawStatusBar();
             updateMenuItems();
             draw();
             break;
