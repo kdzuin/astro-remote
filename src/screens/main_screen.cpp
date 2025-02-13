@@ -44,12 +44,14 @@ void MainScreen::updateMenuItems() {
     menuItems.clear();
     if (!isConnected) {
         menuItems.addItem(MainMenuItem::Connect, "Connect");
+        menuItems.addSeparator();
         menuItems.addItem(MainMenuItem::Settings, "Settings");
     } else {
         menuItems.addItem(MainMenuItem::Photo, "Photo");
         menuItems.addItem(MainMenuItem::Video, "Video");
         menuItems.addItem(MainMenuItem::Astro, "Astro");
         menuItems.addItem(MainMenuItem::Manual, "Manual");
+        menuItems.addSeparator();
         menuItems.addItem(MainMenuItem::Settings, "Settings");
     }
 }

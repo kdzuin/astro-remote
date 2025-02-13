@@ -18,7 +18,6 @@ private:
     const int ITEM_HEIGHT = 14;        // Height per item
     const int HORIZONTAL_PADDING = 8;  // Space for selection marker
     const int ITEM_PADDING = 2;        // Padding between items
-    const int TITLE_PADDING = 4;       // Extra padding below title
 
     // Helper function to create color
     static unifiedColor defaultColor() {
@@ -55,10 +54,11 @@ public:
     };
 
     struct Item {
-        IdType id;             // Unique identifier for the item (enum)
-        std::string label;     // Display text
-        bool enabled = true;   // If false, item is shown but can't be selected
-        Info* info = nullptr;  // Optional info section (nullptr if not present)
+        IdType id;               // Unique identifier for the item (enum)
+        std::string label;       // Display text
+        bool enabled = true;     // If false, item is shown but can't be selected
+        bool separator = false;  // If true, item is a separator line
+        Info* info = nullptr;    // Optional info section (nullptr if not present)
 
         Item(IdType itemId, const std::string& itemLabel, bool itemEnabled = true)
             : id(itemId), label(itemLabel), enabled(itemEnabled) {}
@@ -75,8 +75,12 @@ public:
             info = new Info(infoText);
         }
 
+        // Constructor for separator
+        Item() : enabled(false), separator(true) {}
+
         // Copy constructor
-        Item(const Item& other) : id(other.id), label(other.label), enabled(other.enabled) {
+        Item(const Item& other)
+            : id(other.id), label(other.label), enabled(other.enabled), separator(other.separator) {
             if (other.info) {
                 info = new Info(*other.info);
             }
@@ -88,6 +92,7 @@ public:
                 id = other.id;
                 label = other.label;
                 enabled = other.enabled;
+                separator = other.separator;
                 delete info;
                 if (other.info) {
                     info = new Info(*other.info);
@@ -111,6 +116,7 @@ public:
                  unifiedColor infoColor, bool enabled = true);
     void addItem(IdType id, const std::string& label, const std::string& infoText,
                  bool enabled = true);
+    void addSeparator();
     void setTitle(const std::string& newTitle);
     void setSelectedIndex(int index);
     IdType getSelectedId() const;

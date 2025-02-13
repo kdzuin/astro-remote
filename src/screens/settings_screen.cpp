@@ -1,4 +1,5 @@
 #include "screens/settings_screen.h"
+
 #include "screens/scan_screen.h"
 #include "transport/remote_control_manager.h"
 #include "utils/display_constants.h"
@@ -28,12 +29,13 @@ void SettingsScreen::updateMenuItems() {
     } else {
         menuItems.addItem(SettingsMenuItem::Scan, "Scan New");
     }
-
+    menuItems.addSeparator();
     menuItems.addItem(SettingsMenuItem::AutoConnect, "AutoConnect",
                       (connState.isAutoConnectEnabled ? "On" : "Off"), true);
 
     menuItems.addItem(SettingsMenuItem::Brightness, "Brightness",
                       std::to_string(devState.brightness), true);
+    menuItems.addSeparator();
     menuItems.addItem(SettingsMenuItem::Battery, "Battery",
                       std::to_string(devState.batteryLevel) + "%",
                       SettingsProcess::getBatteryStatusColor(devState.batteryLevel), false);

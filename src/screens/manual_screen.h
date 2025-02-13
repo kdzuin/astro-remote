@@ -1,6 +1,7 @@
 #pragma once
 
 #include "screens/base_screen.h"
+#include "components/menu_system.h"
 
 enum class ManualMenuItem {
     HalfDown,
@@ -19,14 +20,15 @@ enum class ManualMenuItem {
 class ManualScreen : public BaseScreen<ManualMenuItem> {
 public:
     ManualScreen();
-
     void update() override;
-    void updateMenuItems() override;
-    void drawContent() override;
-    void selectMenuItem() override;
-    void nextMenuItem() override;
-    void prevMenuItem() override;
 
 private:
-    int selectedItem = 0;
+    void updateMenuItems();
+    void drawContent() override;
+    void selectMenuItem();
+    void nextMenuItem();
+    void prevMenuItem();
+
+    size_t selectedItem = 0;
+    bool isExecuting = false;
 };
