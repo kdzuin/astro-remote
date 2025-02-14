@@ -2,6 +2,7 @@
 
 #include "components/menu_system.h"
 #include "screens/astro_screen.h"
+#include "screens/focus_screen.h"
 #include "screens/manual_screen.h"
 #include "screens/photo_screen.h"
 #include "screens/settings_screen.h"
@@ -45,6 +46,7 @@ void MainScreen::updateMenuItems() {
         menuItems.addItem(MainMenuItem::Connect, "Connect");
         menuItems.addItem(MainMenuItem::Settings, "Settings");
     } else {
+        menuItems.addItem(MainMenuItem::Focus, "Focus");
         menuItems.addItem(MainMenuItem::Photo, "Photo");
         menuItems.addItem(MainMenuItem::Video, "Video");
         menuItems.addItem(MainMenuItem::Astro, "Astro");
@@ -120,6 +122,9 @@ void MainScreen::selectMenuItem() {
             break;
         case MainMenuItem::Manual:
             MenuSystem::setScreen(new ManualScreen());
+            break;
+        case MainMenuItem::Focus:
+            MenuSystem::setScreen(new FocusScreen());
             break;
         default:
             break;

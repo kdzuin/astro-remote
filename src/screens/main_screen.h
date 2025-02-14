@@ -13,8 +13,9 @@ class SettingsScreen;
 class PhotoScreen;
 class VideoScreen;
 class AstroScreen;
+class FocusScreen;
 
-enum class MainMenuItem { Connect, Video, Photo, Astro, Manual, Settings, Disconnect };
+enum class MainMenuItem { Connect, Video, Photo, Astro, Manual, Settings, Focus, Disconnect };
 
 class MainScreen : public BaseScreen<MainMenuItem> {
 public:
