@@ -11,7 +11,6 @@ BLECharacteristic* BLERemoteServer::pFeedbackChar = nullptr;
 BLECharacteristic* BLERemoteServer::pAstroStatusChar = nullptr;
 BLECharacteristic* BLERemoteServer::pAstroControlChar = nullptr;
 BLERemoteServer::CommandCallback BLERemoteServer::commandCallback = nullptr;
-BLERemoteServer::AstroCommandCallback BLERemoteServer::astroCommandCallback = nullptr;
 bool BLERemoteServer::deviceConnected = false;
 std::map<ButtonId, bool> BLERemoteServer::buttonStates;
 BLERemoteServer::ServerCallbacks BLERemoteServer::serverCallbacks;
@@ -61,23 +60,23 @@ void BLERemoteServer::setCommandCallback(CommandCallback callback) {
     commandCallback = callback;
 }
 
-void BLERemoteServer::setAstroCommandCallback(AstroCommandCallback callback) {
-    astroCommandCallback = callback;
-}
-
 void BLERemoteServer::sendFeedback(CommandStatus status) {
-    if (deviceConnected && pFeedbackChar != nullptr) {
-        uint8_t value = static_cast<uint8_t>(status);
-        pFeedbackChar->setValue(&value, 1);
-        pFeedbackChar->notify();
+    if (!pFeedbackChar || !deviceConnected) {
+        return;
     }
+
+    uint8_t value = static_cast<uint8_t>(status);
+    pFeedbackChar->setValue(&value, 1);
+    pFeedbackChar->notify();
 }
 
 void BLERemoteServer::sendAstroStatus(const AstroStatusPacket& status) {
-    if (deviceConnected && pAstroStatusChar != nullptr) {
-        pAstroStatusChar->setValue((uint8_t*)&status, sizeof(AstroStatusPacket));
-        pAstroStatusChar->notify();
+    if (!pAstroStatusChar || !deviceConnected) {
+        return;
     }
+
+    pAstroStatusChar->setValue((uint8_t*)&status, sizeof(status));
+    pAstroStatusChar->notify();
 }
 
 bool BLERemoteServer::isConnected() {
@@ -113,70 +112,121 @@ void BLERemoteServer::ServerCallbacks::onDisconnect(BLEServer* pServer) {
 
 void BLERemoteServer::ControlCharCallbacks::onWrite(BLECharacteristic* pCharacteristic) {
     std::string value = pCharacteristic->getValue();
-    if (value.length() < 2) {
+    if (value.length() < 2) {  // Need at least command word
         LOG_PERIPHERAL("[BLE] Invalid command length");
         sendFeedback(CommandStatus::INVALID);
         return;
     }
 
-    RemoteCommand cmd = static_cast<RemoteCommand>(value[0]);
-    ButtonId button = static_cast<ButtonId>(value[1]);
+    // Extract 16-bit command from first two bytes
+    uint16_t cmd = (static_cast<uint16_t>(static_cast<uint8_t>(value[0])) << 8) | 
+                   static_cast<uint8_t>(value[1]);
+    uint8_t cmdType = RemoteCmd::getType(cmd);
+    LOG_PERIPHERAL("[BLE] Received command: 0x%04X (type: 0x%02X)", cmd, cmdType);
+    
+    switch (cmdType) {
+        case RemoteCmd::TYPE_BUTTON: {
+            if (value.length() != 3) {  // Command word + button ID
+                LOG_PERIPHERAL("[BLE] Invalid button command length");
+                sendFeedback(CommandStatus::INVALID);
+                return;
+            }
 
-    // Handle button commands
-    if (cmd == RemoteCommand::BUTTON_DOWN || cmd == RemoteCommand::BUTTON_UP) {
-        if (!validateButtonTransition(cmd, button)) {
-            LOG_PERIPHERAL("[BLE] Invalid button state transition");
-            sendFeedback(CommandStatus::BUTTON_STATE_ERROR);
+            ButtonId button = static_cast<ButtonId>(value[2]);
+            LOG_PERIPHERAL("[BLE] Button command: %s, Button: 0x%02X", 
+                          (cmd == RemoteCmd::BUTTON_DOWN ? "DOWN" : "UP"),
+                          static_cast<uint8_t>(button));
+
+            // Validate button ID
+            if (static_cast<uint8_t>(button) < static_cast<uint8_t>(ButtonId::UP) ||
+                static_cast<uint8_t>(button) > static_cast<uint8_t>(ButtonId::BTN_EMERGENCY)) {
+                LOG_PERIPHERAL("[BLE] Invalid button ID");
+                sendFeedback(CommandStatus::INVALID);
+                return;
+            }
+
+            if (!validateButtonTransition(cmd, button)) {
+                LOG_PERIPHERAL("[BLE] Invalid button state transition");
+                sendFeedback(CommandStatus::BUTTON_STATE_ERROR);
+                return;
+            }
+
+            buttonStates[button] = (cmd == RemoteCmd::BUTTON_DOWN);
+            RemoteControlManager::setButtonState(button, cmd == RemoteCmd::BUTTON_DOWN);
+            LOG_PERIPHERAL("[BLE] Button state updated");
+
+            // Forward command to callback
+            if (commandCallback) {
+                const uint8_t* paramPtr = reinterpret_cast<const uint8_t*>(&value[2]);
+                commandCallback(cmd, paramPtr, 1);  // Pass button ID as parameter
+            }
+            break;
+        }
+
+        case RemoteCmd::TYPE_ASTRO: {
+            const uint8_t* paramPtr = value.length() > 2 ? 
+                reinterpret_cast<const uint8_t*>(&value[2]) : nullptr;
+            size_t paramLen = value.length() > 2 ? value.length() - 2 : 0;
+            
+            handleAstroCommand(cmd, paramPtr, paramLen);
             return;
         }
 
-        buttonStates[button] = (cmd == RemoteCommand::BUTTON_DOWN);
-    }
-
-    // Forward command to callback
-    if (commandCallback) {
-        commandCallback(cmd, (uint8_t*)value.data() + 1, value.length() - 1);
-    }
-
-    sendFeedback(CommandStatus::SUCCESS);
-}
-
-void BLERemoteServer::handleAstroCommand(RemoteCommand cmd, const uint8_t* data, size_t length) {
-    if (!astroCommandCallback) {
-        LOG_PERIPHERAL("[BLE] No astro command callback registered");
-        sendFeedback(CommandStatus::FAILURE);
-        return;
-    }
-
-    if (cmd == RemoteCommand::ASTRO_SET_PARAMS) {
-        if (length != sizeof(AstroParamPacket)) {
-            LOG_PERIPHERAL("[BLE] Invalid astro params packet size");
+        default:
+            LOG_PERIPHERAL("[BLE] Unknown command type: 0x%02X", cmdType);
             sendFeedback(CommandStatus::INVALID);
             return;
-        }
-
-        const AstroParamPacket* params = reinterpret_cast<const AstroParamPacket*>(data);
-        astroCommandCallback(cmd, params);
-    } else {
-        astroCommandCallback(cmd, nullptr);
     }
 
     sendFeedback(CommandStatus::SUCCESS);
 }
 
-bool BLERemoteServer::validateButtonTransition(RemoteCommand cmd, ButtonId button) {
-    auto it = buttonStates.find(button);
+void BLERemoteServer::handleAstroCommand(uint16_t cmd, const uint8_t* data, size_t length) {
+    LOG_PERIPHERAL("[BLE] Processing astro command: 0x%04X", cmd);
 
-    // If button state not found, allow only BUTTON_DOWN
-    if (it == buttonStates.end()) {
-        return cmd == RemoteCommand::BUTTON_DOWN;
+    switch (cmd) {
+        case RemoteCmd::ASTRO_SET_PARAMS:
+            if (length != sizeof(AstroParamPacket)) {
+                LOG_PERIPHERAL("[BLE] Invalid astro params size");
+                sendFeedback(CommandStatus::INVALID);
+                return;
+            }
+            break;
+
+        case RemoteCmd::ASTRO_START:
+        case RemoteCmd::ASTRO_PAUSE:
+        case RemoteCmd::ASTRO_STOP:
+        case RemoteCmd::ASTRO_RESET:
+            if (length != 0) {
+                LOG_PERIPHERAL("[BLE] Unexpected parameters for command");
+                sendFeedback(CommandStatus::INVALID);
+                return;
+            }
+            break;
+
+        default:
+            LOG_PERIPHERAL("[BLE] Unknown astro command: 0x%04X", cmd);
+            sendFeedback(CommandStatus::INVALID);
+            return;
     }
 
-    // If button is down, allow only BUTTON_UP
-    if (it->second) {
-        return cmd == RemoteCommand::BUTTON_UP;
+    if (commandCallback) {
+        commandCallback(cmd, data, length);
     }
 
-    // If button is up, allow only BUTTON_DOWN
-    return cmd == RemoteCommand::BUTTON_DOWN;
+    sendFeedback(CommandStatus::SUCCESS);
+}
+
+bool BLERemoteServer::validateButtonTransition(uint16_t cmd, ButtonId button) {
+    bool isDown = (cmd == RemoteCmd::BUTTON_DOWN);
+    bool currentlyPressed = buttonStates[button];
+
+    // Prevent duplicate press/release
+    if (isDown == currentlyPressed) {
+        LOG_PERIPHERAL("[BLE] Invalid button transition: already in state %s", 
+                      isDown ? "pressed" : "released");
+        return false;
+    }
+
+    return true;
 }

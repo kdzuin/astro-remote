@@ -8,11 +8,23 @@
 #include "transport/remote_control_manager.h"
 #include "utils/colors.h"
 
-AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro") {
+uint16_t clamp(uint16_t value, uint16_t min, uint16_t max) {
+    if (value > max)
+        return max;
+    if (value < min)
+        return min;
+    return value;
+}
+
+AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro"), selectedItem(0) {
     setStatusText("Select Option");
     setStatusBgColor(colors::get(colors::GRAY_800));
     menuItems.setTitle("Astro Menu");
     updateMenuItems();
+}
+
+AstroScreen::~AstroScreen() {
+    // Clean up any state
 }
 
 void AstroScreen::updateMenuItems() {
@@ -117,16 +129,7 @@ void AstroScreen::drawContent() {
 void AstroScreen::update() {
     auto& astro = AstroProcess::instance();
 
-    // Update menu if state changed
-    static AstroProcess::State lastState = astro.getStatus().state;
-    static uint16_t lastCompleted = astro.getStatus().completedFrames;
-
-    if (lastState != astro.getStatus().state ||
-        lastCompleted != astro.getStatus().completedFrames) {
-        updateMenuItems();
-        lastState = astro.getStatus().state;
-        lastCompleted = astro.getStatus().completedFrames;
-    }
+    updateMenuItems();
 
     // Handle button inputs
     if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_B) ||
@@ -144,7 +147,65 @@ void AstroScreen::update() {
         RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
+        adjustParameter(1);
     }
+
+    if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT)) {
+        adjustParameter(1);
+    }
+
+    if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT)) {
+        adjustParameter(-1);
+    }
+}
+
+void AstroScreen::adjustParameter(uint16_t delta) {
+    auto& astro = AstroProcess::instance();
+    auto& params = astro.getParameters();
+    auto selectedItem = menuItems.getSelectedId();
+
+    switch (selectedItem) {
+        case AstroMenuItem::InitialDelay:
+            if (!astro.isRunning()) {
+                auto newDelay = clamp(params.initialDelaySec + INITIAL_DELAY_STEP * delta,
+                                      INITIAL_DELAY_MIN, INITIAL_DELAY_MAX);
+
+                astro.setParameter("initialDelaySec", newDelay);
+                updateMenuItems();
+                draw();
+            }
+            break;
+        case AstroMenuItem::ExposureTime:
+            if (!astro.isRunning()) {
+                auto newExp =
+                    clamp(params.exposureSec + EXPOSURE_STEP * delta, EXPOSURE_MIN, EXPOSURE_MAX);
+                astro.setParameter("exposureSec", newExp);
+                updateMenuItems();
+                draw();
+            }
+            break;
+        case AstroMenuItem::NumberOfExposures:
+            if (!astro.isRunning()) {
+                auto newCount = clamp(params.subframeCount + SUBFRAME_COUNT_STEP * delta,
+                                      SUBFRAME_COUNT_MIN, SUBFRAME_COUNT_MAX);
+                astro.setParameter("subframeCount", newCount);
+                updateMenuItems();
+                draw();
+            }
+            break;
+
+        case AstroMenuItem::DelayBetweenExposures:
+            if (!astro.isRunning()) {
+                auto newInterval =
+                    clamp(params.intervalSec + INTERVAL_STEP * delta, INTERVAL_MIN, INTERVAL_MAX);
+                astro.setParameter("intervalSec", newInterval);
+                updateMenuItems();
+                draw();
+            }
+            break;
+    }
+    updateMenuItems();
+    draw();
 }
 
 void AstroScreen::selectMenuItem() {
@@ -155,50 +216,6 @@ void AstroScreen::selectMenuItem() {
     switch (selectedItem) {
         case AstroMenuItem::Focus:
             MenuSystem::setScreen(new FocusScreen());
-            break;
-
-        case AstroMenuItem::InitialDelay:
-            if (!astro.isRunning()) {
-                auto newDelay = params.initialDelaySec + 5;
-                if (newDelay > 300)
-                    newDelay = 5;  // Max 5 minutes
-                astro.setParameter("initialDelaySec", newDelay);
-                updateMenuItems();
-                draw();
-            }
-            break;
-
-        case AstroMenuItem::ExposureTime:
-            if (!astro.isRunning()) {
-                auto newExp = params.exposureSec + 30;
-                if (newExp > 3600)
-                    newExp = 30;  // Max 1 hour
-                astro.setParameter("exposureSec", newExp);
-                updateMenuItems();
-                draw();
-            }
-            break;
-
-        case AstroMenuItem::NumberOfExposures:
-            if (!astro.isRunning()) {
-                auto newCount = params.subframeCount + 5;
-                if (newCount > 100)
-                    newCount = 5;  // Max 100 frames
-                astro.setParameter("subframeCount", newCount);
-                updateMenuItems();
-                draw();
-            }
-            break;
-
-        case AstroMenuItem::DelayBetweenExposures:
-            if (!astro.isRunning()) {
-                auto newInterval = params.intervalSec + 1;
-                if (newInterval > 60)
-                    newInterval = 1;  // Max 1 minute
-                astro.setParameter("intervalSec", newInterval);
-                updateMenuItems();
-                draw();
-            }
             break;
 
         case AstroMenuItem::Start:

@@ -5,9 +5,20 @@ class M5RemoteClient {
     this.CONTROL_CHAR_UUID = "180f1001-1234-5678-90ab-cdef12345678";
     this.FEEDBACK_CHAR_UUID = "180f1002-1234-5678-90ab-cdef12345678";
 
-    // Command constants
-    this.BUTTON_DOWN = 0x01;
-    this.BUTTON_UP = 0x02;
+    // Command types
+    this.CMD_TYPE_BUTTON = 0x01;
+    this.CMD_TYPE_ASTRO = 0x02;
+
+    // Button commands (0x01XX)
+    this.BUTTON_DOWN = 0x0100;
+    this.BUTTON_UP = 0x0101;
+
+    // Astro commands (0x02XX)
+    this.ASTRO_START = 0x0200;
+    this.ASTRO_PAUSE = 0x0201;
+    this.ASTRO_STOP = 0x0202;
+    this.ASTRO_RESET = 0x0203;
+    this.ASTRO_SET_PARAMS = 0x0204;
 
     // Button IDs matching the M5 device's ButtonId enum
     this.BUTTON_UP_ARROW = 0x01; // ButtonId::UP
@@ -346,102 +357,182 @@ class M5RemoteClient {
     console.log("[BLE] Cleanup completed");
   }
 
-  async sendButtonCommand(buttonId) {
+  // Send a command with no parameters
+  async sendCommand16(cmd) {
     if (!this.controlChar) {
-      console.warn(
-        "[BLE] Attempted to send button command without control characteristic"
-      );
+      console.error("[BLE] Not connected");
+      return false;
+    }
+
+    const data = new Uint8Array([
+      (cmd >> 8) & 0xFF,  // High byte
+      cmd & 0xFF          // Low byte
+    ]);
+
+    try {
+      await this.controlChar.writeValue(data);
+      return true;
+    } catch (error) {
+      console.error("[BLE] Error sending command:", error);
+      return false;
+    }
+  }
+
+  // Send a command with one byte parameter
+  async sendCommand24(cmd, param) {
+    if (!this.controlChar) {
+      console.error("[BLE] Not connected");
+      return false;
+    }
+
+    const data = new Uint8Array([
+      (cmd >> 8) & 0xFF,  // High byte
+      cmd & 0xFF,         // Low byte
+      param & 0xFF        // Parameter
+    ]);
+
+    try {
+      await this.controlChar.writeValue(data);
+      return true;
+    } catch (error) {
+      console.error("[BLE] Error sending command:", error);
+      return false;
+    }
+  }
+
+  // Send a command with payload
+  async sendCommandWithPayload(cmd, payload) {
+    if (!this.controlChar) {
+      console.error("[BLE] Not connected");
+      return false;
+    }
+
+    const data = new Uint8Array(2 + payload.length);
+    data[0] = (cmd >> 8) & 0xFF;  // High byte
+    data[1] = cmd & 0xFF;         // Low byte
+    data.set(payload, 2);         // Payload
+
+    try {
+      await this.controlChar.writeValue(data);
+      return true;
+    } catch (error) {
+      console.error("[BLE] Error sending command:", error);
+      return false;
+    }
+  }
+
+  async sendButtonCommand(buttonId) {
+    if (this.isButtonPressed) {
+      console.warn("[BLE] Button already pressed");
       return;
     }
 
-    try {
-      console.log(`[BLE] Sending button command: 0x${buttonId.toString(16)}`);
-      const data = new Uint8Array([this.BUTTON_DOWN, 1, buttonId]);
-      console.log(
-        "[BLE] Command data:",
-        Array.from(data).map((b) => "0x" + b.toString(16))
-      );
-      await this.controlChar.writeValue(data);
+    console.log("[BLE] Sending button press:", buttonId);
+    const success = await this.sendCommand24(this.BUTTON_DOWN, buttonId);
+    
+    if (success) {
       this.isButtonPressed = true;
-      this.currentButtonId = buttonId; // Store the current button ID
-      console.log("[BLE] Button command sent successfully");
-    } catch (error) {
-      console.error("[BLE] Error sending button command:", error);
-      this.updateStatus(
-        "Error sending button command: " + error.message,
-        "error"
-      );
+      this.currentButtonId = buttonId;
     }
   }
 
   async sendButtonRelease() {
-    if (
-      !this.controlChar ||
-      !this.isButtonPressed ||
-      this.currentButtonId === null
-    ) {
+    if (!this.isButtonPressed || this.currentButtonId === null) {
       return;
     }
 
-    try {
-      console.log(
-        `[BLE] Sending button release command for button: 0x${this.currentButtonId.toString(
-          16
-        )}`
-      );
-      const data = new Uint8Array([this.BUTTON_UP, 1, this.currentButtonId]); // Include the current button ID in release
-      console.log(
-        "[BLE] Release data:",
-        Array.from(data).map((b) => "0x" + b.toString(16))
-      );
-      await this.controlChar.writeValue(data);
+    console.log("[BLE] Sending button release:", this.currentButtonId);
+    const success = await this.sendCommand24(this.BUTTON_UP, this.currentButtonId);
+    
+    if (success) {
       this.isButtonPressed = false;
-      this.currentButtonId = null; // Clear the current button ID
-      console.log("[BLE] Button release command sent successfully");
-    } catch (error) {
-      console.error("[BLE] Error sending button release:", error);
-      this.updateStatus(
-        "Error sending button release: " + error.message,
-        "error"
-      );
+      this.currentButtonId = null;
     }
   }
 
-  handleFeedback(value) {
-    const status = value.getUint8(0);
-    console.log("[BLE] Received feedback status:", status);
+  // Astro control methods
+  async sendAstroStart() {
+    console.log("[BLE] Sending astro start command");
+    return await this.sendCommand16(this.ASTRO_START);
+  }
 
-    let message;
-    let type;
+  async sendAstroPause() {
+    console.log("[BLE] Sending astro pause command");
+    return await this.sendCommand16(this.ASTRO_PAUSE);
+  }
+
+  async sendAstroStop() {
+    console.log("[BLE] Sending astro stop command");
+    return await this.sendCommand16(this.ASTRO_STOP);
+  }
+
+  async sendAstroReset() {
+    console.log("[BLE] Sending astro reset command");
+    return await this.sendCommand16(this.ASTRO_RESET);
+  }
+
+  async sendAstroParams(params) {
+    if (!params || typeof params !== 'object') {
+      console.error("[BLE] Invalid astro params");
+      return false;
+    }
+
+    // Convert params to binary format matching AstroParamPacket
+    const data = new Uint8Array(8); // 4 x uint16_t
+    const view = new DataView(data.buffer);
+
+    // Pack parameters in little-endian format
+    view.setUint16(0, params.initialDelaySec || 0, true);
+    view.setUint16(2, params.exposureSec || 0, true);
+    view.setUint16(4, params.subframeCount || 0, true);
+    view.setUint16(6, params.intervalSec || 0, true);
+
+    console.log("[BLE] Sending astro params:", params);
+    return await this.sendCommandWithPayload(this.ASTRO_SET_PARAMS, data);
+  }
+
+  handleFeedback(value) {
+    if (value.byteLength < 1) {
+      console.error("[BLE] Invalid feedback length");
+      return;
+    }
+
+    const status = value.getUint8(0);
+    let statusText;
+    let statusType;
 
     switch (status) {
       case 0: // SUCCESS
-        message = "Command successful";
-        type = "success";
+        statusText = "Command executed successfully";
+        statusType = "success";
         break;
       case 1: // FAILURE
-        message = "Command failed";
-        type = "error";
+        statusText = "Command failed";
+        statusType = "error";
         break;
       case 2: // BUSY
-        message = "Device is busy";
-        type = "info";
+        statusText = "Device is busy";
+        statusType = "warning";
         break;
       case 3: // INVALID
-        message = "Invalid command";
-        type = "error";
+        statusText = "Invalid command";
+        statusType = "error";
         break;
       case 4: // BUTTON_STATE_ERROR
-        message = "Invalid button state";
-        type = "error";
+        statusText = "Invalid button state transition";
+        statusType = "error";
+        break;
+      case 5: // ASTRO_ERROR
+        statusText = "Astro operation error";
+        statusType = "error";
         break;
       default:
-        message = "Unknown status: " + status;
-        type = "error";
+        statusText = "Unknown status code: " + status;
+        statusType = "error";
     }
 
-    console.log(`[BLE] Processing feedback: ${message} (${type})`);
-    this.updateStatus(message, type);
+    console.log(`[BLE] Feedback received: ${statusText} (${status})`);
+    this.updateStatus(statusText, statusType);
   }
 }
 
