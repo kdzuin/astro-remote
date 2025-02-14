@@ -13,5 +13,6 @@ enum class ButtonId : uint8_t {
     // Hardware buttons
     BTN_A = 0x10,
     BTN_B = 0x11,
-    BTN_PWR = 0x12
+    BTN_PWR = 0x12,
+    BTN_EMERGENCY = 0x13
 };

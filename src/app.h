@@ -12,6 +12,11 @@ class Application {
 public:
     Application() = default;
 
+    static void emergencyStop() {
+        // Implementation
+        LOG_DEBUG("Emergency stop");
+    }
+
     void setup() {
         LOG_APP("Starting Sony Camera Remote");
 
@@ -45,6 +50,13 @@ public:
     }
 
     void loop() {
+        // Check for emergency stop FIRST
+        if (RemoteControlManager::wasEmergencyPressed()) {
+            LOG_APP("[!] EMERGENCY STOP TRIGGERED!");
+            emergencyStop();
+            return;
+        }
+
         // Update BLE and menu
         BLEDeviceManager::update();      // Update BLE state
         RemoteControlManager::update();  // Update remote control state
