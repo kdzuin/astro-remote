@@ -99,13 +99,15 @@ void ScanScreen::update() {
     }
 
     if (!state.isScanning && !isConnecting) {
-        if ((M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
+        if ((RemoteControlManager::wasButtonPressed(ButtonId::BTN_A) ||
+             RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
             !state.discoveredDevices.empty()) {
             LOG_PERIPHERAL("[ScanScreen] [Btn] Confirm Button Clicked");
             selectMenuItem();
         }
 
-        if ((M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
+        if ((RemoteControlManager::wasButtonPressed(ButtonId::BTN_B) ||
+             RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
             !state.discoveredDevices.empty()) {
             LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
             nextMenuItem();

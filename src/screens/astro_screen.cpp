@@ -31,7 +31,8 @@ void AstroScreen::drawContent() {
 }
 
 void AstroScreen::update() {
-    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_B) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
@@ -41,7 +42,8 @@ void AstroScreen::update() {
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }

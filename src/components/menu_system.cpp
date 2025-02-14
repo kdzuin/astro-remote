@@ -27,7 +27,8 @@ void update() {
     }
 
     // Handle power button to return to main menu
-    if (M5.BtnPWR.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::BACK)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_PWR) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::BACK)) {
         if (strcmp(currentScreen->getName(), "Main") != 0) {
             goHome();
         }

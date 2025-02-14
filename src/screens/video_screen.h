@@ -57,7 +57,8 @@ inline void VideoScreen::drawContent() {
 }
 
 inline void VideoScreen::update() {
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[VideoScreen] [Btn] Confirm Button Clicked");
 
         if (videoProcess.isRecording()) {

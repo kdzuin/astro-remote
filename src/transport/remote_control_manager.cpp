@@ -1,5 +1,7 @@
 #include "transport/remote_control_manager.h"
 
+#include "M5Unified.h"
+
 std::map<ButtonId, bool> RemoteControlManager::buttonStates;
 std::map<ButtonId, bool> RemoteControlManager::buttonProcessed;
 
@@ -14,6 +16,9 @@ void RemoteControlManager::init() {
     buttonStates[ButtonId::RIGHT] = false;
     buttonStates[ButtonId::CONFIRM] = false;
     buttonStates[ButtonId::BACK] = false;
+    buttonStates[ButtonId::BTN_A] = false;
+    buttonStates[ButtonId::BTN_B] = false;
+    buttonStates[ButtonId::BTN_PWR] = false;
 
     // Initialize all buttons as processed
     buttonProcessed[ButtonId::UP] = true;
@@ -22,9 +27,17 @@ void RemoteControlManager::init() {
     buttonProcessed[ButtonId::RIGHT] = true;
     buttonProcessed[ButtonId::CONFIRM] = true;
     buttonProcessed[ButtonId::BACK] = true;
+    buttonProcessed[ButtonId::BTN_A] = true;
+    buttonProcessed[ButtonId::BTN_B] = true;
+    buttonProcessed[ButtonId::BTN_PWR] = true;
 }
 
 void RemoteControlManager::update() {
+    // Poll hardware buttons
+    setButtonState(ButtonId::BTN_A, M5.BtnA.wasPressed());
+    setButtonState(ButtonId::BTN_B, M5.BtnB.wasPressed());
+    setButtonState(ButtonId::BTN_PWR, M5.BtnPWR.wasClicked());
+
     // Reset processed flags for buttons that were released
     for (auto& pair : buttonStates) {
         if (!pair.second) {  // If button is released

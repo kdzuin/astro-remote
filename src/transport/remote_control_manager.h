@@ -23,6 +23,8 @@ public:
     static bool wasDownPressed() { return wasButtonPressed(ButtonId::DOWN); }
     static bool wasLeftPressed() { return wasButtonPressed(ButtonId::LEFT); }
     static bool wasRightPressed() { return wasButtonPressed(ButtonId::RIGHT); }
+    static bool wasAPressed() { return wasButtonPressed(ButtonId::BTN_A); }
+    static bool wasBPressed() { return wasButtonPressed(ButtonId::BTN_B); }
 
     // Internal use - called by BLE notification handler
     static void setButtonState(ButtonId button, bool pressed);

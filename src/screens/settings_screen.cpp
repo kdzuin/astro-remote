@@ -45,7 +45,8 @@ void SettingsScreen::drawContent() {
 }
 
 void SettingsScreen::update() {
-    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_B) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[SettingsScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
@@ -55,7 +56,8 @@ void SettingsScreen::update() {
         prevMenuItem();
     }
 
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[SettingsScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }

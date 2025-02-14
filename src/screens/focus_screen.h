@@ -42,11 +42,12 @@ inline void FocusScreen::drawContent() {
 }
 
 inline void FocusScreen::update() {
-    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_A) ||
+        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_APP("[FocusScreen] Toggle focus mode");
         FocusProcess::updateFocusState(!FocusProcess::getState().focusing);
         draw();
-    } else if (M5.BtnB.wasClicked()) {
+    } else if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_B)) {
         LOG_APP("[FocusScreen] Cycle sensitivity");
         FocusProcess::cycleSensitivity();
         draw();
