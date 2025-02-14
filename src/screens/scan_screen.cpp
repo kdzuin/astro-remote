@@ -1,8 +1,9 @@
 #include "screens/scan_screen.h"
+
 #include "transport/remote_control_manager.h"
 
 ScanScreen::ScanScreen()
-    : BaseScreen<ScanMenuItem>("Scan"), lastScanning(false), isConnecting(false) {
+    : BaseScreen<std::string>("Scan"), lastScanning(false), isConnecting(false) {
     display().setTextAlignment(textAlign::middle_center);
     int centerX = display().width() / 2;
     int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
@@ -19,18 +20,32 @@ ScanScreen::ScanScreen()
     }
 
     updateMenuItems();
+    menuItems.setTitle("Scan");
 }
 
 void ScanScreen::updateMenuItems() {
     menuItems.clear();
 
-    auto state = ScanProcess::getState();
-    for (const auto& deviceInfo : state.discoveredDevices) {
-        std::string displayName = deviceInfo.getName();
-        if (displayName.empty()) {
-            displayName = deviceInfo.getAddress();
+    const auto& state = ScanProcess::getState();
+    const auto& devices = state.discoveredDevices;
+
+    if (state.isScanning) {
+        setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Scanning));
+        setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::Scanning));
+    } else if (devices.empty()) {
+        setStatusText(ScanProcess::getStatusText(ScanProcess::Status::NoDevices));
+        setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::NoDevices));
+    } else {
+        setStatusText(ScanProcess::getStatusText(ScanProcess::Status::DevicesFound));
+        setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::DevicesFound));
+    }
+
+    for (const auto& device : devices) {
+        std::string label = device.getName();
+        if (label.empty()) {
+            label = device.getAddress();
         }
-        menuItems.addItem(ScanMenuItem::Device, displayName);
+        menuItems.addItem(device.getAddress(), label, true);
     }
 }
 
@@ -45,15 +60,14 @@ void ScanScreen::drawContent() {
     if (isConnecting) {
         display().setTextAlignment(textAlign::middle_center);
         int centerX = display().width() / 2;
-        int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+        int centerY = display().height() / 2;
         display().drawString("Wait...", centerX, centerY);
     } else if (state.discoveredDevices.empty()) {
         display().setTextAlignment(textAlign::middle_center);
         int centerX = display().width() / 2;
-        int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+        int centerY = display().height() / 2;
 
-        display().drawString("Not found", centerX, centerY - 10);
-        display().drawString("Restarting...", centerX, centerY + 10);
+        display().drawString("Not found", centerX, centerY);
 
         // Restart scan after a brief delay if not already scanning
         if (!state.isScanning) {
@@ -77,7 +91,7 @@ void ScanScreen::update() {
     // Check if scanning state changed
     if (lastScanning != state.isScanning) {
         lastScanning = state.isScanning;
-        if (!lastScanning) {  // Scan just finished
+        if (!lastScanning) {    // Scan just finished
             updateMenuItems();  // Update the menu with any found devices
         }
         draw();
@@ -108,11 +122,16 @@ void ScanScreen::update() {
 }
 
 void ScanScreen::selectMenuItem() {
-    size_t selectedIndex = menuItems.getSelectedIndex();
+    const auto& selectedId = menuItems.getSelectedId();
     isConnecting = true;
     draw();
 
-    if (ScanProcess::connectToDevice(selectedIndex)) {
+    const auto& devices = ScanProcess::getState().discoveredDevices;
+    auto it = std::find_if(devices.begin(), devices.end(), [&selectedId](const DeviceInfo& dev) {
+        return dev.getAddress() == selectedId;
+    });
+
+    if (it != devices.end() && ScanProcess::connectToDevice(it->device)) {
         setStatusText(ScanProcess::getStatusText(ScanProcess::Status::Connected));
         setStatusBgColor(ScanProcess::getStatusColor(ScanProcess::Status::Connected));
         draw();

@@ -7,7 +7,7 @@ enum class ScanMenuItem {
     Device  // Each menu item will be a discovered device
 };
 
-class ScanScreen : public BaseScreen<ScanMenuItem> {
+class ScanScreen : public BaseScreen<std::string> {
 public:
     ScanScreen();
     void updateMenuItems() override;
@@ -20,4 +20,5 @@ public:
 private:
     bool lastScanning;
     bool isConnecting;
+    SelectableList<std::string> menuItems;
 };

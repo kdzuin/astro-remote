@@ -87,20 +87,20 @@ bool SelectableList<IdType>::selectNext() {
     size_t startIndex = selectedIndex;
     do {
         selectedIndex = (selectedIndex + 1) % items.size();
-        if (items[selectedIndex].enabled && !items[selectedIndex].separator) {
+        if (!items[selectedIndex].separator) {
             return true;
         }
     } while (selectedIndex != startIndex);
 
-    // If we got here, try to find any enabled item
+    // If we got here, try to find any non-separator item
     for (size_t i = 0; i < items.size(); i++) {
-        if (items[i].enabled && !items[i].separator) {
+        if (!items[i].separator) {
             selectedIndex = i;
             return true;
         }
     }
 
-    return false;  // No enabled items found
+    return false;  // No non-separator items found
 }
 
 template <typename IdType>
@@ -112,20 +112,20 @@ bool SelectableList<IdType>::selectPrev() {
     size_t startIndex = selectedIndex;
     do {
         selectedIndex = (selectedIndex + items.size() - 1) % items.size();
-        if (items[selectedIndex].enabled && !items[selectedIndex].separator) {
+        if (!items[selectedIndex].separator) {
             return true;
         }
     } while (selectedIndex != startIndex);
 
-    // If we got here, try to find any enabled item
+    // If we got here, try to find any non-separator item
     for (size_t i = 0; i < items.size(); i++) {
-        if (items[i].enabled && !items[i].separator) {
+        if (!items[i].separator) {
             selectedIndex = i;
             return true;
         }
     }
 
-    return false;  // No enabled items found
+    return false;  // No non-separator items found
 }
 
 template <typename IdType>

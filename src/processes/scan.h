@@ -33,14 +33,11 @@ public:
         return ScanState{status, isScanning, false, devices};
     }
 
-    static bool connectToDevice(size_t deviceIndex) {
-        const auto& devices = BLEDeviceManager::getDiscoveredDevices();
-        if (deviceIndex >= devices.size()) {
+    static bool connectToDevice(const BLEAdvertisedDevice* device) {
+        if (!device) {
             return false;
         }
-
-        const auto& selectedDev = devices[deviceIndex];
-        return BLEDeviceManager::connectToCamera(selectedDev.device);
+        return BLEDeviceManager::connectToCamera(device);
     }
 
     static void clearDevices() { BLEDeviceManager::clearDiscoveredDevices(); }

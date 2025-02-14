@@ -278,15 +278,15 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device) {
     memset(&connParams, 0, sizeof(connParams));
     memcpy(connParams.bda, address.getNative(), sizeof(esp_bd_addr_t));
     connParams.latency = 0;
-    connParams.max_int = 0x40;  // 80ms interval
-    connParams.min_int = 0x30;  // 60ms interval
-    connParams.timeout = 500;   // 5s timeout
+    connParams.max_int = 0x20;  // 40ms interval
+    connParams.min_int = 0x10;  // 20ms interval
+    connParams.timeout = 400;   // 4s timeout
 
     // Set the connection parameters before connecting
     esp_ble_gap_update_conn_params(&connParams);
 
-    // Set security level to high
-    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
+    // Set security level to just require bonding without MITM
+    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_BOND;
     esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;
     uint8_t key_size = 16;
     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
@@ -310,8 +310,8 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device) {
 
     // Set MTU and wait for completion
     LOG_PERIPHERAL("[BLE] Setting MTU...");
-    pClient->setMTU(517);  // Request maximum MTU
-    delay(1000);           // Wait for MTU exchange
+    pClient->setMTU(185);  // Sony cameras typically use smaller MTU
+    delay(500);           // Wait for MTU exchange
 
     // Set encryption using the correct address type
     LOG_PERIPHERAL("[BLE] Setting up encryption...");
@@ -321,7 +321,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device) {
 
     // Give more time for pairing and service discovery
     LOG_PERIPHERAL("[BLE] Waiting for pairing and service discovery...");
-    delay(3000);  // Reduced from 5000 since we have other delays
+    delay(2000);  // Reduced delay since we have faster connection parameters
 
     if (!initConnection()) {
         LOG_PERIPHERAL("[BLE] Failed to initialize connection");

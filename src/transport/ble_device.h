@@ -30,7 +30,7 @@ class ClientCallback;
 class MySecurity : public BLESecurityCallbacks {
     uint32_t onPassKeyRequest() {
         LOG_PERIPHERAL("[BLE] PassKey Request");
-        return 123456;
+        return 000000;  // Return 000000 for Sony cameras
     }
 
     void onPassKeyNotify(uint32_t pass_key) {
