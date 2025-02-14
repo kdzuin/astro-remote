@@ -37,13 +37,12 @@ void ManualScreen::updateMenuItems() {
     menuItems.clear();
     menuItems.addItem(ManualMenuItem::TakePhoto, "Photo Action");
     menuItems.addItem(ManualMenuItem::TakeVideo, "Video Action");
+    menuItems.addItem(ManualMenuItem::TakeBulb, "Bulb Action");
     menuItems.addSeparator();
     menuItems.addItem(ManualMenuItem::HalfDown, "Half Down");
     menuItems.addItem(ManualMenuItem::FullDown, "Full Down");
     menuItems.addItem(ManualMenuItem::HalfUp, "Half Up");
     menuItems.addItem(ManualMenuItem::FullUp, "Full Up");
-    menuItems.addItem(ManualMenuItem::TakeBulb, "Bulb Action");
-    menuItems.addSeparator();
     menuItems.addItem(ManualMenuItem::FocusIn, "Focus In");
     menuItems.addItem(ManualMenuItem::FocusOut, "Focus Out");
     menuItems.addItem(ManualMenuItem::ZoomIn, "Zoom In");
