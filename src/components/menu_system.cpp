@@ -23,12 +23,12 @@ void update() {
     // Update current screen
     if (currentScreen) {
         currentScreen->update();
-        // currentScreen->draw();  // Make sure screen is drawn every frame
     }
 
     // Handle power button to return to main menu
     if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_PWR) ||
         RemoteControlManager::wasButtonPressed(ButtonId::BACK)) {
+        // implement navigation tree and navigation -1 level
         if (strcmp(currentScreen->getName(), "Main") != 0) {
             goHome();
         }

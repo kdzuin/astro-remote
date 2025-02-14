@@ -144,22 +144,16 @@ void AstroScreen::update() {
     if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_A) ||
         RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
-        selectMenuItem();
         adjustParameter(1);
-        updateMenuItems();
-        draw();
+        selectMenuItem();
     }
 
     if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT)) {
         adjustParameter(1);
-        updateMenuItems();
-        draw();
     }
 
     if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT)) {
         adjustParameter(-1);
-        updateMenuItems();
-        draw();
     }
 }
 
@@ -200,6 +194,8 @@ void AstroScreen::adjustParameter(uint16_t delta) {
             }
             break;
     }
+    updateMenuItems();
+    draw();
 }
 
 void AstroScreen::selectMenuItem() {
@@ -219,18 +215,24 @@ void AstroScreen::selectMenuItem() {
             } else if (!astro.isRunning()) {
                 astro.start();
             }
+            updateMenuItems();
+            draw();
             break;
 
         case AstroMenuItem::Pause:
             if (astro.isRunning()) {
                 astro.pause();
             }
+            updateMenuItems();
+            draw();
             break;
 
         case AstroMenuItem::Stop:
             if (astro.isRunning()) {
                 astro.stop();
             }
+            updateMenuItems();
+            draw();
             break;
     }
 }
