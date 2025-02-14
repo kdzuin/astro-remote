@@ -1,143 +1,83 @@
-#include "ble_remote_server.h"
+#include "transport/ble_remote_server.h"
 
 #include <BLE2902.h>
 #include <BLEDevice.h>
 
-// Initialize static members
+// Static member initialization
 BLEServer* BLERemoteServer::pServer = nullptr;
+BLEService* BLERemoteServer::pService = nullptr;
 BLECharacteristic* BLERemoteServer::pControlChar = nullptr;
 BLECharacteristic* BLERemoteServer::pFeedbackChar = nullptr;
+BLECharacteristic* BLERemoteServer::pAstroStatusChar = nullptr;
+BLECharacteristic* BLERemoteServer::pAstroControlChar = nullptr;
+BLERemoteServer::CommandCallback BLERemoteServer::commandCallback = nullptr;
+BLERemoteServer::AstroCommandCallback BLERemoteServer::astroCommandCallback = nullptr;
 bool BLERemoteServer::deviceConnected = false;
-BLERemoteServer::CommandCallback BLERemoteServer::onCommandReceived = nullptr;
 std::map<ButtonId, bool> BLERemoteServer::buttonStates;
-
-// Initialize static callback instances
 BLERemoteServer::ServerCallbacks BLERemoteServer::serverCallbacks;
 BLERemoteServer::ControlCharCallbacks BLERemoteServer::controlCharCallbacks;
 
-struct CommandPacket {
-    RemoteCommand command;
-    uint8_t parameterCount;
-    uint8_t parameters[16];
-
-    static CommandPacket parse(const uint8_t* data, size_t length) {
-        CommandPacket packet;
-        if (length < 2) {  // Minimum packet size: command (1) + parameter count (1)
-            packet.command = RemoteCommand::NONE;
-            packet.parameterCount = 0;
-            return packet;
-        }
-
-        packet.command = static_cast<RemoteCommand>(data[0]);
-        packet.parameterCount = data[1];
-
-        // Validate parameter count
-        if (packet.parameterCount > 16 || length < (2 + packet.parameterCount)) {
-            packet.command = RemoteCommand::NONE;
-            packet.parameterCount = 0;
-            return packet;
-        }
-
-        // Copy parameters
-        memcpy(packet.parameters, data + 2, packet.parameterCount);
-        return packet;
-    }
-
-    ButtonId getButton() { return static_cast<ButtonId>(parameters[0]); }
-};
-
 void BLERemoteServer::init(const char* deviceName) {
-    // Initialize button states
-    buttonStates[ButtonId::UP] = false;
-    buttonStates[ButtonId::DOWN] = false;
-    buttonStates[ButtonId::LEFT] = false;
-    buttonStates[ButtonId::RIGHT] = false;
-    buttonStates[ButtonId::CONFIRM] = false;
-    buttonStates[ButtonId::BACK] = false;
-
-    // Create the BLE Server
+    // Initialize BLE
     BLEDevice::init(deviceName);
 
-    // Set security parameters
-    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-    esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;  // Display only
-    uint8_t key_size = 16;
-    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
-    uint8_t oob_support = ESP_BLE_OOB_DISABLE;
-
-    esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(auth_req));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(iocap));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(key_size));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(init_key));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(rsp_key));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option,
-                                   sizeof(auth_option));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(oob_support));
-
+    // Create server
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(&serverCallbacks);
 
-    // Create the BLE Service
-    BLEService* pService = pServer->createService(REMOTE_SERVICE_UUID);
+    // Create service
+    pService = pServer->createService(REMOTE_SERVICE_UUID);
 
-    // Create BLE Characteristics with larger MTU for parameters
+    // Create characteristics
     pControlChar =
-        pService->createCharacteristic(CONTROL_CHAR_UUID, BLECharacteristic::PROPERTY_WRITE |
-                                                              BLECharacteristic::PROPERTY_WRITE_NR);
+        pService->createCharacteristic(CONTROL_CHAR_UUID, BLECharacteristic::PROPERTY_WRITE);
     pControlChar->setCallbacks(&controlCharCallbacks);
-    pControlChar->setAccessPermissions(ESP_GATT_PERM_WRITE_ENCRYPTED);
 
-    // Create feedback characteristic with notifications
-    pFeedbackChar = pService->createCharacteristic(
-        FEEDBACK_CHAR_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+    pFeedbackChar =
+        pService->createCharacteristic(FEEDBACK_CHAR_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+    pFeedbackChar->addDescriptor(new BLE2902());
 
-    // Set permissions before adding descriptor
-    pFeedbackChar->setAccessPermissions(ESP_GATT_PERM_READ | ESP_GATT_PERM_READ_ENCRYPTED);
+    pAstroStatusChar =
+        pService->createCharacteristic(ASTRO_STATUS_CHAR_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+    pAstroStatusChar->addDescriptor(new BLE2902());
 
-    // Create and configure the notification descriptor (CCCD)
-    BLE2902* p2902 = new BLE2902();
-    p2902->setNotifications(true);
-    p2902->setAccessPermissions(ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
-    pFeedbackChar->addDescriptor(p2902);
+    pAstroControlChar =
+        pService->createCharacteristic(ASTRO_CONTROL_CHAR_UUID, BLECharacteristic::PROPERTY_WRITE);
+    pAstroControlChar->setCallbacks(&controlCharCallbacks);
 
-    // Start the service
+    // Start service and advertising
     pService->start();
-
-    // Configure advertising
     BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
-
-    // Set advertising data
-    BLEAdvertisementData advData;
-    advData.setFlags(0x06);  // General discoverable mode (0x02) | BR/EDR not supported (0x04)
-    advData.setName(deviceName);
-    advData.setCompleteServices(BLEUUID(REMOTE_SERVICE_UUID));
-
-    // Set scan response data with the same name for consistency
-    BLEAdvertisementData scanResponse;
-    scanResponse.setName(deviceName);
-
-    pAdvertising->setAdvertisementData(advData);
-    pAdvertising->setScanResponseData(scanResponse);
+    pAdvertising->addServiceUUID(REMOTE_SERVICE_UUID);
+    pAdvertising->setScanResponse(true);
     pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-    pAdvertising->setMaxPreferred(0x12);
-    pAdvertising->start();
+    pAdvertising->setMinPreferred(0x12);
+    BLEDevice::startAdvertising();
 
-    LOG_PERIPHERAL("[BLE Server] Remote control server initialized with name: %s", deviceName);
+    LOG_PERIPHERAL("[BLE] Server initialized");
 }
 
 void BLERemoteServer::setCommandCallback(CommandCallback callback) {
-    onCommandReceived = callback;
+    commandCallback = callback;
+}
+
+void BLERemoteServer::setAstroCommandCallback(AstroCommandCallback callback) {
+    astroCommandCallback = callback;
 }
 
 void BLERemoteServer::sendFeedback(CommandStatus status) {
-    if (!deviceConnected || !pFeedbackChar)
-        return;
+    if (deviceConnected && pFeedbackChar != nullptr) {
+        uint8_t value = static_cast<uint8_t>(status);
+        pFeedbackChar->setValue(&value, 1);
+        pFeedbackChar->notify();
+    }
+}
 
-    uint8_t statusValue = static_cast<uint8_t>(status);
-    pFeedbackChar->setValue(&statusValue, 1);
-    pFeedbackChar->notify();
+void BLERemoteServer::sendAstroStatus(const AstroStatusPacket& status) {
+    if (deviceConnected && pAstroStatusChar != nullptr) {
+        pAstroStatusChar->setValue((uint8_t*)&status, sizeof(AstroStatusPacket));
+        pAstroStatusChar->notify();
+    }
 }
 
 bool BLERemoteServer::isConnected() {
@@ -145,90 +85,98 @@ bool BLERemoteServer::isConnected() {
 }
 
 void BLERemoteServer::stop() {
-    if (pServer) {
+    if (pServer != nullptr) {
         pServer->getAdvertising()->stop();
+        BLEDevice::deinit(true);
+        pServer = nullptr;
+        pService = nullptr;
+        pControlChar = nullptr;
+        pFeedbackChar = nullptr;
+        pAstroStatusChar = nullptr;
+        pAstroControlChar = nullptr;
         deviceConnected = false;
+        LOG_PERIPHERAL("[BLE] Server stopped");
     }
 }
 
 void BLERemoteServer::ServerCallbacks::onConnect(BLEServer* pServer) {
     deviceConnected = true;
-    LOG_PERIPHERAL("[BLE Server] Client connected");
+    LOG_PERIPHERAL("[BLE] Client connected");
 }
 
 void BLERemoteServer::ServerCallbacks::onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
-    LOG_PERIPHERAL("[BLE Server] Client disconnected");
-
-    // Reset all button states on disconnect
-    for (auto& state : buttonStates) {
-        state.second = false;
-    }
-
-    // Restart advertising after a short delay
-    delay(500);  // Give some time for cleanup
+    buttonStates.clear();
     pServer->startAdvertising();
+    LOG_PERIPHERAL("[BLE] Client disconnected");
 }
 
 void BLERemoteServer::ControlCharCallbacks::onWrite(BLECharacteristic* pCharacteristic) {
     std::string value = pCharacteristic->getValue();
     if (value.length() < 2) {
-        LOG_PERIPHERAL("[BLE Remote] Invalid command packet length");
-        BLERemoteServer::sendFeedback(CommandStatus::INVALID);
+        LOG_PERIPHERAL("[BLE] Invalid command length");
+        sendFeedback(CommandStatus::INVALID);
         return;
     }
 
-    CommandPacket packet = CommandPacket::parse((uint8_t*)value.data(), value.length());
-    if (packet.command == RemoteCommand::NONE) {
-        LOG_PERIPHERAL("[BLE Remote] Invalid command packet");
-        BLERemoteServer::sendFeedback(CommandStatus::INVALID);
-        return;
-    }
+    RemoteCommand cmd = static_cast<RemoteCommand>(value[0]);
+    ButtonId button = static_cast<ButtonId>(value[1]);
 
     // Handle button commands
-    if (packet.command == RemoteCommand::BUTTON_DOWN ||
-        packet.command == RemoteCommand::BUTTON_UP) {
-        ButtonId button = packet.getButton();
-        bool isPressed = (packet.command == RemoteCommand::BUTTON_DOWN);
-
-        // Validate button transition
-        if (!BLERemoteServer::validateButtonTransition(packet.command, button)) {
-            LOG_PERIPHERAL("[BLE Remote] Invalid button state transition");
-            BLERemoteServer::sendFeedback(CommandStatus::BUTTON_STATE_ERROR);
+    if (cmd == RemoteCommand::BUTTON_DOWN || cmd == RemoteCommand::BUTTON_UP) {
+        if (!validateButtonTransition(cmd, button)) {
+            LOG_PERIPHERAL("[BLE] Invalid button state transition");
+            sendFeedback(CommandStatus::BUTTON_STATE_ERROR);
             return;
         }
 
-        // Update button state in RemoteControlManager
-        RemoteControlManager::setButtonState(button, isPressed);
+        buttonStates[button] = (cmd == RemoteCommand::BUTTON_DOWN);
+    }
 
-        // Call the command callback if set
-        if (BLERemoteServer::onCommandReceived) {
-            BLERemoteServer::onCommandReceived(packet.command, packet.parameters,
-                                               packet.parameterCount);
+    // Forward command to callback
+    if (commandCallback) {
+        commandCallback(cmd, (uint8_t*)value.data() + 1, value.length() - 1);
+    }
+
+    sendFeedback(CommandStatus::SUCCESS);
+}
+
+void BLERemoteServer::handleAstroCommand(RemoteCommand cmd, const uint8_t* data, size_t length) {
+    if (!astroCommandCallback) {
+        LOG_PERIPHERAL("[BLE] No astro command callback registered");
+        sendFeedback(CommandStatus::FAILURE);
+        return;
+    }
+
+    if (cmd == RemoteCommand::ASTRO_SET_PARAMS) {
+        if (length != sizeof(AstroParamPacket)) {
+            LOG_PERIPHERAL("[BLE] Invalid astro params packet size");
+            sendFeedback(CommandStatus::INVALID);
+            return;
         }
 
-        BLERemoteServer::sendFeedback(CommandStatus::SUCCESS);
+        const AstroParamPacket* params = reinterpret_cast<const AstroParamPacket*>(data);
+        astroCommandCallback(cmd, params);
+    } else {
+        astroCommandCallback(cmd, nullptr);
     }
-    // Handle other commands
-    else if (BLERemoteServer::onCommandReceived) {
-        BLERemoteServer::onCommandReceived(packet.command, packet.parameters,
-                                           packet.parameterCount);
-        BLERemoteServer::sendFeedback(CommandStatus::SUCCESS);
-    }
+
+    sendFeedback(CommandStatus::SUCCESS);
 }
 
 bool BLERemoteServer::validateButtonTransition(RemoteCommand cmd, ButtonId button) {
-    bool currentState = buttonStates[button];
+    auto it = buttonStates.find(button);
 
-    if (cmd == RemoteCommand::BUTTON_DOWN && currentState) {
-        return false;  // Button already down
+    // If button state not found, allow only BUTTON_DOWN
+    if (it == buttonStates.end()) {
+        return cmd == RemoteCommand::BUTTON_DOWN;
     }
 
-    if (cmd == RemoteCommand::BUTTON_UP && !currentState) {
-        return false;  // Button already up
+    // If button is down, allow only BUTTON_UP
+    if (it->second) {
+        return cmd == RemoteCommand::BUTTON_UP;
     }
 
-    // Update state if validation passed
-    buttonStates[button] = (cmd == RemoteCommand::BUTTON_DOWN);
-    return true;
+    // If button is up, allow only BUTTON_DOWN
+    return cmd == RemoteCommand::BUTTON_DOWN;
 }
