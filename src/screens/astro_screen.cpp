@@ -42,13 +42,13 @@ void AstroScreen::updateMenuItems() {
         menuItems.addItem(AstroMenuItem::InitialDelay, "Delay", buffer, true);
 
         snprintf(buffer, sizeof(buffer), "%ds", params.exposureSec);
-        menuItems.addItem(AstroMenuItem::ExposureTime, "Exp", buffer, true);
+        menuItems.addItem(AstroMenuItem::ExposureTime, "Exposure", buffer, true);
 
         snprintf(buffer, sizeof(buffer), "%d", params.subframeCount);
-        menuItems.addItem(AstroMenuItem::NumberOfExposures, "Subs", buffer, true);
+        menuItems.addItem(AstroMenuItem::NumberOfExposures, "Subframes", buffer, true);
 
         snprintf(buffer, sizeof(buffer), "%ds", params.intervalSec);
-        menuItems.addItem(AstroMenuItem::DelayBetweenExposures, "Int", buffer, true);
+        menuItems.addItem(AstroMenuItem::DelayBetweenExposures, "Interval", buffer, true);
 
     } else {
         // Show status when running
