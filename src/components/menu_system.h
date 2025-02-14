@@ -1,9 +1,8 @@
 #pragma once
 
-#include <memory>
+#include <M5Unified.h>
 
-#include "hardware_interface.h"
-#include "screens/base_screen.h"
+#include <memory>
 
 // Forward declarations
 template <typename T>
@@ -43,19 +42,17 @@ private:
 
 namespace MenuSystem {
 // Function declarations
-void init(IHardware* hardware);
+void init();
 void update();
 void setScreenInternal(IScreen* screen);
 void goHome();
 IScreen* getCurrentScreen();
-IHardware* getHardware();
 
 // Generic screen setter that can accept any screen type
 template <typename MenuType>
 void setScreen(BaseScreen<MenuType>* screen) {
     if (!screen)
         return;
-    auto wrapper = new ScreenWrapper<MenuType>(screen);
-    setScreenInternal(wrapper);
+    setScreenInternal(new ScreenWrapper<MenuType>(screen));
 }
 }  // namespace MenuSystem

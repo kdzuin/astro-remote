@@ -22,34 +22,33 @@ private:
 };
 
 inline void PhotoScreen::drawContent() {
-    int centerX = display().width() / 2;
-    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+    int centerX = M5.Display.width() / 2;
+    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
 
     if (photoProcess.isFlashActive()) {
         // Flash effect
-        display().fillScreen(display().getColor(display::colors::WHITE));
-        display().setTextColor(display().getColor(display::colors::BLACK));
+        M5.Display.fillScreen(colors::get(colors::WHITE));
+        M5.Display.setTextColor(colors::get(colors::BLACK));
     } else {
         // Normal display
-        display().fillScreen(display().getColor(display::colors::BLACK));
-        display().setTextColor(display().getColor(display::colors::WHITE));
+        M5.Display.fillScreen(colors::get(colors::BLACK));
+        M5.Display.setTextColor(colors::get(colors::WHITE));
 
         // Draw photo counter
-        display().setTextSize(3);
-        display().setTextAlignment(textAlign::middle_center);
+        M5.Display.setTextSize(3);
+        M5.Display.setTextDatum(middle_center);
         char countStr[10];
         sprintf(countStr, "%d", photoProcess.getPhotoCount());
-        display().drawString(countStr, centerX, centerY);
+        M5.Display.drawString(countStr, centerX, centerY);
     }
 
-    setStatusBgColor(display().getColor(display::colors::GRAY_800));
+    setStatusBgColor(colors::get(colors::GRAY_800));
     setStatusText("Ready");
     drawStatusBar();
 }
 
 inline void PhotoScreen::update() {
-    if (input().wasButtonPressed(ButtonId::BTN_A) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[PhotoScreen] [Btn] Confirm Button Clicked");
 
         if (photoProcess.takePhoto()) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
 template <typename IdType>
 SelectableList<IdType>::SelectableList() : title("Menu") {}
@@ -25,7 +25,7 @@ void SelectableList<IdType>::addItem(IdType id, const std::string& label, bool e
 
 template <typename IdType>
 void SelectableList<IdType>::addItem(IdType id, const std::string& label,
-                                     const std::string& infoText, unifiedColor infoColor,
+                                     const std::string& infoText, uint32_t infoColor,
                                      bool enabled) {
     items.emplace_back(id, label, infoText, infoColor, enabled);
 }
@@ -135,23 +135,22 @@ int SelectableList<IdType>::getSelectedIndex() const {
 
 template <typename IdType>
 void SelectableList<IdType>::draw() {
-    auto& display = MenuSystem::getHardware()->getDisplay();
-    const unifiedColor SELECTED_BG = display.getColor(display::colors::WHITE);
-    const unifiedColor SELECTED_FG = display.getColor(display::colors::BLACK);
-    const unifiedColor NORMAL_BG = display.getColor(display::colors::BLACK);
-    const unifiedColor NORMAL_FG = display.getColor(display::colors::WHITE);
-    const unifiedColor DISABLED_FG = display.getColor(display::colors::GRAY_500);
+    const uint32_t SELECTED_BG = colors::get(colors::WHITE);
+    const uint32_t SELECTED_FG = colors::get(colors::BLACK);
+    const uint32_t NORMAL_BG = colors::get(colors::BLACK);
+    const uint32_t NORMAL_FG = colors::get(colors::WHITE);
+    const uint32_t DISABLED_FG = colors::get(colors::GRAY_500);
 
     int y = 0;
 
-    display.fillScreen(display.getColor(display::colors::BLACK));
+    M5.Display.fillScreen(colors::get(colors::BLACK));
 
     // Draw title if present
     if (!title.empty()) {
-        display.setTextSize(1.25);
-        display.setTextAlignment(textAlign::middle_center);
-        display.setTextColor(NORMAL_FG);
-        display.drawString(title.c_str(), display.width() / 2, y + ITEM_HEIGHT / 1.25);
+        M5.Display.setTextSize(1.25);
+        M5.Display.setTextDatum(middle_center);
+        M5.Display.setTextColor(NORMAL_FG);
+        M5.Display.drawString(title.c_str(), M5.Display.width() / 2, y + ITEM_HEIGHT / 1.25);
         y += ITEM_HEIGHT;
     }
 
@@ -163,25 +162,25 @@ void SelectableList<IdType>::draw() {
         if (item.separator) {
             // Draw separator line in the middle of the item height
             int lineY = y + ITEM_HEIGHT / 2;
-            display.drawLine(0, lineY, display.width(), lineY, DISABLED_FG);
+            M5.Display.drawLine(0, lineY, M5.Display.width(), lineY, DISABLED_FG);
         } else {
-            const unifiedColor bgColor = isSelected ? SELECTED_BG : NORMAL_BG;
-            const unifiedColor fgColor =
+            const uint32_t bgColor = isSelected ? SELECTED_BG : NORMAL_BG;
+            const uint32_t fgColor =
                 item.enabled ? (isSelected ? SELECTED_FG : NORMAL_FG) : DISABLED_FG;
 
             // Draw selection background
-            display.fillRect(0, y, display.width(), ITEM_HEIGHT, bgColor);
+            M5.Display.fillRect(0, y, M5.Display.width(), ITEM_HEIGHT, bgColor);
 
-            display.setTextAlignment(textAlign::middle_left);
-            display.setTextColor(fgColor);
-            display.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
+            M5.Display.setTextDatum(middle_left);
+            M5.Display.setTextColor(fgColor);
+            M5.Display.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
 
             // Draw info text if present
             if (item.info) {
-                display.setTextColor(item.info->color ? *item.info->color : fgColor);
-                display.setTextAlignment(textAlign::middle_right);
-                display.drawString(item.info->text.c_str(), display.width() - HORIZONTAL_PADDING,
-                                   y + ITEM_HEIGHT / 2);
+                M5.Display.setTextColor(item.info->color ? *item.info->color : fgColor);
+                M5.Display.setTextDatum(middle_right);
+                M5.Display.drawString(item.info->text.c_str(),
+                                      M5.Display.width() - HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
             }
         }
 

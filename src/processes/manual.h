@@ -1,8 +1,7 @@
 #pragma once
 
-#include "components/menu_system.h"
 #include "transport/camera_commands.h"
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
 class ManualProcess {
 public:
@@ -13,9 +12,7 @@ public:
         bool isExecuting;
     };
 
-    static ManualState getState() {
-        return ManualState{Status::Normal, false};
-    }
+    static ManualState getState() { return ManualState{Status::Normal, false}; }
 
     static bool executeCommand(ManualMenuItem command) {
         switch (command) {
@@ -45,15 +42,14 @@ public:
         return false;
     }
 
-    static uint16_t getStatusColor(Status status) {
-        auto& display = MenuSystem::getHardware()->getDisplay();
+    static uint32_t getStatusColor(Status status) {
         switch (status) {
             case Status::Executing:
-                return display.getColor(display::colors::YELLOW);
+                return colors::get(colors::YELLOW);
             case Status::Normal:
-                return display.getColor(display::colors::GRAY_800);
+                return colors::get(colors::GRAY_800);
         }
-        return display.getColor(display::colors::GRAY_800);
+        return colors::get(colors::GRAY_800);
     }
 
     static const char* getStatusText(Status status) {

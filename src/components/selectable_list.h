@@ -3,13 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "hardware_interface.h"
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
 // Forward declaration
-namespace MenuSystem {
-IHardware* getHardware();
-}
+namespace MenuSystem {}
 
 template <typename IdType>
 class SelectableList {
@@ -20,25 +17,23 @@ private:
     const int ITEM_PADDING = 2;        // Padding between items
 
     // Helper function to create color
-    static unifiedColor defaultColor() {
-        return MenuSystem::getHardware()->getDisplay().getColor(display::colors::WHITE);
-    }
+    static uint32_t defaultColor() { return colors::get(colors::WHITE); }
 
 public:
     struct Info {
         std::string text;
-        unifiedColor* color = nullptr;  // nullptr means use current text color
+        uint32_t* color = nullptr;  // nullptr means use current text color
 
         Info(const std::string& infoText) : text(infoText) {}
-        Info(const std::string& infoText, unifiedColor infoColor)
-            : text(infoText), color(new unifiedColor(infoColor)) {}
+        Info(const std::string& infoText, uint32_t infoColor)
+            : text(infoText), color(new uint32_t(infoColor)) {}
 
         ~Info() { delete color; }
 
         // Copy constructor
         Info(const Info& other) : text(other.text) {
             if (other.color) {
-                color = new unifiedColor(*other.color);
+                color = new uint32_t(*other.color);
             }
         }
 
@@ -47,7 +42,7 @@ public:
             if (this != &other) {
                 text = other.text;
                 delete color;
-                color = other.color ? new unifiedColor(*other.color) : nullptr;
+                color = other.color ? new uint32_t(*other.color) : nullptr;
             }
             return *this;
         }
@@ -64,7 +59,7 @@ public:
             : id(itemId), label(itemLabel), enabled(itemEnabled) {}
 
         Item(IdType itemId, const std::string& itemLabel, const std::string& infoText,
-             unifiedColor infoColor, bool itemEnabled = true)
+             uint32_t infoColor, bool itemEnabled = true)
             : id(itemId), label(itemLabel), enabled(itemEnabled) {
             info = new Info(infoText, infoColor);
         }
@@ -113,7 +108,7 @@ public:
     void clear();
     void addItem(IdType id, const std::string& label, bool enabled = true);
     void addItem(IdType id, const std::string& label, const std::string& infoText,
-                 unifiedColor infoColor, bool enabled = true);
+                 uint32_t infoColor, bool enabled = true);
     void addItem(IdType id, const std::string& label, const std::string& infoText,
                  bool enabled = true);
     void addSeparator();

@@ -2,13 +2,11 @@
 
 #include "screens/scan_screen.h"
 #include "transport/remote_control_manager.h"
-#include "utils/display_constants.h"
-
-using namespace display::colors;
+#include "utils/colors.h"
 
 SettingsScreen::SettingsScreen() : BaseScreen<SettingsMenuItem>("Settings") {
     setStatusText("Select Option");
-    setStatusBgColor(display().getColor(display::colors::NORMAL));
+    setStatusBgColor(colors::get(colors::NORMAL));
     menuItems.setTitle("Settings Menu");
     updateMenuItems();
 }
@@ -47,8 +45,7 @@ void SettingsScreen::drawContent() {
 }
 
 void SettingsScreen::update() {
-    if (input().wasButtonPressed(ButtonId::BTN_B) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
+    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[SettingsScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
@@ -58,8 +55,7 @@ void SettingsScreen::update() {
         prevMenuItem();
     }
 
-    if (input().wasButtonPressed(ButtonId::BTN_A) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[SettingsScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }
@@ -70,10 +66,10 @@ void SettingsScreen::selectMenuItem() {
         case SettingsMenuItem::Connect:
             if (SettingsProcess::connectToDevice()) {
                 setStatusText("Connected!");
-                setStatusBgColor(display().getColor(display::colors::SUCCESS));
+                setStatusBgColor(colors::get(colors::SUCCESS));
             } else {
                 setStatusText("Failed to connect!");
-                setStatusBgColor(display().getColor(display::colors::ERROR));
+                setStatusBgColor(colors::get(colors::ERROR));
             }
             updateMenuItems();
             draw();
@@ -82,7 +78,7 @@ void SettingsScreen::selectMenuItem() {
         case SettingsMenuItem::Forget:
             SettingsProcess::forgetDevice();
             setStatusText("Select Option");
-            setStatusBgColor(display().getColor(display::colors::NORMAL));
+            setStatusBgColor(colors::get(colors::NORMAL));
             updateMenuItems();
             draw();
             break;
@@ -106,7 +102,7 @@ void SettingsScreen::selectMenuItem() {
         case SettingsMenuItem::Disconnect:
             SettingsProcess::disconnectDevice();
             setStatusText("Select Option");
-            setStatusBgColor(display().getColor(display::colors::NORMAL));
+            setStatusBgColor(colors::get(colors::NORMAL));
             updateMenuItems();
             draw();
             break;

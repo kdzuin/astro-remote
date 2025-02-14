@@ -1,5 +1,7 @@
 #pragma once
 
+#include <M5Unified.h>
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -7,6 +9,7 @@
 #include "components/menu_system.h"
 #include "components/selectable_list.h"
 #include "transport/ble_device.h"
+#include "utils/colors.h"
 
 // Base menu item type for screens that don't define their own
 enum class BaseMenuItem { None };
@@ -40,7 +43,7 @@ public:
 
     // Status bar methods
     void setStatusText(const std::string& text) { statusText = text; }
-    void setStatusBgColor(unifiedColor color) { statusBgColor = color; }
+    void setStatusBgColor(uint32_t color) { statusBgColor = color; }
 
     void checkConnection();
 
@@ -48,13 +51,10 @@ protected:
     SelectableList<MenuItemType> menuItems;
     const char* screenName;
     std::string statusText;
-    unifiedColor statusBgColor;
+    uint32_t statusBgColor;
     unsigned long lastConnectionCheck = 0;
     bool wasConnected = false;
     int reconnectAttempts = 0;
-
-    IDisplay& display() { return MenuSystem::getHardware()->getDisplay(); }
-    IInput& input() { return MenuSystem::getHardware()->getInput(); }
 };
 
 #include "base_screen.tpp"

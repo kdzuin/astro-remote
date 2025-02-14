@@ -1,8 +1,11 @@
 #pragma once
 
+#include <M5Unified.h>
+
+#include "processes/video.h"
 #include "screens/base_screen.h"
 #include "transport/remote_control_manager.h"
-#include "processes/video.h"
+#include "utils/colors.h"
 
 enum class VideoMenuItem { None };
 
@@ -22,41 +25,39 @@ private:
 };
 
 inline void VideoScreen::drawContent() {
-    int centerX = display().width() / 2;
-    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+    int centerX = M5.Display.width() / 2;
+    int centerY = M5.Display.height() / 2;
 
     if (videoProcess.isRecording()) {
         // Red background when recording
-        display().fillRect(0, 0, display().width(), display().height(),
-                           display().getColor(display::colors::RED));
-        display().setTextColor(display().getColor(display::colors::WHITE));
+        M5.Display.fillRect(0, 0, M5.Display.width(), M5.Display.height(),
+                            colors::get(colors::RED));
+        M5.Display.setTextColor(colors::get(colors::WHITE));
 
         // Show recording time
         char timeStr[10];
         videoProcess.getFormattedTime(timeStr, sizeof(timeStr));
 
-        display().setTextSize(3);
-        display().setTextAlignment(textAlign::middle_center);
-        display().drawString(timeStr, centerX, centerY);
+        M5.Display.setTextSize(3);
+        M5.Display.setTextDatum(middle_center);
+        M5.Display.drawString(timeStr, centerX, centerY);
     } else {
         // Normal display
-        display().fillScreen(display().getColor(display::colors::BLACK));
+        M5.Display.fillScreen(colors::get(colors::BLACK));
 
         // Draw record symbol
         int radius = 20;
-        display().fillCircle(centerX, centerY, radius, display().getColor(display::colors::RED));
-        display().drawCircle(centerX, centerY, radius + 2,
-                             display().getColor(display::colors::WHITE));
+        M5.Display.fillCircle(centerX, centerY, radius, colors::get(colors::RED));
+        M5.Display.drawCircle(centerX, centerY, radius + 2, colors::get(colors::WHITE));
     }
 
-    setStatusBgColor(display().getColor(display::colors::GRAY_800));
+    setStatusBgColor(colors::get(colors::GRAY_800));
     setStatusText(videoProcess.isRecording() ? "Recording" : "Ready");
     drawStatusBar();
 }
 
 inline void VideoScreen::update() {
-    if (input().wasButtonPressed(ButtonId::BTN_A) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[VideoScreen] [Btn] Confirm Button Clicked");
 
         if (videoProcess.isRecording()) {

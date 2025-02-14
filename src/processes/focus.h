@@ -1,13 +1,13 @@
 #pragma once
 
 #include "transport/camera_commands.h"
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
-enum class FocusSensitivity : uint8_t { 
-    Fine = 0x10,    // First
-    Medium = 0x25, 
-    High = 0x50, 
-    Coarse = 0x7F   // Last
+enum class FocusSensitivity : uint8_t {
+    Fine = 0x10,  // First
+    Medium = 0x25,
+    High = 0x50,
+    Coarse = 0x7F  // Last
 };
 
 class FocusProcess {
@@ -45,7 +45,7 @@ public:
                 state.sensitivity = FocusSensitivity::Coarse;
                 return true;
             case FocusSensitivity::Coarse:
-                return false; // Already at max
+                return false;  // Already at max
         }
         return false;
     }
@@ -63,7 +63,7 @@ public:
                 state.sensitivity = FocusSensitivity::Fine;
                 return true;
             case FocusSensitivity::Fine:
-                return false; // Already at min
+                return false;  // Already at min
         }
         return false;
     }
@@ -82,12 +82,12 @@ public:
 
         if (increment > 0) {
             CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_OUT_PRESS,
-                                        static_cast<uint8_t>(state.sensitivity));
+                                          static_cast<uint8_t>(state.sensitivity));
             delay(30);
             CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_OUT_RELEASE, 0x00);
         } else if (increment < 0) {
             CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_IN_PRESS,
-                                        static_cast<uint8_t>(state.sensitivity));
+                                          static_cast<uint8_t>(state.sensitivity));
             delay(30);
             CameraCommands::sendCommand24(CameraCommands::Cmd::FOCUS_IN_RELEASE, 0x00);
         }
@@ -108,9 +108,8 @@ public:
         }
     }
 
-    static unifiedColor getStatusColor(IDisplay& display) {
-        return getState().focusing ? display.getColor(display::colors::RED)
-                                 : display.getColor(display::colors::GRAY_800);
+    static uint32_t getStatusColor() {
+        return getState().focusing ? colors::get(colors::RED) : colors::get(colors::GRAY_800);
     }
 
     static const char* getStatusText() {

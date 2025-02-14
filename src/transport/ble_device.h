@@ -124,7 +124,7 @@ public:
     static void setAutoConnect(bool enable) { autoConnectEnabled = enable; }
     static bool isAutoConnectEnabled() { return autoConnectEnabled; }
     static void setManuallyDisconnected(bool value) { manuallyDisconnected = value; }
-    static bool wasManuallyDisconnected() { return manuallyDisconnected; }
+    static bool wasManuallyDisconnected() { return manuallyDisconnected || !autoConnectEnabled; }
 
 private:
     static BLEClient* pClient;

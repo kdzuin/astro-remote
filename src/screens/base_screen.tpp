@@ -1,65 +1,59 @@
 #pragma once
 
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
 template <typename MenuItemType>
 BaseScreen<MenuItemType>::BaseScreen(const char* name)
     : screenName(name), statusText(""), statusBgColor(0) {
-    auto& display = MenuSystem::getHardware()->getDisplay();
-    statusBgColor = display.getColor(display::colors::GRAY_800);
-    display.fillScreen(display.getColor(display::colors::BLACK));
+    statusBgColor = colors::get(colors::GRAY_800);
+    M5.Display.fillScreen(colors::get(colors::BLACK));
 }
 
 template <typename MenuItemType>
 void BaseScreen<MenuItemType>::draw() {
-    auto& display = MenuSystem::getHardware()->getDisplay();
-
     // Draw main content in the upper area
-    display.setClipRect(0, 0, display.width(), display.height() - STATUS_BAR_HEIGHT);
+    M5.Display.setClipRect(0, 0, M5.Display.width(), M5.Display.height() - STATUS_BAR_HEIGHT);
     drawContent();
-    display.clearClipRect();
+    M5.Display.clearClipRect();
     drawStatusBar();
 }
 
 template <typename MenuItemType>
 void BaseScreen<MenuItemType>::drawConnectionStatus() const {
-    auto& display = MenuSystem::getHardware()->getDisplay();
-    const int statusBarY = display.height() - STATUS_BAR_HEIGHT;
+    const int statusBarY = M5.Display.height() - STATUS_BAR_HEIGHT;
 
     // Draw connection status indicator
     if (BLEDeviceManager::isConnected()) {
         // Connected - solid green line
-        display.drawLine(0, statusBarY, display.width(), statusBarY,
-                         display.getColor(display::colors::GREEN));
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY,
+                            colors::get(colors::GREEN));
     } else if (BLEDeviceManager::isPaired()) {
         // Paired but not connected - yellow line
-        display.drawLine(0, statusBarY, display.width(), statusBarY,
-                         display.getColor(display::colors::YELLOW));
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY,
+                            colors::get(colors::YELLOW));
     } else {
         // Not paired - red line
-        display.drawLine(0, statusBarY, display.width(), statusBarY,
-                         display.getColor(display::colors::RED));
+        M5.Display.drawLine(0, statusBarY, M5.Display.width(), statusBarY,
+                            colors::get(colors::RED));
     }
 }
 
 template <typename MenuItemType>
 void BaseScreen<MenuItemType>::drawStatusBar() const {
-    auto& display = MenuSystem::getHardware()->getDisplay();
-    const int statusBarY = display.height() - STATUS_BAR_HEIGHT;
+    const int statusBarY = M5.Display.height() - STATUS_BAR_HEIGHT;
 
     // Draw status bar background
-    display.fillRect(0, statusBarY, display.width(), STATUS_BAR_HEIGHT, statusBgColor);
+    M5.Display.fillRect(0, statusBarY, M5.Display.width(), STATUS_BAR_HEIGHT, statusBgColor);
 
-    // Draw status text
+    // Draw status text if any
     if (!statusText.empty()) {
-        display.setTextSize(1);
-        display.setTextAlignment(textAlign::middle_center);
-        display.setTextColor(display.getColor(display::colors::WHITE));
-        display.drawString(statusText.c_str(), display.width() / 2,
-                           statusBarY + STATUS_BAR_HEIGHT / 2);
+        M5.Display.setTextSize(1);
+        M5.Display.setTextDatum(middle_center);
+        M5.Display.setTextColor(colors::get(colors::WHITE));
+        M5.Display.drawString(statusText.c_str(), M5.Display.width() / 2,
+                              statusBarY + STATUS_BAR_HEIGHT / 2);
     }
 
-    // Draw connection status line at the top of status bar
     drawConnectionStatus();
 }
 
@@ -71,36 +65,38 @@ void BaseScreen<MenuItemType>::checkConnection() {
     }
     lastConnectionCheck = millis();
 
-    auto& display = MenuSystem::getHardware()->getDisplay();
-
-    // Only attempt reconnection if:
-    // 1. We were connected but lost connection
-    // 2. We haven't manually disconnected
-    // 3. Auto-connect is enabled
-    if (!BLEDeviceManager::isConnected() && BLEDeviceManager::isPaired() &&
-        !BLEDeviceManager::wasManuallyDisconnected() && BLEDeviceManager::isAutoConnectEnabled()) {
-        if (reconnectAttempts < 10) {
+    if (!BLEDeviceManager::isConnected()) {
+        if (BLEDeviceManager::isPaired() && !BLEDeviceManager::wasManuallyDisconnected()) {
             setStatusText("Reconnecting...");
-            setStatusBgColor(display.getColor(display::colors::GRAY_500));
+            setStatusBgColor(colors::get(colors::GRAY_500));
             drawStatusBar();
 
-            if (BLEDeviceManager::connectToSavedDevice()) {
-                // Connection restored
-                reconnectAttempts = 0;
-                setStatusText("Connected");
-                setStatusBgColor(display.getColor(display::colors::SUCCESS));
-                updateMenuItems();
-                draw();
+            if (reconnectAttempts < 10) {
+                if (BLEDeviceManager::connectToSavedDevice()) {
+                    // Connection restored
+                    reconnectAttempts = 0;
+                    setStatusText("Connected");
+                    setStatusBgColor(colors::get(colors::SUCCESS));
+                    updateMenuItems();
+                    draw();
+                } else {
+                    reconnectAttempts++;
+                }
             } else {
-                reconnectAttempts++;
+                // Max attempts reached, show error and update menu
+                setStatusText("Connection lost");
+                setStatusBgColor(colors::get(colors::ERROR));
+                reconnectAttempts++;  // Increment to avoid showing this message again
+                updateMenuItems();
+                BLEDeviceManager::disconnect();
+                draw();
             }
-        } else if (reconnectAttempts == 10) {
-            // Max attempts reached, show error and update menu
-            setStatusText("Connection lost");
-            setStatusBgColor(display.getColor(display::colors::ERROR));
-            reconnectAttempts++;  // Increment to avoid showing this message again
-            updateMenuItems();
-            draw();
+        } else {
+            setStatusText("Not connected");
+            setStatusBgColor(colors::get(colors::ERROR));
         }
+    } else {
+        setStatusText("Connected");
+        setStatusBgColor(colors::get(colors::SUCCESS));
     }
 }

@@ -4,10 +4,10 @@
 
 ScanScreen::ScanScreen()
     : BaseScreen<std::string>("Scan"), lastScanning(false), isConnecting(false) {
-    display().setTextAlignment(textAlign::middle_center);
-    int centerX = display().width() / 2;
-    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
-    display().drawString("Wait...", centerX, centerY);
+    M5.Display.setTextDatum(middle_center);
+    int centerX = M5.Display.width() / 2;
+    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
+    M5.Display.drawString("Wait...", centerX, centerY);
 
     auto state = ScanProcess::getState();
     setStatusText(ScanProcess::getStatusText(state.status));
@@ -50,7 +50,7 @@ void ScanScreen::updateMenuItems() {
 }
 
 void ScanScreen::drawContent() {
-    display().fillScreen(display().getColor(display::colors::BLACK));
+    M5.Display.fillScreen(colors::get(colors::BLACK));
 
     auto state = ScanProcess::getState();
     if (isConnecting) {
@@ -58,16 +58,16 @@ void ScanScreen::drawContent() {
     }
 
     if (isConnecting) {
-        display().setTextAlignment(textAlign::middle_center);
-        int centerX = display().width() / 2;
-        int centerY = display().height() / 2;
-        display().drawString("Wait...", centerX, centerY);
+        M5.Display.setTextDatum(middle_center);
+        int centerX = M5.Display.width() / 2;
+        int centerY = M5.Display.height() / 2;
+        M5.Display.drawString("Wait...", centerX, centerY);
     } else if (state.discoveredDevices.empty()) {
-        display().setTextAlignment(textAlign::middle_center);
-        int centerX = display().width() / 2;
-        int centerY = display().height() / 2;
+        M5.Display.setTextDatum(middle_center);
+        int centerX = M5.Display.width() / 2;
+        int centerY = M5.Display.height() / 2;
 
-        display().drawString("Not found", centerX, centerY);
+        M5.Display.drawString("Not found", centerX, centerY);
 
         // Restart scan after a brief delay if not already scanning
         if (!state.isScanning) {
@@ -99,15 +99,13 @@ void ScanScreen::update() {
     }
 
     if (!state.isScanning && !isConnecting) {
-        if ((input().wasButtonPressed(ButtonId::BTN_A) ||
-             RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
+        if ((M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) &&
             !state.discoveredDevices.empty()) {
             LOG_PERIPHERAL("[ScanScreen] [Btn] Confirm Button Clicked");
             selectMenuItem();
         }
 
-        if ((input().wasButtonPressed(ButtonId::BTN_B) ||
-             RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
+        if ((M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) &&
             !state.discoveredDevices.empty()) {
             LOG_PERIPHERAL("[ScanScreen] [Btn] Next Button Clicked");
             nextMenuItem();

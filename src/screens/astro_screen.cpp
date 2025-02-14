@@ -4,10 +4,11 @@
 #include "components/menu_system.h"
 #include "screens/focus_screen.h"
 #include "transport/remote_control_manager.h"
+#include "utils/colors.h"
 
 AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro") {
     setStatusText("Select Option");
-    setStatusBgColor(display().getColor(display::colors::GRAY_800));
+    setStatusBgColor(colors::get(colors::GRAY_800));
     menuItems.setTitle("Astro Menu");
     updateMenuItems();
 }
@@ -30,9 +31,7 @@ void AstroScreen::drawContent() {
 }
 
 void AstroScreen::update() {
-    if (input().wasButtonPressed(ButtonId::BTN_B) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
-        LOG_PERIPHERAL("[AstroScreen] [Btn] Next Button Clicked");
+    if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Next Button Clicked");
         nextMenuItem();
     }
@@ -42,8 +41,7 @@ void AstroScreen::update() {
         prevMenuItem();
     }
 
-    if (input().wasButtonPressed(ButtonId::BTN_A) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
     }

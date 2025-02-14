@@ -1,9 +1,35 @@
 #pragma once
 
-#include "hardware_interface.h"
+#include <M5Unified.h>
 
-namespace display {
+struct RGBColorTriple {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
 namespace colors {
+
+/**
+ * Convert RGB color triple to M5.Display color format
+ */
+inline uint32_t fromRGB(const RGBColorTriple& color) {
+    return M5.Display.color888(color.r, color.g, color.b);
+}
+
+/**
+ * Convert RGB values to M5.Display color format
+ */
+inline uint32_t fromRGB(uint8_t r, uint8_t g, uint8_t b) {
+    return M5.Display.color888(r, g, b);
+}
+
+/**
+ * Get color from the predefined palette
+ */
+inline uint32_t get(const RGBColorTriple& color) {
+    return fromRGB(color);
+}
 
 constexpr RGBColorTriple NORMAL = {30, 30, 30};
 constexpr RGBColorTriple SUCCESS = {0, 200, 0};
@@ -33,5 +59,5 @@ constexpr RGBColorTriple GRAY_600 = {79, 79, 79};     // #4f4f4f
 constexpr RGBColorTriple GRAY_700 = {74, 74, 74};     // #4a4a4a
 constexpr RGBColorTriple GRAY_800 = {51, 51, 51};     // #333333
 constexpr RGBColorTriple GRAY_900 = {0, 0, 0};
+
 }  // namespace colors
-}  // namespace display

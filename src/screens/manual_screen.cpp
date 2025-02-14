@@ -3,7 +3,7 @@
 #include "components/menu_system.h"
 #include "processes/manual.h"
 #include "transport/remote_control_manager.h"
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
 ManualScreen::ManualScreen() : BaseScreen("Manual"), isExecuting(false) {
     auto state = ManualProcess::getState();
@@ -14,8 +14,7 @@ ManualScreen::ManualScreen() : BaseScreen("Manual"), isExecuting(false) {
 
 void ManualScreen::update() {
     if (!isExecuting) {
-        if (input().wasButtonPressed(ButtonId::BTN_B) ||
-            RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
+        if (M5.BtnB.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
             LOG_PERIPHERAL("[ManualScreen] [Btn] Next Button Clicked");
             nextMenuItem();
         }
@@ -25,8 +24,7 @@ void ManualScreen::update() {
             prevMenuItem();
         }
 
-        if (input().wasButtonPressed(ButtonId::BTN_A) ||
-            RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+        if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
             LOG_PERIPHERAL("[ManualScreen] [Btn] Confirm Button Clicked");
             selectMenuItem();
         }

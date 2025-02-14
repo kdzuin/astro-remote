@@ -19,34 +19,34 @@ public:
 };
 
 inline void FocusScreen::drawContent() {
-    int centerX = display().width() / 2;
-    int centerY = (display().height() - STATUS_BAR_HEIGHT) / 2;
+    int centerX = M5.Display.width() / 2;
+    int centerY = (M5.Display.height() - STATUS_BAR_HEIGHT) / 2;
 
-    display().fillScreen(display().getColor(display::colors::BLACK));
-    display().setTextColor(display().getColor(display::colors::WHITE));
+    M5.Display.fillScreen(colors::get(colors::BLACK));
+    M5.Display.setTextColor(colors::get(colors::WHITE));
 
     // Draw main focus status
-    display().setTextSize(2);
-    display().setTextAlignment(textAlign::middle_center);
-    display().drawString(FocusProcess::getState().focusing ? "FOCUSING" : "Ready", centerX, centerY);
+    M5.Display.setTextSize(2);
+    M5.Display.setTextDatum(middle_center);
+    M5.Display.drawString(FocusProcess::getState().focusing ? "FOCUSING" : "Ready", centerX,
+                          centerY);
 
     // Draw sensitivity below
-    display().setTextSize(1.25);
-    display().drawString(FocusProcess::getSensitivityText(), centerX, centerY + 30);
+    M5.Display.setTextSize(1.25);
+    M5.Display.drawString(FocusProcess::getSensitivityText(), centerX, centerY + 30);
 
     // Update status bar
-    setStatusBgColor(FocusProcess::getStatusColor(display()));
+    setStatusBgColor(FocusProcess::getStatusColor());
     setStatusText(FocusProcess::getStatusText());
     drawStatusBar();
 }
 
 inline void FocusScreen::update() {
-    if (input().wasButtonPressed(ButtonId::BTN_A) ||
-        RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
+    if (M5.BtnA.wasClicked() || RemoteControlManager::wasButtonPressed(ButtonId::CONFIRM)) {
         LOG_APP("[FocusScreen] Toggle focus mode");
         FocusProcess::updateFocusState(!FocusProcess::getState().focusing);
         draw();
-    } else if (input().wasButtonPressed(ButtonId::BTN_B)) {
+    } else if (M5.BtnB.wasClicked()) {
         LOG_APP("[FocusScreen] Cycle sensitivity");
         FocusProcess::cycleSensitivity();
         draw();

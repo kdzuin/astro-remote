@@ -1,8 +1,7 @@
 #pragma once
 
-#include "components/menu_system.h"
 #include "transport/ble_device.h"
-#include "utils/display_constants.h"
+#include "utils/colors.h"
 
 class ScanProcess {
 public:
@@ -42,21 +41,20 @@ public:
 
     static void clearDevices() { BLEDeviceManager::clearDiscoveredDevices(); }
 
-    static uint16_t getStatusColor(Status status) {
-        auto& display = MenuSystem::getHardware()->getDisplay();
+    static uint32_t getStatusColor(Status status) {
         switch (status) {
             case Status::Scanning:
             case Status::Connecting:
-                return display.getColor(display::colors::YELLOW);
+                return colors::get(colors::YELLOW);
             case Status::Connected:
-                return display.getColor(display::colors::GREEN);
+                return colors::get(colors::GREEN);
             case Status::Failed:
             case Status::NoDevices:
-                return display.getColor(display::colors::RED);
+                return colors::get(colors::RED);
             case Status::DevicesFound:
-                return display.getColor(display::colors::GRAY_800);
+                return colors::get(colors::GRAY_800);
         }
-        return display.getColor(display::colors::GRAY_800);
+        return colors::get(colors::GRAY_800);
     }
 
     static const char* getStatusText(Status status) {

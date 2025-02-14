@@ -128,6 +128,7 @@ void BLEDeviceManager::saveDeviceAddress(const std::string& address) {
 
 void BLEDeviceManager::unpairCamera() {
     disconnectCamera();
+    setManuallyDisconnected(true);
     preferences.remove("device_address");
     cachedAddress.clear();
 }
@@ -311,7 +312,7 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device) {
     // Set MTU and wait for completion
     LOG_PERIPHERAL("[BLE] Setting MTU...");
     pClient->setMTU(185);  // Sony cameras typically use smaller MTU
-    delay(500);           // Wait for MTU exchange
+    delay(500);            // Wait for MTU exchange
 
     // Set encryption using the correct address type
     LOG_PERIPHERAL("[BLE] Setting up encryption...");
