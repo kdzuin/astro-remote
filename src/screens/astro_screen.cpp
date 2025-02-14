@@ -129,8 +129,6 @@ void AstroScreen::drawContent() {
 void AstroScreen::update() {
     auto& astro = AstroProcess::instance();
 
-    updateMenuItems();
-
     // Handle button inputs
     if (RemoteControlManager::wasButtonPressed(ButtonId::BTN_B) ||
         RemoteControlManager::wasButtonPressed(ButtonId::DOWN)) {
@@ -148,14 +146,20 @@ void AstroScreen::update() {
         LOG_PERIPHERAL("[AstroScreen] [Btn] Confirm Button Clicked");
         selectMenuItem();
         adjustParameter(1);
+        updateMenuItems();
+        draw();
     }
 
     if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT)) {
         adjustParameter(1);
+        updateMenuItems();
+        draw();
     }
 
     if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT)) {
         adjustParameter(-1);
+        updateMenuItems();
+        draw();
     }
 }
 
@@ -171,8 +175,6 @@ void AstroScreen::adjustParameter(uint16_t delta) {
                                       INITIAL_DELAY_MIN, INITIAL_DELAY_MAX);
 
                 astro.setParameter("initialDelaySec", newDelay);
-                updateMenuItems();
-                draw();
             }
             break;
         case AstroMenuItem::ExposureTime:
@@ -180,8 +182,6 @@ void AstroScreen::adjustParameter(uint16_t delta) {
                 auto newExp =
                     clamp(params.exposureSec + EXPOSURE_STEP * delta, EXPOSURE_MIN, EXPOSURE_MAX);
                 astro.setParameter("exposureSec", newExp);
-                updateMenuItems();
-                draw();
             }
             break;
         case AstroMenuItem::NumberOfExposures:
@@ -189,8 +189,6 @@ void AstroScreen::adjustParameter(uint16_t delta) {
                 auto newCount = clamp(params.subframeCount + SUBFRAME_COUNT_STEP * delta,
                                       SUBFRAME_COUNT_MIN, SUBFRAME_COUNT_MAX);
                 astro.setParameter("subframeCount", newCount);
-                updateMenuItems();
-                draw();
             }
             break;
 
@@ -199,13 +197,9 @@ void AstroScreen::adjustParameter(uint16_t delta) {
                 auto newInterval =
                     clamp(params.intervalSec + INTERVAL_STEP * delta, INTERVAL_MIN, INTERVAL_MAX);
                 astro.setParameter("intervalSec", newInterval);
-                updateMenuItems();
-                draw();
             }
             break;
     }
-    updateMenuItems();
-    draw();
 }
 
 void AstroScreen::selectMenuItem() {
@@ -215,6 +209,7 @@ void AstroScreen::selectMenuItem() {
 
     switch (selectedItem) {
         case AstroMenuItem::Focus:
+            // TODO: possible problem. do we need to do anything about current AstroScreen here?
             MenuSystem::setScreen(new FocusScreen());
             break;
 
@@ -224,23 +219,17 @@ void AstroScreen::selectMenuItem() {
             } else if (!astro.isRunning()) {
                 astro.start();
             }
-            updateMenuItems();
-            draw();
             break;
 
         case AstroMenuItem::Pause:
             if (astro.isRunning()) {
                 astro.pause();
-                updateMenuItems();
-                draw();
             }
             break;
 
         case AstroMenuItem::Stop:
             if (astro.isRunning()) {
                 astro.stop();
-                updateMenuItems();
-                draw();
             }
             break;
     }
