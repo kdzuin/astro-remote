@@ -1,10 +1,16 @@
 #include "astro.h"
+#include "transport/ble_astro_observer.h"
 
 #include <Arduino.h>
 
 AstroProcess& AstroProcess::instance() {
     static AstroProcess instance;
     return instance;
+}
+
+AstroProcess::AstroProcess() {
+    // Register BLE observer
+    addObserver(&BLEAstroObserver::instance());
 }
 
 void AstroProcess::start() {
@@ -59,6 +65,7 @@ void AstroProcess::setParameters(const Parameters& params) {
     if (status_.state == State::IDLE || status_.state == State::STOPPED) {
         params_ = params;
         updateTimings();
+        notifyParametersChanged();
     }
 }
 
@@ -86,6 +93,7 @@ bool AstroProcess::setParameter(const std::string& name, uint16_t value) {
     }
 
     params_ = newParams;  // Apply the changes
+    notifyParametersChanged();
     return true;
 }
 
@@ -170,6 +178,12 @@ void AstroProcess::updateTimings() {
     }
 }
 
+void AstroProcess::notifyParametersChanged() {
+    for (auto* observer : observers_) {
+        observer->onAstroParametersChanged(params_);
+    }
+}
+
 void AstroProcess::notifyStateChange() {
     AstroStatusPacket packet;
     packet.state = static_cast<uint8_t>(status_.state);
@@ -181,7 +195,9 @@ void AstroProcess::notifyStateChange() {
     packet.isCameraConnected = status_.isCameraConnected;
     packet.errorCode = status_.errorCode;
 
-    BLERemoteServer::sendAstroStatus(packet);
+    for (auto* observer : observers_) {
+        observer->onAstroStatusChanged(status_);
+    }
 }
 
 bool AstroProcess::startExposure() {

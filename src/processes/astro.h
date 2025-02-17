@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "transport/ble_remote_server.h"
 #include "transport/camera_commands.h"
@@ -89,11 +90,46 @@ public:
                status_.state != State::ERROR;
     }
 
+    // Observer interface for UI updates
+    class Observer {
+    public:
+        virtual ~Observer() = default;
+        virtual void onAstroParametersChanged(const Parameters& params) = 0;
+        virtual void onAstroStatusChanged(const Status& status) = 0;
+    };
+
+    void addObserver(Observer* observer) {
+        if (observer) {
+            observers_.push_back(observer);
+            // Send current state immediately
+            observer->onAstroParametersChanged(params_);
+            observer->onAstroStatusChanged(status_);
+        }
+    }
+
+    void removeObserver(Observer* observer) {
+        observers_.erase(
+            std::remove(observers_.begin(), observers_.end(), observer),
+            observers_.end()
+        );
+    }
+
     // Update loop - call this regularly
     void update();
 
 private:
-    AstroProcess() = default;
+    void notifyParametersChanged();
+    void notifyStateChange();
+
+    // Member variables
+    Parameters params_;
+    Status status_;
+    std::vector<Observer*> observers_;
+    uint32_t lastUpdateTime_ = 0;
+    bool exposureActive_ = false;
+
+    // Constructor is no longer defaulted, will be defined in cpp
+    AstroProcess();
     ~AstroProcess() = default;
     AstroProcess(const AstroProcess&) = delete;
     AstroProcess& operator=(const AstroProcess&) = delete;
@@ -101,13 +137,6 @@ private:
     // State management
     void setState(State newState);
     void updateTimings();
-    void notifyStateChange();
     bool startExposure();
     void stopExposure();
-
-    // Member variables
-    Parameters params_;
-    Status status_;
-    uint32_t lastUpdateTime_ = 0;
-    bool exposureActive_ = false;
 };

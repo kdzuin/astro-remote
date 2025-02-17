@@ -3,8 +3,8 @@
 #include <M5Unified.h>
 
 #include "components/menu_system.h"
-#include "processes/astro.h"
 #include "screens/astro_screen.h"
+#include "transport/ble_device.h"
 #include "transport/ble_remote_server.h"
 #include "utils/colors.h"
 #include "utils/preferences.h"
@@ -34,6 +34,9 @@ public:
         M5.Display.setTextSize(1.25);
         M5.Display.setBrightness(PreferencesManager::getBrightness());
 
+        // Initialize BLE components
+        BLEDeviceManager::init();
+
         // Initialize BLE Remote Server
         BLERemoteServer::init("M5Remote");
         RemoteControlManager::init();
@@ -44,6 +47,7 @@ public:
 
     void loop() {
         // Update BLE and menu
+        BLEDeviceManager::update();      // Update BLE state
         RemoteControlManager::update();  // Update remote control state
         MenuSystem::update();            // This will handle input internally
     }

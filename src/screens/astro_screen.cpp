@@ -20,10 +20,16 @@ AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro"), selectedItem(0)
     setStatusText("Select Option");
     setStatusBgColor(colors::get(colors::GRAY_800));
     menuItems.setTitle("Astro Menu");
+
+    // Register as observer
+    AstroProcess::instance().addObserver(this);
+
     updateMenuItems();
 }
 
 AstroScreen::~AstroScreen() {
+    // Unregister as observer
+    AstroProcess::instance().removeObserver(this);
     // Clean up any state
 }
 
@@ -34,7 +40,6 @@ void AstroScreen::updateMenuItems() {
 
     menuItems.clear();
 
-    menuItems.addItem(AstroMenuItem::Focus, "Focus");
     if (!astro.isRunning()) {
         menuItems.addItem(AstroMenuItem::Start, "Start");
     } else {
@@ -45,6 +50,7 @@ void AstroScreen::updateMenuItems() {
         }
         menuItems.addItem(AstroMenuItem::Stop, "Stop");
     }
+    menuItems.addItem(AstroMenuItem::Focus, "Focus");
     menuItems.addSeparator();
 
     // Show parameters when not running
@@ -57,7 +63,7 @@ void AstroScreen::updateMenuItems() {
         menuItems.addItem(AstroMenuItem::ExposureTime, "Exposure", buffer, true);
 
         snprintf(buffer, sizeof(buffer), "%d", params.subframeCount);
-        menuItems.addItem(AstroMenuItem::NumberOfExposures, "Subframes", buffer, true);
+        menuItems.addItem(AstroMenuItem::SubframeCount, "Subframes", buffer, true);
 
         snprintf(buffer, sizeof(buffer), "%ds", params.intervalSec);
         menuItems.addItem(AstroMenuItem::DelayBetweenExposures, "Interval", buffer, true);
@@ -67,7 +73,7 @@ void AstroScreen::updateMenuItems() {
         char buffer[32];
         snprintf(buffer, sizeof(buffer), "Frame: %d/%d", status.completedFrames + 1,
                  params.subframeCount);
-        menuItems.addItem(AstroMenuItem::NumberOfExposures, buffer);
+        menuItems.addItem(AstroMenuItem::SubframeCount, buffer);
     }
 }
 
@@ -171,7 +177,7 @@ void AstroScreen::adjustParameter(uint16_t delta) {
                 astro.setParameter("exposureSec", newExp);
             }
             break;
-        case AstroMenuItem::NumberOfExposures:
+        case AstroMenuItem::SubframeCount:
             if (!astro.isRunning()) {
                 auto newCount = clamp(
                     params.subframeCount + AstroProcess::Parameters::SUBFRAME_COUNT_STEP * delta,
