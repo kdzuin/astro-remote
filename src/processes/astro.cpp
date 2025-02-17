@@ -162,7 +162,7 @@ void AstroProcess::updateTimings() {
         return;
     }
 
-    uint32_t totalTime = params_.totalDurationSec();
+    uint32_t totalTime = params_.getTotalDurationSec();
     if (status_.elapsedSec > totalTime) {
         status_.remainingSec = 0;
     } else {
@@ -180,7 +180,7 @@ void AstroProcess::notifyStateChange() {
     packet.remainingSec = status_.remainingSec;
     packet.isCameraConnected = status_.isCameraConnected;
     packet.errorCode = status_.errorCode;
-    
+
     BLERemoteServer::sendAstroStatus(packet);
 }
 

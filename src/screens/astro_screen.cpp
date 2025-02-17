@@ -51,7 +51,7 @@ void AstroScreen::updateMenuItems() {
     if (!astro.isRunning()) {
         char buffer[32];
         snprintf(buffer, sizeof(buffer), "%ds", params.initialDelaySec);
-        menuItems.addItem(AstroMenuItem::InitialDelay, "Delay", buffer, true);
+        menuItems.addItem(AstroMenuItem::InitialDelay, "Delay", buffer, false);
 
         snprintf(buffer, sizeof(buffer), "%ds", params.exposureSec);
         menuItems.addItem(AstroMenuItem::ExposureTime, "Exposure", buffer, true);
@@ -114,7 +114,7 @@ void AstroScreen::drawContent() {
 
     } else {
         char buffer[64];
-        uint32_t totalSec = params.totalDurationSec();
+        uint32_t totalSec = params.getTotalDurationSec();
         snprintf(buffer, sizeof(buffer), "Total: %02d:%02d:%02d", totalSec / 3600,
                  (totalSec % 3600) / 60, totalSec % 60);
         setStatusText(buffer);
@@ -163,33 +163,29 @@ void AstroScreen::adjustParameter(uint16_t delta) {
     auto selectedItem = menuItems.getSelectedId();
 
     switch (selectedItem) {
-        case AstroMenuItem::InitialDelay:
-            if (!astro.isRunning()) {
-                auto newDelay = clamp(params.initialDelaySec + INITIAL_DELAY_STEP * delta,
-                                      INITIAL_DELAY_MIN, INITIAL_DELAY_MAX);
-
-                astro.setParameter("initialDelaySec", newDelay);
-            }
-            break;
         case AstroMenuItem::ExposureTime:
             if (!astro.isRunning()) {
-                auto newExp =
-                    clamp(params.exposureSec + EXPOSURE_STEP * delta, EXPOSURE_MIN, EXPOSURE_MAX);
+                auto newExp = clamp(
+                    params.exposureSec + AstroProcess::Parameters::EXPOSURE_STEP * delta,
+                    AstroProcess::Parameters::EXPOSURE_MIN, AstroProcess::Parameters::EXPOSURE_MAX);
                 astro.setParameter("exposureSec", newExp);
             }
             break;
         case AstroMenuItem::NumberOfExposures:
             if (!astro.isRunning()) {
-                auto newCount = clamp(params.subframeCount + SUBFRAME_COUNT_STEP * delta,
-                                      SUBFRAME_COUNT_MIN, SUBFRAME_COUNT_MAX);
+                auto newCount = clamp(
+                    params.subframeCount + AstroProcess::Parameters::SUBFRAME_COUNT_STEP * delta,
+                    AstroProcess::Parameters::SUBFRAME_COUNT_MIN,
+                    AstroProcess::Parameters::SUBFRAME_COUNT_MAX);
                 astro.setParameter("subframeCount", newCount);
             }
             break;
 
         case AstroMenuItem::DelayBetweenExposures:
             if (!astro.isRunning()) {
-                auto newInterval =
-                    clamp(params.intervalSec + INTERVAL_STEP * delta, INTERVAL_MIN, INTERVAL_MAX);
+                auto newInterval = clamp(
+                    params.intervalSec + AstroProcess::Parameters::INTERVAL_STEP * delta,
+                    AstroProcess::Parameters::INTERVAL_MIN, AstroProcess::Parameters::INTERVAL_MAX);
                 astro.setParameter("intervalSec", newInterval);
             }
             break;
@@ -205,7 +201,6 @@ void AstroScreen::selectMenuItem() {
 
     switch (selectedItem) {
         case AstroMenuItem::Focus:
-            // TODO: possible problem. do we need to do anything about current AstroScreen here?
             MenuSystem::setScreen(new FocusScreen());
             break;
 

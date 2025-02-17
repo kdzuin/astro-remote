@@ -2,8 +2,9 @@
 
 #include <cstdint>
 #include <string>
-#include "transport/camera_commands.h"
+
 #include "transport/ble_remote_server.h"
+#include "transport/camera_commands.h"
 
 class AstroProcess {
 public:
@@ -14,33 +15,53 @@ public:
         INTERVAL,       // Waiting between exposures
         PAUSED,         // Sequence paused
         STOPPED,        // Sequence stopped
-        ERROR          // Error state (e.g., camera disconnected)
+        ERROR           // Error state (e.g., camera disconnected)
     };
 
     struct Parameters {
-        uint16_t initialDelaySec = 5;     // Initial delay in seconds (increment: 5s)
-        uint16_t exposureSec = 60;        // Exposure time in seconds (increment: 30s)
-        uint16_t subframeCount = 5;       // Number of exposures (increment: 5)
-        uint16_t intervalSec = 5;         // Delay between exposures (increment: 1s)
+        // Parameter constraints
+        static constexpr uint16_t INITIAL_DELAY_DEFAULT = 5;
+        static constexpr uint16_t INITIAL_DELAY_STEP = 5;
+
+        static constexpr uint16_t EXPOSURE_DEFAULT = 60;
+        static constexpr uint16_t EXPOSURE_STEP = 30;
+        static constexpr uint16_t EXPOSURE_MIN = 30;
+        static constexpr uint16_t EXPOSURE_MAX = 600;
+
+        static constexpr uint16_t SUBFRAME_COUNT_DEFAULT = 10;
+        static constexpr uint16_t SUBFRAME_COUNT_STEP = 10;
+        static constexpr uint16_t SUBFRAME_COUNT_MIN = 10;
+        static constexpr uint16_t SUBFRAME_COUNT_MAX = 480;
+
+        static constexpr uint16_t INTERVAL_DEFAULT = 5;
+        static constexpr uint16_t INTERVAL_STEP = 1;
+        static constexpr uint16_t INTERVAL_MIN = 1;
+        static constexpr uint16_t INTERVAL_MAX = 60;
+
+        // Parameter values
+        uint16_t initialDelaySec = INITIAL_DELAY_DEFAULT;  // Initial delay in seconds
+        uint16_t exposureSec = EXPOSURE_DEFAULT;           // Exposure time in seconds
+        uint16_t subframeCount = SUBFRAME_COUNT_DEFAULT;   // Number of exposures
+        uint16_t intervalSec = INTERVAL_DEFAULT;           // Delay between exposures
 
         bool validate() const {
-            return initialDelaySec % 5 == 0 &&
-                   exposureSec % 30 == 0 &&
-                   subframeCount % 5 == 0 &&
-                   intervalSec >= 1;
+            return initialDelaySec % INITIAL_DELAY_STEP == 0 && exposureSec >= EXPOSURE_MIN &&
+                   exposureSec <= EXPOSURE_MAX && exposureSec % EXPOSURE_STEP == 0 &&
+                   subframeCount >= SUBFRAME_COUNT_MIN && subframeCount <= SUBFRAME_COUNT_MAX &&
+                   subframeCount % SUBFRAME_COUNT_STEP == 0 && intervalSec >= INTERVAL_MIN &&
+                   intervalSec <= INTERVAL_MAX;
         }
 
-        uint32_t totalDurationSec() const {
-            return initialDelaySec + 
-                   subframeCount * (exposureSec + intervalSec);
+        uint32_t getTotalDurationSec() const {
+            return initialDelaySec + subframeCount * (exposureSec + intervalSec);
         }
     };
 
     struct Status {
         State state = State::IDLE;
         uint16_t completedFrames = 0;
-        uint32_t sequenceStartTime = 0;    // Unix timestamp
-        uint32_t currentFrameStartTime = 0; // Unix timestamp
+        uint32_t sequenceStartTime = 0;      // Unix timestamp
+        uint32_t currentFrameStartTime = 0;  // Unix timestamp
         uint32_t elapsedSec = 0;
         uint32_t remainingSec = 0;
         bool isCameraConnected = false;
@@ -55,7 +76,7 @@ public:
     void pause();
     void stop();
     void reset();
-    
+
     // Parameter management
     void setParameters(const Parameters& params);
     const Parameters& getParameters() const { return params_; }
@@ -63,10 +84,9 @@ public:
 
     // Status access
     const Status& getStatus() const { return status_; }
-    bool isRunning() const { 
-        return status_.state != State::IDLE && 
-               status_.state != State::STOPPED && 
-               status_.state != State::ERROR; 
+    bool isRunning() const {
+        return status_.state != State::IDLE && status_.state != State::STOPPED &&
+               status_.state != State::ERROR;
     }
 
     // Update loop - call this regularly
@@ -84,7 +104,7 @@ private:
     void notifyStateChange();
     bool startExposure();
     void stopExposure();
-    
+
     // Member variables
     Parameters params_;
     Status status_;
