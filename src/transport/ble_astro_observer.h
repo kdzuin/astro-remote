@@ -11,14 +11,19 @@ public:
     }
 
     void onAstroParametersChanged(const AstroProcess::Parameters& params) override {
-        // Currently we don't need to notify parameter changes via BLE
-        // If needed in the future, we can add it here
+        LOG_DEBUG("[BLE] Parameters changed: exp=%ds, frames=%d, interval=%ds", params.exposureSec,
+                  params.subframeCount, params.intervalSec);
     }
-    
+
     void onAstroStatusChanged(const AstroProcess::Status& status) override {
+        LOG_DEBUG("[BLE] Status changed: state=%d, frames=%d/%d, elapsed=%ds",
+                  static_cast<int>(status.state), status.completedFrames + 1, status.totalFrames,
+                  status.elapsedSec);
+
         AstroStatusPacket packet;
         packet.state = static_cast<uint8_t>(status.state);
         packet.completedFrames = status.completedFrames;
+        packet.totalFrames = status.totalFrames;
         packet.elapsedSec = status.elapsedSec;
         packet.remainingSec = status.remainingSec;
         packet.isCameraConnected = status.isCameraConnected;

@@ -41,6 +41,7 @@ public:
         BLERemoteServer::init("M5Remote");
         RemoteControlManager::init();
 
+        // Initialize menu system
         MenuSystem::init();
         MenuSystem::setScreen(new AstroScreen());
     }

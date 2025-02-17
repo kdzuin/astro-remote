@@ -66,6 +66,7 @@ struct __attribute__((packed)) AstroParamPacket {
 struct __attribute__((packed)) AstroStatusPacket {
     uint8_t state;  // Maps to AstroProcess::State
     uint16_t completedFrames;
+    uint16_t totalFrames;
     uint32_t sequenceStartTime;
     uint32_t currentFrameStartTime;
     uint32_t elapsedSec;

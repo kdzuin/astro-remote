@@ -22,6 +22,7 @@ AstroScreen::AstroScreen() : BaseScreen<AstroMenuItem>("Astro"), selectedItem(0)
     menuItems.setTitle("Astro Menu");
 
     // Register as observer
+    AstroProcess::instance().init();
     AstroProcess::instance().addObserver(this);
 
     updateMenuItems();

@@ -27,10 +27,15 @@ public:
 private:
     // Observer interface implementation
     void onAstroParametersChanged(const AstroProcess::Parameters& params) override {
+        LOG_DEBUG("[UI] Parameters changed: exp=%ds, frames=%d, interval=%ds", params.exposureSec,
+                  params.subframeCount, params.intervalSec);
         updateMenuItems();  // Refresh menu with new parameter values
     }
 
     void onAstroStatusChanged(const AstroProcess::Status& status) override {
+        LOG_DEBUG("[UI] Status changed: state=%d, frames=%d/%d, elapsed=%ds",
+                  static_cast<int>(status.state), status.completedFrames + 1, status.totalFrames,
+                  status.elapsedSec);
         updateMenuItems();  // Update menu items based on new state
     }
 

@@ -11,7 +11,11 @@
     "istream": "cpp",
     "ostream": "cpp",
     "sstream": "cpp",
-    "new": "cpp"
+    "new": "cpp",
+    "functional": "cpp",
+    "stdexcept": "cpp",
+    "tuple": "cpp",
+    "typeinfo": "cpp"
   },
   "cSpell.customDictionaries": {
     "custom-dictionary-workspace": {

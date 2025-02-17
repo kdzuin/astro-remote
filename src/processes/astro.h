@@ -61,8 +61,10 @@ public:
     struct Status {
         State state = State::IDLE;
         uint16_t completedFrames = 0;
-        uint32_t sequenceStartTime = 0;      // Unix timestamp
-        uint32_t currentFrameStartTime = 0;  // Unix timestamp
+        uint16_t totalFrames =
+            Parameters::SUBFRAME_COUNT_DEFAULT;  // Total number of frames in sequence
+        uint32_t sequenceStartTime = 0;          // Unix timestamp
+        uint32_t currentFrameStartTime = 0;      // Unix timestamp
         uint32_t elapsedSec = 0;
         uint32_t remainingSec = 0;
         bool isCameraConnected = false;
@@ -70,7 +72,20 @@ public:
     };
 
     // Singleton access
-    static AstroProcess& instance();
+    static AstroProcess& instance() {
+        static AstroProcess instance;
+        return instance;
+    }
+
+    // Initialization - should be called after construction
+    void init() {
+        if (!initialized_) {
+            initializeObservers();
+            initialized_ = true;
+        }
+    }
+
+    bool isInitialized() const { return initialized_; }
 
     // Command interface
     void start();
@@ -108,10 +123,8 @@ public:
     }
 
     void removeObserver(Observer* observer) {
-        observers_.erase(
-            std::remove(observers_.begin(), observers_.end(), observer),
-            observers_.end()
-        );
+        observers_.erase(std::remove(observers_.begin(), observers_.end(), observer),
+                         observers_.end());
     }
 
     // Update loop - call this regularly
@@ -128,8 +141,11 @@ private:
     uint32_t lastUpdateTime_ = 0;
     bool exposureActive_ = false;
 
-    // Constructor is no longer defaulted, will be defined in cpp
-    AstroProcess();
+    void initializeObservers();  // Defined in cpp
+    bool initialized_ = false;
+
+    // Constructor is minimal now
+    AstroProcess() = default;
     ~AstroProcess() = default;
     AstroProcess(const AstroProcess&) = delete;
     AstroProcess& operator=(const AstroProcess&) = delete;

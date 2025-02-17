@@ -1,14 +1,10 @@
-#include "astro.h"
-#include "transport/ble_astro_observer.h"
+#include "processes/astro.h"
 
 #include <Arduino.h>
 
-AstroProcess& AstroProcess::instance() {
-    static AstroProcess instance;
-    return instance;
-}
+#include "transport/ble_astro_observer.h"
 
-AstroProcess::AstroProcess() {
+void AstroProcess::initializeObservers() {
     // Register BLE observer
     addObserver(&BLEAstroObserver::instance());
 }
@@ -28,6 +24,7 @@ void AstroProcess::start() {
 
     status_.sequenceStartTime = millis() / 1000;  // Convert to seconds
     status_.completedFrames = 0;
+    status_.totalFrames = params_.subframeCount;
     updateTimings();
     setState(State::INITIAL_DELAY);
 }
@@ -57,6 +54,7 @@ void AstroProcess::reset() {
     status_.currentFrameStartTime = 0;
     status_.elapsedSec = 0;
     status_.remainingSec = 0;
+    status_.totalFrames = params_.subframeCount;
     status_.errorCode = 0;
     setState(State::IDLE);
 }
@@ -70,31 +68,31 @@ void AstroProcess::setParameters(const Parameters& params) {
 }
 
 bool AstroProcess::setParameter(const std::string& name, uint16_t value) {
-    if (isRunning()) {
-        return false;  // Can't modify parameters while running
-    }
-
-    Parameters newParams = params_;  // Make a copy for validation
-
+    bool changed = false;
     if (name == "initialDelaySec") {
-        newParams.initialDelaySec = value;
+        params_.initialDelaySec = value;
+        changed = true;
     } else if (name == "exposureSec") {
-        newParams.exposureSec = value;
+        params_.exposureSec = value;
+        changed = true;
     } else if (name == "subframeCount") {
-        newParams.subframeCount = value;
+        params_.subframeCount = value;
+        status_.totalFrames = value;  // Update total frames in status
+        changed = true;
     } else if (name == "intervalSec") {
-        newParams.intervalSec = value;
+        params_.intervalSec = value;
+        changed = true;
+    } else if (name == "subframeCount") {
+        params_.subframeCount = value;
     } else {
         return false;  // Unknown parameter
     }
 
-    if (!newParams.validate()) {
-        return false;  // Invalid parameter value
+    if (changed) {
+        updateTimings();
+        notifyParametersChanged();
     }
-
-    params_ = newParams;  // Apply the changes
-    notifyParametersChanged();
-    return true;
+    return changed;
 }
 
 void AstroProcess::update() {
@@ -188,6 +186,7 @@ void AstroProcess::notifyStateChange() {
     AstroStatusPacket packet;
     packet.state = static_cast<uint8_t>(status_.state);
     packet.completedFrames = status_.completedFrames;
+    packet.totalFrames = status_.totalFrames;
     packet.sequenceStartTime = status_.sequenceStartTime;
     packet.currentFrameStartTime = status_.currentFrameStartTime;
     packet.elapsedSec = status_.elapsedSec;
