@@ -521,5 +521,6 @@ window.addEventListener("load", () => {
       "Web Bluetooth unavailable in this browser.";
     return;
   }
-  new M5RemoteClient();
+  // Exposed for debugging in the console (e.g. window.m5.service).
+  window.m5 = new M5RemoteClient();
 });

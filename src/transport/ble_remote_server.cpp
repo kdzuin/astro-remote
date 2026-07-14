@@ -25,8 +25,10 @@ void BLERemoteServer::init(const char* deviceName) {
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(&serverCallbacks);
 
-    // Create service
-    pService = pServer->createService(REMOTE_SERVICE_UUID);
+    // Create service. The default handle budget (15) is too small for our five
+    // characteristics once each notify char's CCCD descriptor is counted — the
+    // last one (params) then fails to register. Request enough handles up front.
+    pService = pServer->createService(BLEUUID(REMOTE_SERVICE_UUID), 30, 0);
 
     // Create characteristics
     pControlChar =
