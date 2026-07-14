@@ -16,15 +16,19 @@ constexpr int ROW = ITEM_H + ITEM_PAD;  // vertical advance per row/separator
 }  // namespace
 
 AstroRunScreen::AstroRunScreen()
-    : BaseScreen<AstroRunItem>("AstroRun"), topCanvas_(&M5.Display), botCanvas_(&M5.Display) {
+    : BaseScreen<AstroRunItem>("AstroRun"),
+      actions_("Astro Run"),
+      topCanvas_(&M5.Display),
+      botCanvas_(&M5.Display) {
     AstroProcess::instance().init();  // ensure the web BLE observer is registered
 
     const int w = M5.Display.width();
     const int h = M5.Display.height();
-    // Top region matches the config menu's layout: title row + separator row +
-    // two action rows, each advancing by ROW (ITEM_H + ITEM_PAD). Bottom region
-    // is everything else (stats + status bar). Pushed independently so the
-    // per-second stats refresh never repaints — or flickers — the menu above.
+    // Top region reuses SelectableList (title + separator + two action rows), so
+    // it matches the config menu exactly. Its height: title + separator + two
+    // items, each advancing by ROW. Bottom region is everything else (stats +
+    // status bar). Pushed independently so the per-second stats refresh never
+    // repaints — or flickers — the menu above.
     topH_ = ROW * 4;
 
     topCanvas_.setColorDepth(16);
@@ -155,40 +159,20 @@ void AstroRunScreen::draw() {
 void AstroRunScreen::drawTop() {
     auto& astro = AstroProcess::instance();
     const auto& status = astro.getStatus();
-    const int w = topCanvas_.width();
-    const uint32_t white = colors::get(colors::WHITE);
-    const uint32_t black = colors::get(colors::BLACK);
-
-    topCanvas_.fillSprite(black);
-    topCanvas_.setTextSize(1.25);
-
-    int y = 0;
-
-    // Title row — same baseline the menu uses (ITEM_H / 1.25).
-    topCanvas_.setTextColor(white);
-    topCanvas_.setTextDatum(middle_center);
-    topCanvas_.drawString("Astro Run", w / 2, y + ITEM_H / 1.25);
-    y += ROW;
-
-    // Separator row — a line through the middle of a full row, like the menu.
-    topCanvas_.drawLine(0, y + ITEM_H / 2, w, y + ITEM_H / 2, colors::get(colors::GRAY_500));
-    y += ROW;
-
-    // Action rows: full-width selection highlight, ROW spacing.
     const bool paused = status.state == AstroProcess::State::PAUSED;
     const bool pausePending = astro.isPausePending();
-    const char* actions[2] = {pausePending ? "Pausing..." : (paused ? "Resume" : "Pause"), "Stop"};
-    for (int i = 0; i < 2; i++) {
-        const bool sel = (i == actionIndex_);
-        if (sel) {
-            topCanvas_.fillRect(0, y, w, ITEM_H, white);
-        }
-        topCanvas_.setTextColor(sel ? black : white);
-        topCanvas_.setTextDatum(middle_left);
-        topCanvas_.drawString(actions[i], HPAD, y + ITEM_H / 2);
-        y += ROW;
-    }
 
+    // Rebuild the action list each draw so the Pause/Resume/Pausing label tracks
+    // state, then render it through SelectableList into the top canvas — same
+    // component and visual language as the config menu, no duplicated layout.
+    actions_.clear();  // re-adds the leading separator under the title
+    actions_.addItem(AstroRunItem::PauseResume,
+                     pausePending ? "Pausing..." : (paused ? "Resume" : "Pause"));
+    actions_.addItem(AstroRunItem::Stop, "Stop");
+    actions_.setSelectedIndex(actionIndex_ + 1);  // +1: index 0 is the separator
+
+    topCanvas_.fillSprite(colors::get(colors::BLACK));
+    actions_.draw(topCanvas_, /*clearFirst=*/false);
     topCanvas_.pushSprite(0, 0);
 }
 

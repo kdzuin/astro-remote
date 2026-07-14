@@ -121,7 +121,14 @@ public:
     size_t size() const;
     bool selectNext();
     bool selectPrev();
-    void draw();
+    // Draw into any target with the LovyanGFX-style API (the live display, an
+    // off-screen M5Canvas, or the test stub). Templated on the target type so it
+    // needs no concrete base class — keeping it host-testable. `clearFirst`
+    // fills the target black first; pass false when the caller already prepared
+    // it (e.g. a canvas cleared once per frame).
+    void draw() { draw(M5.Display); }
+    template <typename Target>
+    void draw(Target& target, bool clearFirst = true);
     int getSelectedIndex() const;
 
 private:

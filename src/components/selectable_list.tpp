@@ -134,23 +134,27 @@ int SelectableList<IdType>::getSelectedIndex() const {
 }
 
 template <typename IdType>
-void SelectableList<IdType>::draw() {
+template <typename Target>
+void SelectableList<IdType>::draw(Target& target, bool clearFirst) {
     const uint32_t SELECTED_BG = colors::get(colors::WHITE);
     const uint32_t SELECTED_FG = colors::get(colors::BLACK);
     const uint32_t NORMAL_BG = colors::get(colors::BLACK);
     const uint32_t NORMAL_FG = colors::get(colors::WHITE);
     const uint32_t DISABLED_FG = colors::get(colors::GRAY_500);
 
+    const int width = target.width();
     int y = 0;
 
-    M5.Display.fillScreen(colors::get(colors::BLACK));
+    if (clearFirst) {
+        target.fillScreen(colors::get(colors::BLACK));
+    }
 
     // Draw title if present
     if (!title.empty()) {
-        M5.Display.setTextSize(1.25);
-        M5.Display.setTextDatum(middle_center);
-        M5.Display.setTextColor(NORMAL_FG);
-        M5.Display.drawString(title.c_str(), M5.Display.width() / 2, y + ITEM_HEIGHT / 1.25);
+        target.setTextSize(1.25);
+        target.setTextDatum(middle_center);
+        target.setTextColor(NORMAL_FG);
+        target.drawString(title.c_str(), width / 2, y + ITEM_HEIGHT / 1.25);
         y += ITEM_HEIGHT;
     }
 
@@ -162,25 +166,25 @@ void SelectableList<IdType>::draw() {
         if (item.separator) {
             // Draw separator line in the middle of the item height
             int lineY = y + ITEM_HEIGHT / 2;
-            M5.Display.drawLine(0, lineY, M5.Display.width(), lineY, DISABLED_FG);
+            target.drawLine(0, lineY, width, lineY, DISABLED_FG);
         } else {
             const uint32_t bgColor = isSelected ? SELECTED_BG : NORMAL_BG;
             const uint32_t fgColor =
                 item.enabled ? (isSelected ? SELECTED_FG : NORMAL_FG) : DISABLED_FG;
 
             // Draw selection background
-            M5.Display.fillRect(0, y, M5.Display.width(), ITEM_HEIGHT, bgColor);
+            target.fillRect(0, y, width, ITEM_HEIGHT, bgColor);
 
-            M5.Display.setTextDatum(middle_left);
-            M5.Display.setTextColor(fgColor);
-            M5.Display.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
+            target.setTextDatum(middle_left);
+            target.setTextColor(fgColor);
+            target.drawString(item.label.c_str(), HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
 
             // Draw info text if present
             if (item.info) {
-                M5.Display.setTextColor(item.info->color ? *item.info->color : fgColor);
-                M5.Display.setTextDatum(middle_right);
-                M5.Display.drawString(item.info->text.c_str(),
-                                      M5.Display.width() - HORIZONTAL_PADDING, y + ITEM_HEIGHT / 2);
+                target.setTextColor(item.info->color ? *item.info->color : fgColor);
+                target.setTextDatum(middle_right);
+                target.drawString(item.info->text.c_str(), width - HORIZONTAL_PADDING,
+                                   y + ITEM_HEIGHT / 2);
             }
         }
 

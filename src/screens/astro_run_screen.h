@@ -2,6 +2,7 @@
 
 #include <M5Unified.h>
 
+#include "components/selectable_list.h"
 #include "processes/astro.h"
 #include "screens/base_screen.h"
 
@@ -49,6 +50,7 @@ private:
     bool lastConnected_ = false;
     bool lastSummary_ = false;
 
+    SelectableList<AstroRunItem> actions_;  // title + Pause/Resume, Stop
     M5Canvas topCanvas_;
     M5Canvas botCanvas_;
     int topH_ = 0;  // height of the top (menu) region; bottom fills the rest
