@@ -16,7 +16,10 @@ enum class AstroMenuItem {
     InitialDelay,
 };
 
-class AstroScreen : public BaseScreen<AstroMenuItem>, public AstroProcess::Observer {
+// Config screen for astro sequences: connection, Start/Resume, Focus, and the
+// exposure parameters. The live in-progress display is AstroRunScreen, so this
+// screen never has to branch on a running sequence and is not an observer.
+class AstroScreen : public BaseScreen<AstroMenuItem> {
 public:
     AstroScreen();
     ~AstroScreen() override;
@@ -26,24 +29,12 @@ public:
     void prevMenuItem();
 
 private:
-    // Observer interface implementation
-    void onAstroParametersChanged(const AstroProcess::Parameters& params) override {
-        LOG_DEBUG("[UI] Parameters changed: exp=%ds, frames=%d, interval=%ds", params.exposureSec,
-                  params.subframeCount, params.intervalSec);
-        updateMenuItems();  // Refresh menu with new parameter values
-    }
-
-    void onAstroStatusChanged(const AstroProcess::Status& status) override {
-        LOG_DEBUG("[UI] Status changed: state=%d, frames=%d/%d, elapsed=%ds",
-                  static_cast<int>(status.state), status.completedFrames + 1, status.totalFrames,
-                  status.elapsedSec);
-        updateMenuItems();  // Update menu items based on new state
-        draw();             // Repaint so running timers/frame counter refresh
-    }
-
     void drawContent();
     void updateMenuItems();
     void adjustParameter(uint16_t delta);
-    void selectMenuItem();
+    void selectMenuItem() { handleSelect(); }  // BaseScreen hook
+    // Returns true if it navigated to another screen (this screen is then
+    // deleted — the caller must not touch any member afterwards).
+    bool handleSelect();
     int selectedItem = 0;
 };
