@@ -100,6 +100,12 @@ void BLERemoteServer::stop() {
 
 void BLERemoteServer::ServerCallbacks::onConnect(BLEServer* pServer) {
     deviceConnected = true;
+    // Keep advertising while connected. The ESP32 stops advertising on connect
+    // by default; if a client goes away uncleanly (tab closed, phone slept) the
+    // onDisconnect that would re-advertise may never fire, leaving the stick
+    // invisible until reboot. Staying discoverable lets a fresh client connect
+    // regardless of a stale link.
+    pServer->startAdvertising();
     LOG_PERIPHERAL("[BLE] Client connected");
 }
 
