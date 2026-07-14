@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "transport/camera_store.h"
+
 // Sony BLE definitions
 #define SONY_COMPANY_ID 0x012D
 #define SONY_CAMERA_TYPE 0x03
@@ -111,6 +113,18 @@ public:
     static bool isPaired() { return !cachedAddress.empty(); }
     static const std::string& getPairedDeviceAddress() { return cachedAddress; }
 
+    // Saved-camera list (multi-camera). The active camera is the one
+    // cachedAddress points at; connecting any camera makes it active.
+    static const std::vector<SavedCamera>& getSavedCameras();
+    static bool hasSavedCameras();
+    static const std::string& getActiveCameraAddress() { return cachedAddress; }
+    // Connect to a specific saved camera by address (reuses the reconnect
+    // path) and make it the active camera on success.
+    static bool connectToAddress(const std::string& address);
+    // Forget a specific saved camera. If it is the active camera, disconnect
+    // and clear active (no auto-pick).
+    static void forgetCamera(const std::string& address);
+
     // Scanning
     static bool startScan(int duration);
     static void stopScan();
@@ -143,7 +157,13 @@ private:
     static std::vector<DeviceInfo> discoveredDevices;
     static Preferences preferences;
     static std::string cachedAddress;
+    static CameraStore cameraStore;
 
     static void saveDeviceAddress(const std::string& address);
     static void loadDeviceAddress();
+
+    // Persist the whole CameraStore (list + active) to NVS under indexed keys.
+    static void saveCameraStore();
+    // Load the CameraStore from NVS and sync cachedAddress to the active camera.
+    static void loadCameraStore();
 };

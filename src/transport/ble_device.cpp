@@ -32,6 +32,7 @@ std::string BLEDeviceManager::lastDeviceAddress = "";
 std::vector<DeviceInfo> BLEDeviceManager::discoveredDevices;
 Preferences BLEDeviceManager::preferences;
 std::string BLEDeviceManager::cachedAddress = "";
+CameraStore BLEDeviceManager::cameraStore;
 
 void BLEDeviceManager::onConnect(BLEClient* client) {
     connected = true;
@@ -109,9 +110,9 @@ void BLEDeviceManager::init() {
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
 
-    // Initialize preferences and load saved device
+    // Initialize preferences and load the saved-camera list
     preferences.begin("sony-camera", false);
-    loadDeviceAddress();
+    loadCameraStore();
 
     initialized = true;
 }
@@ -122,15 +123,85 @@ void BLEDeviceManager::loadDeviceAddress() {
 }
 
 void BLEDeviceManager::saveDeviceAddress(const std::string& address) {
-    preferences.putString("device_address", address.c_str());
+    // Record the connected camera as saved + active, then persist the list.
+    cameraStore.add(address, "");
+    cameraStore.setActive(address);
     cachedAddress = address;
+    saveCameraStore();
+}
+
+void BLEDeviceManager::loadCameraStore() {
+    cameraStore.clear();
+    uint8_t count = preferences.getUChar("cam_count", 0);
+    for (uint8_t i = 0; i < count && i < CameraStore::MAX_CAMERAS; i++) {
+        std::string addrKey = "cam_addr_" + std::to_string(i);
+        std::string nameKey = "cam_name_" + std::to_string(i);
+        String addr = preferences.getString(addrKey.c_str(), "");
+        String name = preferences.getString(nameKey.c_str(), "");
+        if (addr.length() > 0) {
+            cameraStore.add(addr.c_str(), name.c_str());
+        }
+    }
+    String active = preferences.getString("active", "");
+    if (active.length() > 0) {
+        cameraStore.setActive(active.c_str());
+    }
+    cachedAddress = cameraStore.activeAddress();
+}
+
+void BLEDeviceManager::saveCameraStore() {
+    const auto& cams = cameraStore.cameras();
+    preferences.putUChar("cam_count", (uint8_t)cams.size());
+    for (size_t i = 0; i < cams.size(); i++) {
+        std::string addrKey = "cam_addr_" + std::to_string(i);
+        std::string nameKey = "cam_name_" + std::to_string(i);
+        preferences.putString(addrKey.c_str(), cams[i].address.c_str());
+        preferences.putString(nameKey.c_str(), cams[i].name.c_str());
+    }
+    preferences.putString("active", cameraStore.activeAddress().c_str());
+}
+
+const std::vector<SavedCamera>& BLEDeviceManager::getSavedCameras() {
+    return cameraStore.cameras();
+}
+
+bool BLEDeviceManager::hasSavedCameras() {
+    return cameraStore.count() > 0;
+}
+
+bool BLEDeviceManager::connectToAddress(const std::string& address) {
+    // Point the active/reconnect target at this camera, then reuse the
+    // address-only reconnect path. On success it becomes the active camera.
+    std::string previous = cachedAddress;
+    cachedAddress = address;
+    setManuallyDisconnected(false);
+    if (connectToSavedDevice()) {
+        cameraStore.setActive(address);
+        saveCameraStore();
+        return true;
+    }
+    // Failed: leave the persisted active camera untouched.
+    cachedAddress = previous;
+    return false;
+}
+
+void BLEDeviceManager::forgetCamera(const std::string& address) {
+    bool wasActive = (cameraStore.activeAddress() == address);
+    if (wasActive && isConnected()) {
+        disconnectCamera();
+        setManuallyDisconnected(true);
+    }
+    cameraStore.forget(address);
+    cachedAddress = cameraStore.activeAddress();  // cleared if we forgot active
+    saveCameraStore();
 }
 
 void BLEDeviceManager::unpairCamera() {
     disconnectCamera();
     setManuallyDisconnected(true);
-    preferences.remove("device_address");
-    cachedAddress.clear();
+    if (!cachedAddress.empty()) {
+        forgetCamera(cachedAddress);
+    }
 }
 
 bool BLEDeviceManager::startScan(int duration) {
@@ -330,8 +401,12 @@ bool BLEDeviceManager::connectToCamera(const BLEAdvertisedDevice* device) {
         return false;
     }
 
-    // Save the device address
-    saveDeviceAddress(address.toString());
+    // Save the camera (with its advertised name) as saved + active.
+    std::string name = const_cast<BLEAdvertisedDevice*>(device)->getName();
+    cameraStore.add(address.toString(), name);
+    cameraStore.setActive(address.toString());
+    cachedAddress = address.toString();
+    saveCameraStore();
     return true;
 }
 

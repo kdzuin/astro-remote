@@ -3,7 +3,7 @@
 #include "processes/settings.h"
 #include "screens/base_screen.h"
 
-enum class SettingsMenuItem { Connect, Disconnect, Forget, Scan, AutoConnect, Brightness, Battery };
+enum class SettingsMenuItem { Connect, Disconnect, Cameras, AutoConnect, Brightness, Battery };
 
 class SettingsScreen : public BaseScreen<SettingsMenuItem> {
 private:
