@@ -98,6 +98,10 @@ public:
     const Parameters& getParameters() const { return params_; }
     bool setParameter(const std::string& name, uint16_t value);
 
+    // Live camera-connection state, fed from the app loop each tick. Kept as a
+    // plain setter so AstroProcess has no dependency on the BLE transport.
+    void setCameraConnected(bool connected) { status_.isCameraConnected = connected; }
+
     // Status access
     const Status& getStatus() const { return status_; }
     bool isRunning() const {
@@ -132,13 +136,14 @@ public:
 
 private:
     void notifyParametersChanged();
-    void notifyStateChange();
+    void notifyStatusObservers();  // Fan status_ out to all observers now.
 
     // Member variables
     Parameters params_;
     Status status_;
     std::vector<Observer*> observers_;
     uint32_t lastUpdateTime_ = 0;
+    uint32_t lastNotifySec_ = 0;  // Throttles periodic status notifications to ~1 Hz.
     bool exposureActive_ = false;
 
     void initializeObservers();  // Defined in cpp

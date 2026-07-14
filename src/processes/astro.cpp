@@ -152,14 +152,22 @@ void AstroProcess::update() {
             break;
     }
 
-    // Notify state changes
-    notifyStateChange();
+    // Periodic status notification, throttled to 1 Hz. State transitions above
+    // notify immediately via setState(), so this only covers the ticking
+    // elapsed/remaining timers while the state is unchanged.
+    if (currentTime != lastNotifySec_) {
+        lastNotifySec_ = currentTime;
+        notifyStatusObservers();
+    }
 }
 
 void AstroProcess::setState(State newState) {
     if (status_.state != newState) {
         status_.state = newState;
-        notifyStateChange();
+        // A transition is always important — notify immediately and reset the
+        // throttle window so the next periodic tick doesn't double-fire.
+        lastNotifySec_ = millis() / 1000;
+        notifyStatusObservers();
     }
 }
 
@@ -183,18 +191,7 @@ void AstroProcess::notifyParametersChanged() {
     }
 }
 
-void AstroProcess::notifyStateChange() {
-    AstroStatusPacket packet;
-    packet.state = static_cast<uint8_t>(status_.state);
-    packet.completedFrames = status_.completedFrames;
-    packet.totalFrames = status_.totalFrames;
-    packet.sequenceStartTime = status_.sequenceStartTime;
-    packet.currentFrameStartTime = status_.currentFrameStartTime;
-    packet.elapsedSec = status_.elapsedSec;
-    packet.remainingSec = status_.remainingSec;
-    packet.isCameraConnected = status_.isCameraConnected;
-    packet.errorCode = status_.errorCode;
-
+void AstroProcess::notifyStatusObservers() {
     for (auto* observer : observers_) {
         observer->onAstroStatusChanged(status_);
     }

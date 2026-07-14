@@ -38,6 +38,7 @@ private:
                   static_cast<int>(status.state), status.completedFrames + 1, status.totalFrames,
                   status.elapsedSec);
         updateMenuItems();  // Update menu items based on new state
+        draw();             // Repaint so running timers/frame counter refresh
     }
 
     void drawContent();

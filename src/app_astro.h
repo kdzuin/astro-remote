@@ -3,6 +3,7 @@
 #include <M5Unified.h>
 
 #include "components/menu_system.h"
+#include "processes/astro.h"
 #include "screens/astro_screen.h"
 #include "transport/ble_device.h"
 #include "transport/ble_remote_server.h"
@@ -41,15 +42,23 @@ public:
         BLERemoteServer::init("M5Remote");
         RemoteControlManager::init();
 
+        // Register astro observers (BLE status push) once, up front.
+        AstroProcess::instance().init();
+
         // Initialize menu system
         MenuSystem::init();
         MenuSystem::setScreen(new AstroScreen());
     }
 
     void loop() {
-        // Update BLE and menu
         BLEDeviceManager::update();      // Update BLE state
         RemoteControlManager::update();  // Update remote control state
-        MenuSystem::update();            // This will handle input internally
+
+        // Feed live camera-connection state, then tick the astro sequence
+        // state machine so a running sequence actually advances.
+        AstroProcess::instance().setCameraConnected(BLEDeviceManager::isConnected());
+        AstroProcess::instance().update();
+
+        MenuSystem::update();  // This will handle input internally
     }
 };

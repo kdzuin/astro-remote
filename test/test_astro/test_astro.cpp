@@ -40,6 +40,18 @@ void BLERemoteServer::sendAstroStatus(const AstroStatusPacket& status) {
 // ---- Helpers ----------------------------------------------------------------
 static AstroProcess& astro() { return AstroProcess::instance(); }
 
+// Counting observer: records how many status callbacks arrive and the last
+// state seen, so tests can assert the tick fires and the 1 Hz throttle holds.
+struct CountingObserver : public AstroProcess::Observer {
+    int statusCalls = 0;
+    AstroProcess::State lastState = AstroProcess::State::IDLE;
+    void onAstroParametersChanged(const AstroProcess::Parameters&) override {}
+    void onAstroStatusChanged(const AstroProcess::Status& s) override {
+        statusCalls++;
+        lastState = s.state;
+    }
+};
+
 // Drive the state machine forward by `seconds`, ticking update() once per
 // simulated second (matches the 1 Hz granularity astro.cpp works at).
 static void advanceSeconds(uint32_t seconds) {
@@ -126,9 +138,7 @@ void test_full_sequence_completes() {
     p.intervalSec = 1;
     astro().setParameters(p);
 
-    // NOTE: production code never sets isCameraConnected (read-only gap — see
-    // review note). Tests force it via the const ref until a setter exists.
-    const_cast<AstroProcess::Status&>(astro().getStatus()).isCameraConnected = true;
+    astro().setCameraConnected(true);
 
     astro().start();
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INITIAL_DELAY),
@@ -152,7 +162,7 @@ void test_pause_during_exposure_releases_shutter() {
     p.subframeCount = 10;
     p.intervalSec = 1;
     astro().setParameters(p);
-    const_cast<AstroProcess::Status&>(astro().getStatus()).isCameraConnected = true;
+    astro().setCameraConnected(true);
 
     astro().start();
     advanceSeconds(2);  // into first exposure
@@ -175,7 +185,7 @@ void test_bulb_failure_errors() {
     p.subframeCount = 10;
     p.intervalSec = 1;
     astro().setParameters(p);
-    const_cast<AstroProcess::Status&>(astro().getStatus()).isCameraConnected = true;
+    astro().setCameraConnected(true);
     g_mock.takeBulbShouldFail = true;
 
     astro().start();
@@ -183,6 +193,43 @@ void test_bulb_failure_errors() {
 
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::ERROR),
                       static_cast<int>(astro().getStatus().state));
+}
+
+// Periodic status notifications throttle to 1 Hz, but state transitions always
+// notify immediately. Ticking update() many times within one simulated second
+// must yield at most one periodic callback for that second.
+void test_status_notification_throttled() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 5;
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 1;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    CountingObserver obs;
+    astro().addObserver(&obs);  // addObserver fires one immediate callback
+    int base = obs.statusCalls;
+
+    // start() transitions IDLE -> INITIAL_DELAY: exactly one immediate notify.
+    astro().start();
+    TEST_ASSERT_EQUAL(base + 1, obs.statusCalls);
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INITIAL_DELAY),
+                      static_cast<int>(obs.lastState));
+
+    // 100 ticks within the SAME second must not fire a periodic notify.
+    int before = obs.statusCalls;
+    for (int i = 0; i < 100; i++) {
+        astro().update();  // clock not advanced
+    }
+    TEST_ASSERT_EQUAL(before, obs.statusCalls);
+
+    // Advancing one second yields exactly one periodic notify (still in delay).
+    advanceMillis(1000);
+    astro().update();
+    TEST_ASSERT_EQUAL(before + 1, obs.statusCalls);
+
+    astro().removeObserver(&obs);
 }
 
 int main(int, char**) {
@@ -193,5 +240,6 @@ int main(int, char**) {
     RUN_TEST(test_full_sequence_completes);
     RUN_TEST(test_pause_during_exposure_releases_shutter);
     RUN_TEST(test_bulb_failure_errors);
+    RUN_TEST(test_status_notification_throttled);
     return UNITY_END();
 }
