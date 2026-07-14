@@ -3,7 +3,7 @@
 // CACHE_VERSION is stamped from a content hash of the precached assets by
 // build-sw.mjs (`npm run build`) — do not edit by hand. It changes exactly when
 // an asset changes, so old caches are purged on activate only when needed.
-const CACHE_VERSION = "astroremote-7e6bde412be3";
+const CACHE_VERSION = "astroremote-dd3610d9db48";
 
 // Explicit precache list — every asset the app needs offline. Kept explicit
 // (not a glob) so build artifacts like package.json / input.css / node_modules

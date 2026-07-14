@@ -416,7 +416,7 @@ class M5RemoteClient {
       e.stateLabel.textContent = "Idle";
       e.stateDot.className = "inline-block h-2.5 w-2.5 rounded-full bg-muted";
       e.frameCount.textContent = "0 / 0";
-      e.seqTimes.textContent = "00:00 / 00:00";
+      e.seqTimes.textContent = "00:00 · -00:00";
       e.phaseLabel.textContent = "Phase";
       e.phaseTime.textContent = "00:00";
       e.seqBar.classList.add("bar-snap"); // no glide on reset to empty
@@ -466,12 +466,11 @@ class M5RemoteClient {
 
     // Fractional fills so the bars glide instead of stepping once per second.
     const prog = smoothProgress(s, msSincePacket);
-    const seqTotal = s.elapsedSec + s.remainingSec;
     const seqFrac = finished ? 1 : aborted ? 0 : prog.seq;
     e.seqBar.style.width = (seqFrac * 100).toFixed(2) + "%";
     e.seqTimes.textContent = aborted
-      ? "00:00 / 00:00"
-      : `${formatMMSS(s.elapsedSec)} / ${formatMMSS(seqTotal)}`;
+      ? "00:00 · -00:00"
+      : `${formatMMSS(s.elapsedSec)} · -${formatMMSS(s.remainingSec)}`;
 
     // Phase bar.
     e.phaseLabel.textContent = finished
