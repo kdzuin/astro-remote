@@ -1,6 +1,7 @@
 #include "screens/astro_run_screen.h"
 
 #include "components/menu_system.h"
+#include "processes/settings.h"
 #include "screens/astro_screen.h"
 #include "transport/ble_device.h"
 #include "transport/remote_control_manager.h"
@@ -101,15 +102,19 @@ void AstroRunScreen::update() {
     }
 
     const bool connected = BLEDeviceManager::isConnected();
+    const int battery = SettingsProcess::getDeviceState().batteryLevel;
     const int state = static_cast<int>(status.state);
+    const bool pausePending = astro.isPausePending();
 
     // Summary is a special full-screen state — repaint both regions once.
     if (summaryMode_ != lastSummary_) {
         lastSummary_ = summaryMode_;
         lastAction_ = actionIndex_;
         lastState_ = state;
+        lastPausePending_ = pausePending;
         lastElapsed_ = status.elapsedSec;
         lastConnected_ = connected;
+        lastBattery_ = battery;
         draw();
         return;
     }
@@ -117,17 +122,21 @@ void AstroRunScreen::update() {
         return;
     }
 
-    // Top region (menu) only changes on selection or run-state change.
-    if (actionIndex_ != lastAction_ || state != lastState_) {
+    // Top region (menu) changes on selection, run-state, or a pending pause
+    // (which flips the label to "Pausing..." while the state stays EXPOSING).
+    if (actionIndex_ != lastAction_ || state != lastState_ ||
+        pausePending != lastPausePending_) {
         lastAction_ = actionIndex_;
         lastState_ = state;
+        lastPausePending_ = pausePending;
         drawTop();
     }
     // Bottom region (stats + bar) changes each second, on state, or on link flip.
     if (status.elapsedSec != lastElapsed_ || state != lastState_ ||
-        connected != lastConnected_) {
+        connected != lastConnected_ || battery != lastBattery_) {
         lastElapsed_ = status.elapsedSec;
         lastConnected_ = connected;
+        lastBattery_ = battery;
         drawBottom();
     }
 }
@@ -189,9 +198,11 @@ void AstroRunScreen::drawBottom() {
     botCanvas_.fillSprite(colors::get(colors::BLACK));
     botCanvas_.setTextSize(1.25);
 
-    // Stats: three rows sitting just above the status bar (bottom-aligned).
+    // Stats sit just above the status bar (bottom-aligned): three time rows,
+    // a gap, the battery row, then a gap before the bar.
+    constexpr int GAP = 10;  // blank row above and below the battery row
     const int statsAreaH = h - barH;
-    int y = statsAreaH - 3 * ITEM_H;
+    int y = statsAreaH - (4 * ITEM_H + 2 * GAP);
     if (y < 0) {
         y = 0;
     }
@@ -214,6 +225,24 @@ void AstroRunScreen::drawBottom() {
     snprintf(value, sizeof(value), "%02d:%02d:%02d", status.remainingSec / 3600,
              (status.remainingSec % 3600) / 60, status.remainingSec % 60);
     infoRow("Left", value);
+
+    // Battery row: "Battery" label on the left, percentage as white text on a
+    // status-coloured cell hugging the value on the right (<20 red, <50 amber,
+    // else green). A gap separates it from the time rows above and the bar below.
+    y += GAP;
+    const int battLevel = SettingsProcess::getDeviceState().batteryLevel;
+    const uint32_t battColor = SettingsProcess::getBatteryStatusColor(battLevel);
+    botCanvas_.setTextDatum(middle_left);
+    botCanvas_.setTextColor(labelColor);
+    botCanvas_.drawString("Battery", HPAD, y + ITEM_H / 2);
+    snprintf(value, sizeof(value), "%d%%", battLevel);
+    const int cellW = botCanvas_.textWidth(value) + 2 * HPAD;
+    const int cellX = w - HPAD - cellW;
+    botCanvas_.fillRect(cellX, y, cellW, ITEM_H, battColor);
+    botCanvas_.setTextDatum(middle_right);
+    botCanvas_.setTextColor(white);
+    botCanvas_.drawString(value, w - HPAD - HPAD, y + ITEM_H / 2);
+    y += ITEM_H;
 
     // Status bar: colour-codes the phase, shows the phase countdown.
     uint32_t stateColor;
