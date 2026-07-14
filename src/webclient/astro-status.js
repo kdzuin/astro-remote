@@ -97,6 +97,24 @@ export function interpolate(status, msSincePacket) {
   };
 }
 
+// Fractional bar fills (0..1) for the sequence + phase, advanced by the
+// sub-second time since the packet. Unlike interpolate() (which floors to whole
+// seconds for the mm:ss text), this keeps fractional precision so the bars
+// glide continuously instead of stepping once per second. Frozen when paused/
+// not running.
+export function smoothProgress(status, msSincePacket) {
+  const frac = RUNNING_STATES.has(status.state)
+    ? Math.max(0, msSincePacket) / 1000
+    : 0;
+  const seqTotal = status.elapsedSec + status.remainingSec;
+  const seqElapsed = status.elapsedSec + frac;
+  const phaseElapsed = status.phaseTotalSec - status.phaseRemainingSec + frac;
+  return {
+    seq: barFraction(seqElapsed, seqTotal),
+    phase: barFraction(phaseElapsed, status.phaseTotalSec),
+  };
+}
+
 // Decode a little-endian AstroParamPacket (the configured sequence plan).
 export function decodeAstroParams(view) {
   if (!view || view.byteLength < ASTRO_PARAMS_PACKET_BYTES) {

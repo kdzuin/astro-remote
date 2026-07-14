@@ -9,6 +9,7 @@ import {
   stateLabel,
   isFinished,
   sequenceTotalSec,
+  smoothProgress,
 } from "./astro-status.js";
 
 class M5RemoteClient {
@@ -324,7 +325,7 @@ class M5RemoteClient {
     try {
       this.lastStatus = decodeAstroStatus(value);
       this.lastStatusAt = performance.now();
-      this.renderStatus(this.lastStatus);
+      this.renderStatus(this.lastStatus, 0);
     } catch (err) {
       console.error("[BLE] bad astro status packet:", err);
     }
@@ -345,8 +346,8 @@ class M5RemoteClient {
     this.tickTimer = setInterval(() => {
       if (!this.lastStatus) return;
       const dt = performance.now() - this.lastStatusAt;
-      this.renderStatus(interpolate(this.lastStatus, dt));
-    }, 250);
+      this.renderStatus(interpolate(this.lastStatus, dt), dt);
+    }, 200); // matches the bars' 200ms transition for continuous motion
   }
 
   stopTicker() {
@@ -400,14 +401,16 @@ class M5RemoteClient {
       }
       return;
     }
-    e.planExposure.textContent = formatDuration(p.exposureSec);
-    e.planInterval.textContent = formatDuration(p.intervalSec);
-    e.planDelay.textContent = formatDuration(p.initialDelaySec);
+    // Exposure/interval/delay in raw seconds (how astro exposures are set);
+    // Total stays compact since a sequence can run for hours.
+    e.planExposure.textContent = `${p.exposureSec}s`;
+    e.planInterval.textContent = `${p.intervalSec}s`;
+    e.planDelay.textContent = `${p.initialDelaySec}s`;
     e.planFrames.textContent = String(p.subframeCount);
     e.planTotal.textContent = formatDuration(sequenceTotalSec(p));
   }
 
-  renderStatus(s) {
+  renderStatus(s, msSincePacket = 0) {
     const e = this.el;
     if (!s) {
       e.stateLabel.textContent = "Idle";
@@ -449,22 +452,31 @@ class M5RemoteClient {
     // Frames.
     e.frameCount.textContent = `${s.completedFrames} / ${s.totalFrames}`;
 
-    // Sequence bar: elapsed / (elapsed + remaining). Finished pins it full.
-    const seqTotal = s.elapsedSec + s.remainingSec;
-    const seqFrac = finished ? 1 : barFraction(s.elapsedSec, seqTotal);
-    e.seqBar.style.width = (seqFrac * 100).toFixed(1) + "%";
-    e.seqTimes.textContent = `${formatMMSS(s.elapsedSec)} / ${formatMMSS(seqTotal)}`;
+    // A terminal, non-finished state (user Stopped, Error, Idle) has stale
+    // leftover timings — don't draw them as live progress.
+    const aborted =
+      !running && !finished && s.state !== ASTRO_STATE.PAUSED;
 
-    // Phase bar: elapsed within the current phase.
-    const phaseElapsed = s.phaseTotalSec - s.phaseRemainingSec;
+    // Fractional fills so the bars glide instead of stepping once per second.
+    const prog = smoothProgress(s, msSincePacket);
+    const seqTotal = s.elapsedSec + s.remainingSec;
+    const seqFrac = finished ? 1 : aborted ? 0 : prog.seq;
+    e.seqBar.style.width = (seqFrac * 100).toFixed(2) + "%";
+    e.seqTimes.textContent = aborted
+      ? "00:00 / 00:00"
+      : `${formatMMSS(s.elapsedSec)} / ${formatMMSS(seqTotal)}`;
+
+    // Phase bar.
     e.phaseLabel.textContent = finished
       ? "Complete"
       : s.state === ASTRO_STATE.PAUSED
         ? "Phase (paused)"
-        : stateLabel(s.state);
-    e.phaseTime.textContent = formatMMSS(s.phaseRemainingSec);
-    e.phaseBar.style.width =
-      (finished ? 100 : barFraction(phaseElapsed, s.phaseTotalSec) * 100).toFixed(1) + "%";
+        : aborted
+          ? "Phase"
+          : stateLabel(s.state);
+    e.phaseTime.textContent = aborted ? "00:00" : formatMMSS(s.phaseRemainingSec);
+    const phaseFrac = finished ? 1 : aborted ? 0 : prog.phase;
+    e.phaseBar.style.width = (phaseFrac * 100).toFixed(2) + "%";
     e.phaseBar.classList.toggle("bar-active", running);
 
     // Camera link indicator.

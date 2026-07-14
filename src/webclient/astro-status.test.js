@@ -13,6 +13,7 @@ import {
   interpolate,
   isFinished,
   sequenceTotalSec,
+  smoothProgress,
 } from "./astro-status.js";
 
 // Build a packed little-endian AstroStatusPacket buffer for tests. Mirrors the
@@ -234,4 +235,58 @@ test("formatDuration is compact h/m/s", () => {
   assert.equal(formatDuration(90), "1m 30s");
   assert.equal(formatDuration(600), "10m");
   assert.equal(formatDuration(3661), "1h 1m");
+});
+
+// --- smoothProgress: fractional bar fills (no per-second jump) ---------------
+
+test("smoothProgress: sequence + phase fractions from a packet at t=0", () => {
+  const s = {
+    state: ASTRO_STATE.EXPOSING,
+    elapsedSec: 100,
+    remainingSec: 300, // seq total 400
+    phaseRemainingSec: 20,
+    phaseTotalSec: 30, // phase elapsed 10
+  };
+  const p = smoothProgress(s, 0);
+  assert.equal(p.seq.toFixed(3), (100 / 400).toFixed(3));
+  assert.equal(p.phase.toFixed(3), (10 / 30).toFixed(3));
+});
+
+test("smoothProgress advances fractionally between whole seconds", () => {
+  const s = {
+    state: ASTRO_STATE.EXPOSING,
+    elapsedSec: 100,
+    remainingSec: 300,
+    phaseRemainingSec: 20,
+    phaseTotalSec: 30,
+  };
+  const p = smoothProgress(s, 500); // +0.5s
+  assert.equal(p.seq.toFixed(4), (100.5 / 400).toFixed(4));
+  assert.equal(p.phase.toFixed(4), (10.5 / 30).toFixed(4));
+});
+
+test("smoothProgress clamps to 1 and never NaN", () => {
+  const s = {
+    state: ASTRO_STATE.EXPOSING,
+    elapsedSec: 30,
+    remainingSec: 0,
+    phaseRemainingSec: 0,
+    phaseTotalSec: 0, // idle phase -> 0, not NaN
+  };
+  const p = smoothProgress(s, 2000);
+  assert.equal(p.seq, 1);
+  assert.equal(p.phase, 0);
+});
+
+test("smoothProgress freezes when paused / not running", () => {
+  const s = {
+    state: ASTRO_STATE.PAUSED,
+    elapsedSec: 100,
+    remainingSec: 300,
+    phaseRemainingSec: 20,
+    phaseTotalSec: 30,
+  };
+  const a = smoothProgress(s, 0);
+  const b = smoothProgress(s, 5000);
+  assert.deepEqual(a, b); // no advance while paused
 });
