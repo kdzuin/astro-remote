@@ -6,6 +6,7 @@
 #include "transport/ble_device.h"
 #include "transport/remote_control_manager.h"
 #include "utils/colors.h"
+#include "utils/preferences.h"
 
 namespace {
 // Mirror SelectableList's display constants exactly so the top menu matches the
@@ -40,6 +41,10 @@ AstroRunScreen::AstroRunScreen()
 }
 
 AstroRunScreen::~AstroRunScreen() {
+    // If we navigate away mid-flash, brightness is left boosted — restore it.
+    if (lastFlashOn_) {
+        M5.Display.setBrightness(PreferencesManager::getBrightness());
+    }
     if (spritesReady_) {
         topCanvas_.deleteSprite();
         botCanvas_.deleteSprite();
@@ -120,6 +125,28 @@ void AstroRunScreen::update() {
     }
     if (summaryMode_) {
         return;
+    }
+
+    // Critical-battery alert: below the critical threshold, flash the whole
+    // screen red for 300ms out of every ~10s. Timing is millis()-based, not
+    // delay(), so the sequence timers keep running.
+    const bool critical = SettingsProcess::isBatteryCritical(battery);
+    const bool flashOn = critical && (millis() % 10000UL < 300UL);
+    if (flashOn != lastFlashOn_) {
+        lastFlashOn_ = flashOn;
+        if (flashOn) {
+            M5.Display.setBrightness(200);  // punch through; restored on flash-off
+            M5.Display.fillScreen(colors::get(colors::ERROR));
+        } else {
+            // Flash just ended — restore the user's brightness and repaint the
+            // full UI over the red fill.
+            M5.Display.setBrightness(PreferencesManager::getBrightness());
+            drawTop();
+            drawBottom();
+        }
+    }
+    if (flashOn) {
+        return;  // hold the red fill; skip the normal region redraws below.
     }
 
     // Top region (menu) changes on selection, run-state, or a pending pause

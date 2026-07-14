@@ -52,8 +52,17 @@ public:
         PreferencesManager::setBrightness(static_cast<uint8_t>(nextLevel));
     }
 
+    // Battery level below this (percent) is "critical" — red status colour and,
+    // on the Astro run screen, the full-screen alert flash.
+    static constexpr int BATTERY_CRITICAL_PCT = 20;
+
+    // A negative level means the reading is unavailable — not critical.
+    static bool isBatteryCritical(int batteryLevel) {
+        return batteryLevel >= 0 && batteryLevel < BATTERY_CRITICAL_PCT;
+    }
+
     static uint32_t getBatteryStatusColor(int batteryLevel) {
-        if (batteryLevel < 20) {
+        if (batteryLevel < BATTERY_CRITICAL_PCT) {
             return colors::get(colors::ERROR);  // Critical
         }
         if (batteryLevel < 50) {
