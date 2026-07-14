@@ -36,31 +36,43 @@ The project also includes a web-based remote control, that can we hosted anywher
 
 ## Project Architecture
 
-### Hardware Abstraction Layer
+See [docs/architecture.md](docs/architecture.md) for how the code is organized
+and how it runs, [CONTEXT.md](CONTEXT.md) for the glossary, and
+[docs/adr/](docs/adr/) for the design decisions.
 
-The project uses a clean hardware abstraction layer to separate device-specific code from the application logic:
-
-- `IDisplay`: Interface for screen operations (M5StickC LCD)
-  - Color handling via `getColor(r, g, b)`
-  - Text and graphics primitives
-- `IInput`: Interface for button handling
-  - Supports A, B, and PWR buttons
-  - Provides both immediate and event-based states
-- `IHardware`: Main hardware interface combining display and input
-
-This abstraction allows for:
-
-- Easy testing with mock hardware
-- Potential support for other M5Stack devices, and not only M5 devices
-- Clear separation between UI logic and hardware specifics
+A hardware-abstraction layer (`IDisplay` / `IInput` / `IHardware`) for
+testability and multi-board support is a **goal, not yet implemented** — the
+code currently calls `M5.*` directly. See the hardware-abstraction notes in
+docs/architecture.md for the current state and the seams already in place.
 
 ## Setup Instructions
 
 ### PlatformIO Setup
 
-1. Install PlatformIO in VSCode
-2. Clone this repository
-3. Build and upload to your M5StickC
+Prerequisites: **Python 3**, **git**, and a **USB data cable** for the M5StickC
+(the M5StickC enumerates over an FTDI USB-serial chip; macOS/Linux need no extra
+driver, Windows may need the FTDI VCP driver).
+
+PlatformIO can be used either as a standalone CLI or via the VSCode extension.
+
+**CLI (recommended for build/test/flash):**
+
+```sh
+git clone <this repo> && cd AstroRemote
+python3 -m venv ~/.pio-venv           # isolated env for the pio CLI
+~/.pio-venv/bin/pip install platformio
+git config core.hooksPath .githooks   # enable the native-test pre-commit hook
+
+~/.pio-venv/bin/pio run -e m5stick-c  # first build downloads the ESP32
+                                      # platform + toolchain — slow, be patient
+```
+
+Flashing needs the device's serial port — see
+[CLAUDE.md](CLAUDE.md#development-environment) for finding it, the flash command,
+and reading serial output.
+
+**VSCode:** install the PlatformIO IDE extension, open the repo folder, and use
+its Build / Upload buttons. The extension bundles its own `pio`.
 
 ### Tests
 
