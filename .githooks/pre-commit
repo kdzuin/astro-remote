@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Pre-commit hook: run the native unit tests before allowing a commit.
+# Enable once per clone with:  git config core.hooksPath .githooks
+#
+# Skip in an emergency with:   git commit --no-verify
+
+set -euo pipefail
+
+# Locate the PlatformIO CLI. It is often not on PATH (e.g. installed in a
+# dedicated venv), so fall back to common install locations.
+if command -v pio >/dev/null 2>&1; then
+    PIO=pio
+elif [ -x "$HOME/.pio-venv/bin/pio" ]; then
+    PIO="$HOME/.pio-venv/bin/pio"
+elif [ -x "$HOME/.platformio/penv/bin/pio" ]; then
+    PIO="$HOME/.platformio/penv/bin/pio"
+else
+    echo "pre-commit: PlatformIO (pio) not found; skipping native tests." >&2
+    echo "            Install it or set it on PATH to enable the check." >&2
+    exit 0
+fi
+
+echo "pre-commit: running native tests..."
+if ! "$PIO" test -e native; then
+    echo "pre-commit: native tests FAILED — commit aborted." >&2
+    echo "            Fix the tests, or bypass with 'git commit --no-verify'." >&2
+    exit 1
+fi
+
+echo "pre-commit: native tests passed."

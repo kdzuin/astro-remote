@@ -68,31 +68,32 @@ void AstroProcess::setParameters(const Parameters& params) {
 }
 
 bool AstroProcess::setParameter(const std::string& name, uint16_t value) {
-    bool changed = false;
+    if (isRunning()) {
+        return false;  // Can't modify parameters while running
+    }
+
+    Parameters newParams = params_;  // Validate on a copy before applying
     if (name == "initialDelaySec") {
-        params_.initialDelaySec = value;
-        changed = true;
+        newParams.initialDelaySec = value;
     } else if (name == "exposureSec") {
-        params_.exposureSec = value;
-        changed = true;
+        newParams.exposureSec = value;
     } else if (name == "subframeCount") {
-        params_.subframeCount = value;
-        status_.totalFrames = value;  // Update total frames in status
-        changed = true;
+        newParams.subframeCount = value;
     } else if (name == "intervalSec") {
-        params_.intervalSec = value;
-        changed = true;
-    } else if (name == "subframeCount") {
-        params_.subframeCount = value;
+        newParams.intervalSec = value;
     } else {
         return false;  // Unknown parameter
     }
 
-    if (changed) {
-        updateTimings();
-        notifyParametersChanged();
+    if (!newParams.validate()) {
+        return false;  // Reject invalid value, leave params unchanged
     }
-    return changed;
+
+    params_ = newParams;
+    status_.totalFrames = params_.subframeCount;
+    updateTimings();
+    notifyParametersChanged();
+    return true;
 }
 
 void AstroProcess::update() {

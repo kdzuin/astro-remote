@@ -79,7 +79,7 @@ void test_start_requires_camera() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 5;
     p.exposureSec = 30;
-    p.subframeCount = 5;
+    p.subframeCount = 10;  // must be a multiple of 10 and >= 10
     p.intervalSec = 1;
     astro().setParameters(p);
     // isCameraConnected defaults false
@@ -91,23 +91,38 @@ void test_start_requires_camera() {
     TEST_ASSERT_EQUAL_UINT8(2, astro().getStatus().errorCode);
 }
 
-// setParameter enforces the validation rules (mult of 5 / 30, interval >= 1).
+// setParameter enforces the validation rules: step multiples plus min/max
+// bounds. Invalid values must be rejected and leave params unchanged.
 void test_setParameter_validation() {
+    // exposure: step 30, range 30..600
     TEST_ASSERT_TRUE(astro().setParameter("exposureSec", 60));
-    TEST_ASSERT_FALSE(astro().setParameter("exposureSec", 61));
+    TEST_ASSERT_FALSE(astro().setParameter("exposureSec", 61));   // not a multiple of 30
+    TEST_ASSERT_FALSE(astro().setParameter("exposureSec", 700));  // above max
+    TEST_ASSERT_EQUAL_UINT16(60, astro().getParameters().exposureSec);  // unchanged
+
+    // initial delay: step 5
     TEST_ASSERT_TRUE(astro().setParameter("initialDelaySec", 10));
     TEST_ASSERT_FALSE(astro().setParameter("initialDelaySec", 7));
-    TEST_ASSERT_FALSE(astro().setParameter("intervalSec", 0));
-    TEST_ASSERT_FALSE(astro().setParameter("bogus", 5));
+
+    // subframe count: step 10, range 10..480
+    TEST_ASSERT_TRUE(astro().setParameter("subframeCount", 20));
+    TEST_ASSERT_FALSE(astro().setParameter("subframeCount", 15));  // not a multiple of 10
+    TEST_ASSERT_FALSE(astro().setParameter("subframeCount", 5));   // below min
+
+    // interval: range 1..60
+    TEST_ASSERT_FALSE(astro().setParameter("intervalSec", 0));   // below min
+    TEST_ASSERT_FALSE(astro().setParameter("intervalSec", 61));  // above max
+
+    TEST_ASSERT_FALSE(astro().setParameter("bogus", 5));  // unknown parameter
 }
 
-// A full 5-frame sequence: assert it fires exactly one bulb per frame and ends
-// STOPPED. delay=5, exposure=30, interval=1, frames=5 (must be mult of 5).
+// A full 10-frame sequence: assert it fires exactly one bulb per frame and
+// ends STOPPED. delay=5, exposure=30, interval=1, frames=10 (min/step is 10).
 void test_full_sequence_completes() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 5;
     p.exposureSec = 30;
-    p.subframeCount = 5;
+    p.subframeCount = 10;
     p.intervalSec = 1;
     astro().setParameters(p);
 
@@ -119,12 +134,12 @@ void test_full_sequence_completes() {
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INITIAL_DELAY),
                       static_cast<int>(astro().getStatus().state));
 
-    // Total sequence: 5 (delay) + 5*(30 exposure + 1 interval) = 160s.
+    // Total sequence: 5 (delay) + 10*(30 exposure + 1 interval) = 315s.
     // Run a bit past the end.
-    advanceSeconds(170);
+    advanceSeconds(330);
 
-    TEST_ASSERT_EQUAL(5, g_mock.takeBulbCalls);
-    TEST_ASSERT_EQUAL_UINT16(5, astro().getStatus().completedFrames);
+    TEST_ASSERT_EQUAL(10, g_mock.takeBulbCalls);
+    TEST_ASSERT_EQUAL_UINT16(10, astro().getStatus().completedFrames);
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::STOPPED),
                       static_cast<int>(astro().getStatus().state));
 }
@@ -134,7 +149,7 @@ void test_pause_during_exposure_releases_shutter() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 0;
     p.exposureSec = 30;
-    p.subframeCount = 5;
+    p.subframeCount = 10;
     p.intervalSec = 1;
     astro().setParameters(p);
     const_cast<AstroProcess::Status&>(astro().getStatus()).isCameraConnected = true;
@@ -157,7 +172,7 @@ void test_bulb_failure_errors() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 0;
     p.exposureSec = 30;
-    p.subframeCount = 5;
+    p.subframeCount = 10;
     p.intervalSec = 1;
     astro().setParameters(p);
     const_cast<AstroProcess::Status&>(astro().getStatus()).isCameraConnected = true;

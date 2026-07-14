@@ -62,6 +62,23 @@ This abstraction allows for:
 2. Clone this repository
 3. Build and upload to your M5StickC
 
+### Tests
+
+Device-independent logic (`AstroProcess`, `SelectableList`) has native unit
+tests that run on the host:
+
+```sh
+pio test -e native
+```
+
+A pre-commit hook runs these before every commit. Enable it once per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+Bypass in an emergency with `git commit --no-verify`.
+
 ### VSCode Configuration
 
 To ensure proper code navigation and eliminate false errors:
