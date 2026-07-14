@@ -1,8 +1,9 @@
 // AstroRemote service worker — cache-first for offline use (ADR 0006).
 //
-// Bump CACHE_VERSION whenever any precached asset changes, or clients keep
-// serving the old copy. Old caches are purged on activate.
-const CACHE_VERSION = "astroremote-v2";
+// CACHE_VERSION is stamped from a content hash of the precached assets by
+// build-sw.mjs (`npm run build`) — do not edit by hand. It changes exactly when
+// an asset changes, so old caches are purged on activate only when needed.
+const CACHE_VERSION = "astroremote-872677cf127f";
 
 // Explicit precache list — every asset the app needs offline. Kept explicit
 // (not a glob) so build artifacts like package.json / input.css / node_modules

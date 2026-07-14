@@ -26,12 +26,12 @@ jobs:
       - name: Run unit tests
         run: node --test
 
-      - name: Verify committed tailwind.css is up to date
+      - name: Verify committed build output (tailwind.css + sw.js) is up to date
         run: |
           npm ci
-          npm run build:css
-          if ! git diff --quiet -- tailwind.css; then
-            echo "tailwind.css is stale — run 'npm run build:css' and commit the result." >&2
-            git diff -- tailwind.css >&2
+          npm run build
+          if ! git diff --quiet -- tailwind.css sw.js; then
+            echo "Build output is stale — run 'npm run build' and commit the result." >&2
+            git diff -- tailwind.css sw.js >&2
             exit 1
           fi

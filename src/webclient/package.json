@@ -5,7 +5,9 @@
   "description": "Web Bluetooth remote + live astro-status display for AstroRemote (M5StickC).",
   "type": "module",
   "scripts": {
+    "build": "npm run build:css && npm run build:sw",
     "build:css": "tailwindcss -i input.css -o tailwind.css --minify",
+    "build:sw": "node build-sw.mjs",
     "watch:css": "tailwindcss -i input.css -o tailwind.css --watch",
     "test": "node --test"
   },

@@ -65,9 +65,18 @@ right-sized to one static leaf, not a monorepo:
 
 - A single **`src/webclient/package.json`** (colocated with the code, C++ root
   untouched) with devDeps `tailwindcss` + `@tailwindcss/cli` pinned to an
-  explicit 4.x, a committed lockfile, and two scripts: `build:css`
-  (`tailwindcss -i input.css -o tailwind.css --minify`) and `test`
+  explicit 4.x, a committed lockfile, and scripts: `build:css`
+  (`tailwindcss -i input.css -o tailwind.css --minify`), `build:sw` (stamps the
+  service worker's `CACHE_VERSION` — see below), `build` (both), and `test`
   (`node --test`, the built-in runner — zero extra deps).
+- The **service-worker cache version is content-derived**, not manual:
+  `build-sw.mjs` hashes the precached assets (sha256, first 12 hex) and stamps
+  `CACHE_VERSION` into `sw.js`. This invalidates the offline cache exactly when
+  an asset changes and never otherwise — avoiding both stale clients (forgot to
+  bump) and needless churn. A commit hash was rejected: the SW is committed
+  before its own commit exists (chicken/egg → always one stale) and would churn
+  the cache on every commit regardless of whether web assets changed. The
+  committed `tailwind.css` and stamped `sw.js` are both verified fresh in CI.
 - **`node_modules/` is git-ignored** so it never reaches the checkout, and thus
   never the GitHub-Pages artifact (which uploads `src/webclient/` as-is).
 - **Pure logic is extracted from `ble.js`** into an importable module
