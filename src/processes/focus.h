@@ -4,7 +4,8 @@
 #include "utils/colors.h"
 
 enum class FocusSensitivity : uint8_t {
-    Fine = 0x10,  // First
+    Finest = 0x01,  // First (smallest step; verified moving on-device)
+    Fine = 0x10,
     Medium = 0x25,
     High = 0x50,
     Coarse = 0x7F  // Last
@@ -35,6 +36,9 @@ public:
     static bool nextSensitivity() {
         auto& state = getState();
         switch (state.sensitivity) {
+            case FocusSensitivity::Finest:
+                state.sensitivity = FocusSensitivity::Fine;
+                return true;
             case FocusSensitivity::Fine:
                 state.sensitivity = FocusSensitivity::Medium;
                 return true;
@@ -63,16 +67,33 @@ public:
                 state.sensitivity = FocusSensitivity::Fine;
                 return true;
             case FocusSensitivity::Fine:
+                state.sensitivity = FocusSensitivity::Finest;
+                return true;
+            case FocusSensitivity::Finest:
                 return false;  // Already at min
         }
         return false;
     }
 
     static void cycleSensitivity() {
-        if (nextSensitivity()) {
-            return;
+        auto& state = getState();
+        switch (state.sensitivity) {
+            case FocusSensitivity::Finest:
+                state.sensitivity = FocusSensitivity::Fine;
+                break;
+            case FocusSensitivity::Fine:
+                state.sensitivity = FocusSensitivity::Medium;
+                break;
+            case FocusSensitivity::Medium:
+                state.sensitivity = FocusSensitivity::High;
+                break;
+            case FocusSensitivity::High:
+                state.sensitivity = FocusSensitivity::Coarse;
+                break;
+            case FocusSensitivity::Coarse:
+                state.sensitivity = FocusSensitivity::Finest;
+                break;
         }
-        prevSensitivity();
     }
 
     static void handleFocus(int32_t increment) {
@@ -95,6 +116,8 @@ public:
 
     static const char* getSensitivityText() {
         switch (getState().sensitivity) {
+            case FocusSensitivity::Finest:
+                return "Finest";
             case FocusSensitivity::Fine:
                 return "Fine";
             case FocusSensitivity::Medium:

@@ -29,7 +29,8 @@ constexpr uint16_t ZOOM_TELE_PRESS = 0x0245;    // Press zoom tele
 constexpr uint16_t ZOOM_WIDE_RELEASE = 0x0246;  // Release zoom wide
 constexpr uint16_t ZOOM_WIDE_PRESS = 0x0247;    // Press zoom wide
 
-// Manual focus control (add parameter 0x00~0x0f for release, 0x10-0x7F for press)
+// Manual focus control (24-bit; param is step intensity — verified moving as
+// low as 0x01 on-device, up to 0x7F. Release uses 0x00.)
 constexpr uint16_t FOCUS_IN_RELEASE = 0x026a;   // Focus In Up
 constexpr uint16_t FOCUS_IN_PRESS = 0x026b;     // Focus In Down
 constexpr uint16_t FOCUS_OUT_RELEASE = 0x026c;  // Focus Out Up
@@ -69,8 +70,8 @@ bool isShutterActive();
 bool isRecording();
 
 // Focus control functions
-bool focusIn(uint8_t sensitivity = 0x25);   // sensitivity: 0x10 (min) to 0x7F (max)
-bool focusOut(uint8_t sensitivity = 0x25);  // sensitivity: 0x10 (min) to 0x7F (max)
+bool focusIn(uint8_t sensitivity = 0x25);   // sensitivity: 0x01 (min) to 0x7F (max)
+bool focusOut(uint8_t sensitivity = 0x25);  // sensitivity: 0x01 (min) to 0x7F (max)
 
 // Zoom control functions
 bool zoomIn(uint8_t sensitivity = 0x10);   // sensitivity: 0x10 (min) to 0x7F (max)
