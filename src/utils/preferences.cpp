@@ -18,9 +18,9 @@ void PreferencesManager::setBrightness(uint8_t brightness) {
 }
 
 uint8_t PreferencesManager::getBrightness() {
-    uint8_t value = preferences.getUChar(KEY_BRIGHTNESS, DEFAULT_BRIGHTNESS);
-    LOG_DEBUG("[Preferences] Loading brightness: %d (default: %d)\n", value, DEFAULT_BRIGHTNESS);
-    return value;
+    // No log here: this is read every frame (via SettingsProcess::getDeviceState
+    // on the run/emergency screens), so logging spams the serial each tick.
+    return preferences.getUChar(KEY_BRIGHTNESS, DEFAULT_BRIGHTNESS);
 }
 
 void PreferencesManager::setAutoConnect(bool enabled) {

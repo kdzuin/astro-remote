@@ -28,6 +28,10 @@ public:
         return {M5.Power.getBatteryLevel(), PreferencesManager::getBrightness()};
     }
 
+    // Battery only — for the per-tick screens that don't need brightness, so we
+    // avoid an NVS brightness read every frame.
+    static int getBatteryLevel() { return M5.Power.getBatteryLevel(); }
+
     static bool connectToDevice() {
         if (BLEDeviceManager::connectToSavedDevice()) {
             return true;

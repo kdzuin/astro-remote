@@ -24,7 +24,7 @@ EmergencyScreen::EmergencyScreen() : BaseScreen<BaseMenuItem>("Emergency") {
 
 void EmergencyScreen::update() {
     auto& astro = AstroProcess::instance();
-    const int battery = SettingsProcess::getDeviceState().batteryLevel;
+    const int battery = SettingsProcess::getBatteryLevel();
 
     // Auto-resume: charged back above the emergency threshold — return to the
     // live run screen, which re-enters the running sequence.
@@ -67,7 +67,7 @@ void EmergencyScreen::update() {
 void EmergencyScreen::draw() {
     const int w = M5.Display.width();
     const int h = M5.Display.height();
-    const int battery = SettingsProcess::getDeviceState().batteryLevel;
+    const int battery = SettingsProcess::getBatteryLevel();
 
     M5.Display.fillScreen(colors::get(colors::BLACK));
     M5.Display.setTextColor(colors::get(colors::ERROR));
