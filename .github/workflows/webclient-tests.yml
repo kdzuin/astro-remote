@@ -1,0 +1,37 @@
+name: Web Client Tests
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["src/webclient/**"]
+  pull_request:
+    paths: ["src/webclient/**"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/webclient
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run unit tests
+        run: node --test
+
+      - name: Verify committed tailwind.css is up to date
+        run: |
+          npm ci
+          npm run build:css
+          if ! git diff --quiet -- tailwind.css; then
+            echo "tailwind.css is stale — run 'npm run build:css' and commit the result." >&2
+            git diff -- tailwind.css >&2
+            exit 1
+          fi

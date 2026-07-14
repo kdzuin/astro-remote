@@ -71,6 +71,8 @@ struct __attribute__((packed)) AstroStatusPacket {
     uint32_t currentFrameStartTime;
     uint32_t elapsedSec;
     uint32_t remainingSec;
+    uint32_t phaseRemainingSec;  // Time left in the current phase (delay/exposure/interval)
+    uint32_t phaseTotalSec;      // Full length of the current phase; 0 when idle/stopped
     uint8_t isCameraConnected;
     uint8_t errorCode;
 };

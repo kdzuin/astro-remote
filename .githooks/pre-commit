@@ -28,3 +28,19 @@ if ! "$PIO" test -e native; then
 fi
 
 echo "pre-commit: native tests passed."
+
+# Web-client JS tests. Node is not always installed (firmware-only clones),
+# so guard on it like the pio check above rather than hard-failing.
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+WEBCLIENT="$REPO_ROOT/src/webclient"
+if command -v node >/dev/null 2>&1; then
+    echo "pre-commit: running web-client tests..."
+    if ! ( cd "$WEBCLIENT" && node --test ); then
+        echo "pre-commit: web-client tests FAILED — commit aborted." >&2
+        echo "            Fix the tests, or bypass with 'git commit --no-verify'." >&2
+        exit 1
+    fi
+    echo "pre-commit: web-client tests passed."
+else
+    echo "pre-commit: node not found; skipping web-client tests." >&2
+fi

@@ -68,6 +68,7 @@ public:
         uint32_t elapsedSec = 0;
         uint32_t remainingSec = 0;
         uint32_t phaseRemainingSec = 0;  // Time left in the current phase (delay/exposure/interval)
+        uint32_t phaseTotalSec = 0;      // Full length of the current phase; 0 when idle/stopped
         bool isCameraConnected = false;
         uint8_t errorCode = 0;
     };

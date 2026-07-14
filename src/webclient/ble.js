@@ -1,553 +1,419 @@
+import {
+  ASTRO_STATE,
+  decodeAstroStatus,
+  interpolate,
+  formatMMSS,
+  barFraction,
+  stateLabel,
+} from "./astro-status.js";
+
 class M5RemoteClient {
   constructor() {
-    // UUIDs matching the server
+    // UUIDs matching the server (BLERemoteServer, lower-cased for Web BLE).
     this.SERVICE_UUID = "180f1000-1234-5678-90ab-cdef12345678";
     this.CONTROL_CHAR_UUID = "180f1001-1234-5678-90ab-cdef12345678";
     this.FEEDBACK_CHAR_UUID = "180f1002-1234-5678-90ab-cdef12345678";
+    this.ASTRO_STATUS_CHAR_UUID = "180f1003-1234-5678-90ab-cdef12345678";
 
-    // Command types
-    this.CMD_TYPE_BUTTON = 0x01;
-    this.CMD_TYPE_ASTRO = 0x02;
-
-    // Button commands (0x01XX)
+    // Button command words (0x01XX) + release, matching RemoteCmd.
     this.BUTTON_DOWN = 0x0100;
     this.BUTTON_UP = 0x0101;
-
-    // Astro commands (0x02XX)
-    this.ASTRO_START = 0x0200;
-    this.ASTRO_PAUSE = 0x0201;
-    this.ASTRO_STOP = 0x0202;
-    this.ASTRO_RESET = 0x0203;
-    this.ASTRO_SET_PARAMS = 0x0204;
-
-    // Button IDs matching the M5 device's ButtonId enum
-    this.BUTTON_UP_ARROW = 0x01; // ButtonId::UP
-    this.BUTTON_DOWN_ARROW = 0x02; // ButtonId::DOWN
-    this.BUTTON_LEFT_ARROW = 0x03; // ButtonId::LEFT
-    this.BUTTON_RIGHT_ARROW = 0x04; // ButtonId::RIGHT
-    this.BUTTON_CONFIRM = 0x05; // ButtonId::CONFIRM
-    this.BUTTON_BACK = 0x06; // ButtonId::BACK
 
     this.device = null;
     this.server = null;
     this.service = null;
     this.controlChar = null;
     this.feedbackChar = null;
-    this.isButtonPressed = false; // Track button state
-    this.currentButtonId = null; // Track which button is currently pressed
+    this.astroStatusChar = null;
 
-    // UI elements
-    this.deviceList = document.getElementById("deviceList");
-    this.status = document.getElementById("status");
-    this.scanButton = document.getElementById("scanButton");
-    this.disconnectButton = document.getElementById("disconnectButton");
-    this.controlKeysContainer = document.getElementById("controlKeysContainer");
+    this.currentButtonId = null; // Which button is held (null = none).
 
-    this.confirmButton = document.getElementById("confirmButton");
-    this.upButton = document.getElementById("upButton");
-    this.downButton = document.getElementById("downButton");
-    this.leftButton = document.getElementById("leftButton");
-    this.rightButton = document.getElementById("rightButton");
-    this.backButton = document.getElementById("backButton");
+    // Latest decoded status + when it arrived (performance.now ms), for
+    // local interpolation between the device's ~1 Hz notifications.
+    this.lastStatus = null;
+    this.lastStatusAt = 0;
+    this.tickTimer = null;
 
-    console.log(
-      "[BLE] Client initialized with service UUID:",
-      this.SERVICE_UUID
-    );
+    this.el = {
+      deviceStatus: document.getElementById("status"),
+      unsupported: document.getElementById("unsupported"),
+      scanButton: document.getElementById("scanButton"),
+      disconnectButton: document.getElementById("disconnectButton"),
+      controls: document.getElementById("controlKeysContainer"),
+      // status panel
+      stateDot: document.getElementById("stateDot"),
+      stateLabel: document.getElementById("stateLabel"),
+      cameraDot: document.getElementById("cameraDot"),
+      cameraLabel: document.getElementById("cameraLabel"),
+      errorBanner: document.getElementById("errorBanner"),
+      frameCount: document.getElementById("frameCount"),
+      seqTimes: document.getElementById("seqTimes"),
+      seqBar: document.getElementById("seqBar"),
+      phaseLabel: document.getElementById("phaseLabel"),
+      phaseTime: document.getElementById("phaseTime"),
+      phaseBar: document.getElementById("phaseBar"),
+    };
 
-    // Bind event listeners
-    this.scanButton.addEventListener("click", () => this.startScan());
-    this.disconnectButton.addEventListener("click", () => this.disconnect());
+    this.keys = Array.from(document.querySelectorAll(".key"));
 
-    // Bind control button events
-    this.upButton.addEventListener("mousedown", () =>
-      this.sendButtonCommand(this.BUTTON_UP_ARROW)
-    );
-    this.upButton.addEventListener("mouseup", () => this.sendButtonRelease());
-    this.upButton.addEventListener("mouseleave", () =>
-      this.sendButtonRelease()
-    );
+    this.el.scanButton.addEventListener("click", () => this.startScan());
+    this.el.disconnectButton.addEventListener("click", () => this.disconnect());
 
-    this.downButton.addEventListener("mousedown", () =>
-      this.sendButtonCommand(this.BUTTON_DOWN_ARROW)
-    );
-    this.downButton.addEventListener("mouseup", () => this.sendButtonRelease());
-    this.downButton.addEventListener("mouseleave", () =>
-      this.sendButtonRelease()
-    );
+    this.bindPointerControls();
+    this.bindKeyboardControls();
+    this.bindSafetyReleases();
 
-    this.leftButton.addEventListener("mousedown", () =>
-      this.sendButtonCommand(this.BUTTON_LEFT_ARROW)
-    );
-    this.leftButton.addEventListener("mouseup", () => this.sendButtonRelease());
-    this.leftButton.addEventListener("mouseleave", () =>
-      this.sendButtonRelease()
-    );
-
-    this.rightButton.addEventListener("mousedown", () =>
-      this.sendButtonCommand(this.BUTTON_RIGHT_ARROW)
-    );
-    this.rightButton.addEventListener("mouseup", () =>
-      this.sendButtonRelease()
-    );
-    this.rightButton.addEventListener("mouseleave", () =>
-      this.sendButtonRelease()
-    );
-
-    this.confirmButton.addEventListener("mousedown", () =>
-      this.sendButtonCommand(this.BUTTON_CONFIRM)
-    );
-    this.confirmButton.addEventListener("mouseup", () =>
-      this.sendButtonRelease()
-    );
-    this.confirmButton.addEventListener("mouseleave", () =>
-      this.sendButtonRelease()
-    );
-
-    this.backButton.addEventListener("mousedown", () =>
-      this.sendButtonCommand(this.BUTTON_BACK)
-    );
-    this.backButton.addEventListener("mouseup", () => this.sendButtonRelease());
-    this.backButton.addEventListener("mouseleave", () =>
-      this.sendButtonRelease()
-    );
-
-    // Add touch events for mobile support
-    [
-      this.upButton,
-      this.downButton,
-      this.leftButton,
-      this.rightButton,
-      this.confirmButton,
-      this.backButton,
-    ].forEach((button) => {
-      button.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        const buttonId = {
-          [this.upButton.id]: this.BUTTON_UP_ARROW,
-          [this.downButton.id]: this.BUTTON_DOWN_ARROW,
-          [this.leftButton.id]: this.BUTTON_LEFT_ARROW,
-          [this.rightButton.id]: this.BUTTON_RIGHT_ARROW,
-          [this.confirmButton.id]: this.BUTTON_CONFIRM,
-          [this.backButton.id]: this.BUTTON_BACK,
-        }[button.id];
-        this.sendButtonCommand(buttonId);
-      });
-
-      button.addEventListener("touchend", (e) => {
-        e.preventDefault();
-        this.sendButtonRelease();
-      });
-
-      button.addEventListener("touchcancel", (e) => {
-        e.preventDefault();
-        this.sendButtonRelease();
-      });
-    });
-
-    // Add keyboard controls
-    document.addEventListener("keydown", (e) => {
-      // Prevent default behavior for arrow keys to avoid page scrolling
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        e.preventDefault();
-      }
-
-      // Only process if we're not already pressing a key and we're connected
-      if (!this.isButtonPressed && this.controlChar) {
-        const buttonId = {
-          ArrowUp: this.BUTTON_UP_ARROW,
-          ArrowDown: this.BUTTON_DOWN_ARROW,
-          ArrowLeft: this.BUTTON_LEFT_ARROW,
-          ArrowRight: this.BUTTON_RIGHT_ARROW,
-          Enter: this.BUTTON_CONFIRM,
-          Escape: this.BUTTON_BACK
-        }[e.key];
-
-        if (buttonId) {
-          this.sendButtonCommand(buttonId);
-          // Add visual feedback by adding a pressed class
-          const buttonElement = {
-            [this.BUTTON_UP_ARROW]: this.upButton,
-            [this.BUTTON_DOWN_ARROW]: this.downButton,
-            [this.BUTTON_LEFT_ARROW]: this.leftButton,
-            [this.BUTTON_RIGHT_ARROW]: this.rightButton,
-            [this.BUTTON_CONFIRM]: this.confirmButton,
-            [this.BUTTON_BACK]: this.backButton
-          }[buttonId];
-          
-          if (buttonElement) {
-            buttonElement.classList.add("pressed");
-          }
-        }
-      }
-    });
-
-    document.addEventListener("keyup", (e) => {
-      const buttonId = {
-        ArrowUp: this.BUTTON_UP_ARROW,
-        ArrowDown: this.BUTTON_DOWN_ARROW,
-        ArrowLeft: this.BUTTON_LEFT_ARROW,
-        ArrowRight: this.BUTTON_RIGHT_ARROW,
-        Enter: this.BUTTON_CONFIRM,
-        Escape: this.BUTTON_BACK
-      }[e.key];
-
-      if (buttonId) {
-        this.sendButtonRelease();
-        // Remove visual feedback
-        const buttonElement = {
-          [this.BUTTON_UP_ARROW]: this.upButton,
-          [this.BUTTON_DOWN_ARROW]: this.downButton,
-          [this.BUTTON_LEFT_ARROW]: this.leftButton,
-          [this.BUTTON_RIGHT_ARROW]: this.rightButton,
-          [this.BUTTON_CONFIRM]: this.confirmButton,
-          [this.BUTTON_BACK]: this.backButton
-        }[buttonId];
-        
-        if (buttonElement) {
-          buttonElement.classList.remove("pressed");
-        }
-      }
-    });
-
-    // Initialize UI state
-    this.disconnectButton.disabled = true;
-    this.confirmButton.disabled = true;
+    this.el.disconnectButton.disabled = true;
+    this.renderStatus(null); // idle placeholder
   }
 
-  updateStatus(message, type = "info") {
-    console.log(`[BLE] Status update (${type}):`, message);
-    this.status.textContent = message;
-    this.status.className = type;
+  // --- Input: pointer (mouse + touch + pen, one path) --------------------
+
+  bindPointerControls() {
+    for (const key of this.keys) {
+      const id = Number(key.dataset.btn);
+      key.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        // Capture so we still get pointerup even if the finger slides off.
+        try {
+          key.setPointerCapture(e.pointerId);
+        } catch {}
+        this.pressButton(id, key);
+      });
+      const release = (e) => {
+        e.preventDefault();
+        this.releaseButton(key);
+      };
+      key.addEventListener("pointerup", release);
+      key.addEventListener("pointercancel", release);
+    }
+  }
+
+  bindKeyboardControls() {
+    const keyMap = {
+      ArrowUp: 1,
+      ArrowDown: 2,
+      ArrowLeft: 3,
+      ArrowRight: 4,
+      Enter: 5,
+      Escape: 6,
+    };
+    document.addEventListener("keydown", (e) => {
+      const id = keyMap[e.key];
+      if (id === undefined) return;
+      e.preventDefault();
+      if (e.repeat) return; // Hold = single press, not autorepeat spam.
+      this.pressButton(id, this.keyEl(id));
+    });
+    document.addEventListener("keyup", (e) => {
+      const id = keyMap[e.key];
+      if (id === undefined) return;
+      e.preventDefault();
+      this.releaseButton(this.keyEl(id));
+    });
+  }
+
+  // On any interruption, force a button-up so the M5 is never left holding a
+  // key (which would keep navigating the device UI).
+  bindSafetyReleases() {
+    const forceRelease = () => this.releaseButton(null, true);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) forceRelease();
+    });
+    window.addEventListener("blur", forceRelease);
+    window.addEventListener("pagehide", forceRelease);
+  }
+
+  keyEl(id) {
+    return this.keys.find((k) => Number(k.dataset.btn) === id) || null;
+  }
+
+  async pressButton(id, el) {
+    if (this.currentButtonId !== null) return; // one at a time
+    if (!this.controlChar) return;
+    const ok = await this.sendButton(this.BUTTON_DOWN, id);
+    if (ok) {
+      this.currentButtonId = id;
+      if (el) el.classList.add("pressed");
+    }
+  }
+
+  // el: element to un-highlight (or null). force: send release even if we
+  // think nothing is held (used by safety handlers after a lost event).
+  async releaseButton(el, force = false) {
+    const held = this.currentButtonId;
+    if (held === null && !force) return;
+    if (el) el.classList.remove("pressed");
+    else this.keys.forEach((k) => k.classList.remove("pressed"));
+    this.currentButtonId = null;
+    if (held !== null && this.controlChar) {
+      await this.sendButton(this.BUTTON_UP, held);
+    }
+  }
+
+  async sendButton(cmd, buttonId) {
+    if (!this.controlChar) return false;
+    const data = new Uint8Array([(cmd >> 8) & 0xff, cmd & 0xff, buttonId & 0xff]);
+    try {
+      await this.controlChar.writeValue(data);
+      return true;
+    } catch (err) {
+      console.error("[BLE] button write failed:", err);
+      return false;
+    }
+  }
+
+  // --- Connection --------------------------------------------------------
+
+  setDeviceStatus(message, type = "info") {
+    const tones = {
+      info: "text-muted",
+      success: "text-ok",
+      warning: "text-warn",
+      error: "text-danger",
+    };
+    this.el.deviceStatus.textContent = message;
+    this.el.deviceStatus.className =
+      "mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-sm " +
+      (tones[type] || tones.info);
   }
 
   async startScan() {
     try {
-      console.log("[BLE] Starting device scan...");
-      this.updateStatus("Scanning for M5Remote devices...", "info");
-      this.scanButton.disabled = true;
-      this.deviceList.innerHTML = "";
-
-      console.log(
-        "[BLE] Requesting Bluetooth device with service:",
-        this.SERVICE_UUID
-      );
+      this.setDeviceStatus("Scanning for M5Remote…", "info");
+      this.el.scanButton.disabled = true;
       const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          {
-            services: [this.SERVICE_UUID],
-          },
-        ],
-        optionalServices: [],
+        filters: [{ services: [this.SERVICE_UUID] }],
       });
-
-      console.log("[BLE] Device selected:", device.name, "ID:", device.id);
-      this.updateStatus("Device selected, connecting...", "info");
+      this.setDeviceStatus("Connecting…", "info");
       await this.connect(device);
-    } catch (error) {
-      console.error("[BLE] Scan error:", error);
-      this.updateStatus("Error: " + error.message, "error");
-      this.scanButton.disabled = false;
+    } catch (err) {
+      console.error("[BLE] scan error:", err);
+      this.setDeviceStatus("Error: " + err.message, "error");
+      this.el.scanButton.disabled = false;
     }
   }
 
   async connect(device) {
     try {
-      console.log("[BLE] Starting connection process to device:", device.name);
       this.device = device;
+      device.addEventListener("gattserverdisconnected", () =>
+        this.onDisconnected(),
+      );
 
-      // Setup disconnect listener
-      this.device.addEventListener("gattserverdisconnected", () => {
-        console.log("[BLE] GATT server disconnected event received");
-        this.onDisconnected();
-      });
-
-      console.log("[BLE] Connecting to GATT server...");
       this.server = await device.gatt.connect();
-      console.log("[BLE] GATT server connected");
-
-      console.log("[BLE] Getting primary service...");
       this.service = await this.server.getPrimaryService(this.SERVICE_UUID);
-      console.log("[BLE] Service obtained:", this.SERVICE_UUID);
-
-      console.log("[BLE] Getting control characteristic...");
       this.controlChar = await this.service.getCharacteristic(
-        this.CONTROL_CHAR_UUID
+        this.CONTROL_CHAR_UUID,
       );
-      console.log("[BLE] Control characteristic obtained");
 
-      console.log("[BLE] Getting feedback characteristic...");
-      this.feedbackChar = await this.service.getCharacteristic(
-        this.FEEDBACK_CHAR_UUID
-      );
-      console.log("[BLE] Feedback characteristic obtained");
-
-      // Try notifications first, fall back to indications
-      console.log("[BLE] Starting notifications/indications for feedback...");
+      // Feedback (1-byte command ack) — optional, best-effort.
       try {
-        // Add event listener before starting notifications
-        this.feedbackChar.addEventListener(
-          "characteristicvaluechanged",
-          (event) => {
-            console.log("[BLE] Received feedback notification/indication");
-            this.handleFeedback(event.target.value);
-          }
+        this.feedbackChar = await this.service.getCharacteristic(
+          this.FEEDBACK_CHAR_UUID,
         );
-
-        // Start notifications
+        this.feedbackChar.addEventListener("characteristicvaluechanged", (e) =>
+          this.handleFeedback(e.target.value),
+        );
         await this.feedbackChar.startNotifications();
-        console.log("[BLE] Notifications started successfully");
-
-        this.updateStatus("Connected to " + device.name, "success");
-        console.log("[BLE] Connection process completed successfully");
-        this.scanButton.disabled = true;
-        this.disconnectButton.disabled = false;
-        this.confirmButton.disabled = false;
-        
-        // Show control keys container when connected
-        this.controlKeysContainer.classList.remove("hidden");
-      } catch (error) {
-        console.error("[BLE] Connection error:", error);
-        this.updateStatus("Connection error: " + error.message, "error");
-        this.disconnect();
+      } catch (err) {
+        console.warn("[BLE] feedback characteristic unavailable:", err);
       }
-    } catch (error) {
-      console.error("[BLE] Connection error:", error);
-      this.updateStatus("Connection error: " + error.message, "error");
+
+      // Astro status broadcast — the live sequence progress.
+      try {
+        this.astroStatusChar = await this.service.getCharacteristic(
+          this.ASTRO_STATUS_CHAR_UUID,
+        );
+        this.astroStatusChar.addEventListener(
+          "characteristicvaluechanged",
+          (e) => this.handleAstroStatus(e.target.value),
+        );
+        await this.astroStatusChar.startNotifications();
+        // Prime with the current value so the panel isn't blank until the
+        // next change.
+        try {
+          const v = await this.astroStatusChar.readValue();
+          this.handleAstroStatus(v);
+        } catch {}
+      } catch (err) {
+        console.warn("[BLE] astro-status characteristic unavailable:", err);
+      }
+
+      this.setDeviceStatus("Connected to " + (device.name || "M5Remote"), "success");
+      this.el.scanButton.disabled = true;
+      this.el.disconnectButton.disabled = false;
+      this.el.controls.classList.remove("hidden");
+      this.startTicker();
+    } catch (err) {
+      console.error("[BLE] connection error:", err);
+      this.setDeviceStatus("Connection error: " + err.message, "error");
       this.disconnect();
     }
   }
 
   disconnect() {
-    console.log("[BLE] Initiating disconnect...");
     if (this.device && this.device.gatt.connected) {
-      console.log("[BLE] Disconnecting GATT server");
       this.device.gatt.disconnect();
     } else {
-      console.log("[BLE] No active connection, cleaning up");
       this.onDisconnected();
     }
   }
 
   onDisconnected() {
-    console.log("[BLE] Processing disconnect");
-    this.updateStatus("Device disconnected", "info");
-
-    // Log connection state
-    if (this.device) {
-      console.log("[BLE] Device state:", {
-        name: this.device.name,
-        id: this.device.id,
-        gattConnected: this.device.gatt.connected,
-      });
-    }
-
-    this.scanButton.disabled = false;
-    this.disconnectButton.disabled = true;
-    this.confirmButton.disabled = true;
-    
-    // Hide control keys container when disconnected
-    this.controlKeysContainer.classList.add("hidden");
-
+    this.setDeviceStatus("Disconnected", "info");
+    this.stopTicker();
+    this.releaseButton(null, true);
+    this.el.scanButton.disabled = false;
+    this.el.disconnectButton.disabled = true;
+    this.el.controls.classList.add("hidden");
     this.device = null;
     this.server = null;
     this.service = null;
     this.controlChar = null;
     this.feedbackChar = null;
-    console.log("[BLE] Cleanup completed");
+    this.astroStatusChar = null;
+    this.lastStatus = null;
+    this.renderStatus(null);
   }
 
-  // Send a command with no parameters
-  async sendCommand16(cmd) {
-    if (!this.controlChar) {
-      console.error("[BLE] Not connected");
-      return false;
-    }
+  // --- Astro status ------------------------------------------------------
 
-    const data = new Uint8Array([
-      (cmd >> 8) & 0xFF,  // High byte
-      cmd & 0xFF          // Low byte
-    ]);
-
+  handleAstroStatus(value) {
     try {
-      await this.controlChar.writeValue(data);
-      return true;
-    } catch (error) {
-      console.error("[BLE] Error sending command:", error);
-      return false;
+      this.lastStatus = decodeAstroStatus(value);
+      this.lastStatusAt = performance.now();
+      this.renderStatus(this.lastStatus);
+    } catch (err) {
+      console.error("[BLE] bad astro status packet:", err);
     }
   }
 
-  // Send a command with one byte parameter
-  async sendCommand24(cmd, param) {
-    if (!this.controlChar) {
-      console.error("[BLE] Not connected");
-      return false;
-    }
+  // Local 1 Hz interpolation between packets; each real packet re-snaps.
+  startTicker() {
+    this.stopTicker();
+    this.tickTimer = setInterval(() => {
+      if (!this.lastStatus) return;
+      const dt = performance.now() - this.lastStatusAt;
+      this.renderStatus(interpolate(this.lastStatus, dt));
+    }, 250);
+  }
 
-    const data = new Uint8Array([
-      (cmd >> 8) & 0xFF,  // High byte
-      cmd & 0xFF,         // Low byte
-      param & 0xFF        // Parameter
-    ]);
-
-    try {
-      await this.controlChar.writeValue(data);
-      return true;
-    } catch (error) {
-      console.error("[BLE] Error sending command:", error);
-      return false;
+  stopTicker() {
+    if (this.tickTimer) {
+      clearInterval(this.tickTimer);
+      this.tickTimer = null;
     }
   }
 
-  // Send a command with payload
-  async sendCommandWithPayload(cmd, payload) {
-    if (!this.controlChar) {
-      console.error("[BLE] Not connected");
-      return false;
-    }
-
-    const data = new Uint8Array(2 + payload.length);
-    data[0] = (cmd >> 8) & 0xFF;  // High byte
-    data[1] = cmd & 0xFF;         // Low byte
-    data.set(payload, 2);         // Payload
-
-    try {
-      await this.controlChar.writeValue(data);
-      return true;
-    } catch (error) {
-      console.error("[BLE] Error sending command:", error);
-      return false;
-    }
-  }
-
-  async sendButtonCommand(buttonId) {
-    if (this.isButtonPressed) {
-      console.warn("[BLE] Button already pressed");
+  renderStatus(s) {
+    const e = this.el;
+    if (!s) {
+      e.stateLabel.textContent = "Idle";
+      e.stateDot.className = "inline-block h-2.5 w-2.5 rounded-full bg-muted";
+      e.frameCount.textContent = "0 / 0";
+      e.seqTimes.textContent = "00:00 · -00:00";
+      e.seqBar.style.width = "0%";
+      e.phaseLabel.textContent = "Phase";
+      e.phaseTime.textContent = "-00:00";
+      e.phaseBar.style.width = "0%";
+      e.phaseBar.classList.remove("bar-active");
+      e.seqBar.classList.remove("bar-active");
+      e.errorBanner.classList.add("hidden");
+      e.cameraDot.className = "inline-block h-2 w-2 rounded-full bg-muted";
+      e.cameraLabel.textContent = "Camera —";
       return;
     }
 
-    console.log("[BLE] Sending button press:", buttonId);
-    const success = await this.sendCommand24(this.BUTTON_DOWN, buttonId);
-    
-    if (success) {
-      this.isButtonPressed = true;
-      this.currentButtonId = buttonId;
+    const running =
+      s.state === ASTRO_STATE.INITIAL_DELAY ||
+      s.state === ASTRO_STATE.EXPOSING ||
+      s.state === ASTRO_STATE.INTERVAL;
+
+    // State label + dot colour.
+    e.stateLabel.textContent = stateLabel(s.state);
+    const dotTone = {
+      [ASTRO_STATE.EXPOSING]: "bg-ok",
+      [ASTRO_STATE.INTERVAL]: "bg-accent",
+      [ASTRO_STATE.INITIAL_DELAY]: "bg-accent",
+      [ASTRO_STATE.PAUSED]: "bg-warn",
+      [ASTRO_STATE.ERROR]: "bg-danger",
+    }[s.state] || "bg-muted";
+    e.stateDot.className =
+      "inline-block h-2.5 w-2.5 rounded-full " +
+      dotTone +
+      (running ? " bar-active" : "");
+
+    // Frames.
+    e.frameCount.textContent = `${s.completedFrames} / ${s.totalFrames}`;
+
+    // Sequence bar: elapsed / (elapsed + remaining).
+    const seqTotal = s.elapsedSec + s.remainingSec;
+    e.seqBar.style.width = (barFraction(s.elapsedSec, seqTotal) * 100).toFixed(1) + "%";
+    e.seqTimes.textContent = `${formatMMSS(s.elapsedSec)} · -${formatMMSS(s.remainingSec)}`;
+
+    // Phase bar: elapsed within the current phase.
+    const phaseElapsed = s.phaseTotalSec - s.phaseRemainingSec;
+    e.phaseLabel.textContent =
+      s.state === ASTRO_STATE.PAUSED ? "Phase (paused)" : stateLabel(s.state);
+    e.phaseTime.textContent = `-${formatMMSS(s.phaseRemainingSec)}`;
+    e.phaseBar.style.width =
+      (barFraction(phaseElapsed, s.phaseTotalSec) * 100).toFixed(1) + "%";
+    e.phaseBar.classList.toggle("bar-active", running);
+
+    // Camera link indicator.
+    e.cameraDot.className =
+      "inline-block h-2 w-2 rounded-full " +
+      (s.isCameraConnected ? "bg-ok" : "bg-danger");
+    e.cameraLabel.textContent = s.isCameraConnected
+      ? "Camera linked"
+      : "Camera off";
+
+    // Error banner.
+    if (s.errorCode) {
+      const msg = {
+        1: "Invalid parameters — sequence cannot start.",
+        2: "Camera not connected.",
+      }[s.errorCode] || `Error code ${s.errorCode}.`;
+      e.errorBanner.textContent = msg;
+      e.errorBanner.classList.remove("hidden");
+    } else {
+      e.errorBanner.classList.add("hidden");
     }
-  }
-
-  async sendButtonRelease() {
-    if (!this.isButtonPressed || this.currentButtonId === null) {
-      return;
-    }
-
-    console.log("[BLE] Sending button release:", this.currentButtonId);
-    const success = await this.sendCommand24(this.BUTTON_UP, this.currentButtonId);
-    
-    if (success) {
-      this.isButtonPressed = false;
-      this.currentButtonId = null;
-    }
-  }
-
-  // Astro control methods
-  async sendAstroStart() {
-    console.log("[BLE] Sending astro start command");
-    return await this.sendCommand16(this.ASTRO_START);
-  }
-
-  async sendAstroPause() {
-    console.log("[BLE] Sending astro pause command");
-    return await this.sendCommand16(this.ASTRO_PAUSE);
-  }
-
-  async sendAstroStop() {
-    console.log("[BLE] Sending astro stop command");
-    return await this.sendCommand16(this.ASTRO_STOP);
-  }
-
-  async sendAstroReset() {
-    console.log("[BLE] Sending astro reset command");
-    return await this.sendCommand16(this.ASTRO_RESET);
-  }
-
-  async sendAstroParams(params) {
-    if (!params || typeof params !== 'object') {
-      console.error("[BLE] Invalid astro params");
-      return false;
-    }
-
-    // Convert params to binary format matching AstroParamPacket
-    const data = new Uint8Array(8); // 4 x uint16_t
-    const view = new DataView(data.buffer);
-
-    // Pack parameters in little-endian format
-    view.setUint16(0, params.initialDelaySec || 0, true);
-    view.setUint16(2, params.exposureSec || 0, true);
-    view.setUint16(4, params.subframeCount || 0, true);
-    view.setUint16(6, params.intervalSec || 0, true);
-
-    console.log("[BLE] Sending astro params:", params);
-    return await this.sendCommandWithPayload(this.ASTRO_SET_PARAMS, data);
   }
 
   handleFeedback(value) {
-    if (value.byteLength < 1) {
-      console.error("[BLE] Invalid feedback length");
-      return;
-    }
-
+    if (value.byteLength < 1) return;
     const status = value.getUint8(0);
-    let statusText;
-    let statusType;
-
-    switch (status) {
-      case 0: // SUCCESS
-        statusText = "Command executed successfully";
-        statusType = "success";
-        break;
-      case 1: // FAILURE
-        statusText = "Command failed";
-        statusType = "error";
-        break;
-      case 2: // BUSY
-        statusText = "Device is busy";
-        statusType = "warning";
-        break;
-      case 3: // INVALID
-        statusText = "Invalid command";
-        statusType = "error";
-        break;
-      case 4: // BUTTON_STATE_ERROR
-        statusText = "Invalid button state transition";
-        statusType = "error";
-        break;
-      case 5: // ASTRO_ERROR
-        statusText = "Astro operation error";
-        statusType = "error";
-        break;
-      default:
-        statusText = "Unknown status code: " + status;
-        statusType = "error";
-    }
-
-    console.log(`[BLE] Feedback received: ${statusText} (${status})`);
-    this.updateStatus(statusText, statusType);
+    const map = {
+      0: ["Command OK", "success"],
+      1: ["Command failed", "error"],
+      2: ["Device busy", "warning"],
+      3: ["Invalid command", "error"],
+      4: ["Invalid button state", "error"],
+      5: ["Astro error", "error"],
+    };
+    const [text, type] = map[status] || [`Status ${status}`, "error"];
+    // Only surface non-success feedback; success is noisy on every keypress.
+    if (status !== 0) this.setDeviceStatus(text, type);
   }
 }
 
-// Initialize the client when the page loads
 window.addEventListener("load", () => {
-  console.log("[BLE] Checking Web Bluetooth support...");
-  if (!navigator.bluetooth) {
-    console.warn("[BLE] Web Bluetooth not supported");
-    document.getElementById("status").textContent =
-      "Web Bluetooth is not supported in this browser. Please use Chrome or Edge.";
-    document.getElementById("status").className = "error";
-    document.getElementById("scanButton").disabled = true;
-    return;
+  // Register the service worker for offline use (ADR 0006). Best-effort:
+  // needs a secure context, absent in some Web-BLE browsers — never blocks.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("sw.js")
+      .catch((err) => console.warn("[PWA] service worker registration failed:", err));
   }
 
-  console.log("[BLE] Web Bluetooth supported, initializing client");
+  if (!navigator.bluetooth) {
+    document.getElementById("unsupported").classList.remove("hidden");
+    document.getElementById("scanButton").disabled = true;
+    document.getElementById("status").textContent =
+      "Web Bluetooth unavailable in this browser.";
+    return;
+  }
   new M5RemoteClient();
 });

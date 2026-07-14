@@ -28,6 +28,8 @@ public:
         packet.currentFrameStartTime = status.currentFrameStartTime;
         packet.elapsedSec = status.elapsedSec;
         packet.remainingSec = status.remainingSec;
+        packet.phaseRemainingSec = status.phaseRemainingSec;
+        packet.phaseTotalSec = status.phaseTotalSec;
         packet.isCameraConnected = status.isCameraConnected;
         packet.errorCode = status.errorCode;
 

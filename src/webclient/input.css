@@ -1,0 +1,23 @@
+/* source(none) disables Tailwind's automatic content detection (which varies
+   with cwd and would scan the generated tailwind.css into itself). We then list
+   sources explicitly, so the build is deterministic from any directory. */
+@import "tailwindcss" source(none);
+
+@source "./index.html";
+@source "./ble.js";
+@source "./astro-status.js";
+
+/* AstroRemote web client is dark-only (ADR 0006). These tokens drive the
+   status screen + d-pad; utility classes in index.html reference them. */
+@theme {
+  --color-bg: #0b0f14;
+  --color-surface: #151b23;
+  --color-surface-2: #1e2732;
+  --color-border: #2a3441;
+  --color-text: #e6edf3;
+  --color-muted: #8b98a5;
+  --color-accent: #4c9aff;
+  --color-ok: #3fb950;
+  --color-warn: #d29922;
+  --color-danger: #f85149;
+}

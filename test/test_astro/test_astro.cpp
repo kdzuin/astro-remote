@@ -180,16 +180,19 @@ void test_phase_remaining_counts_down_per_phase() {
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INITIAL_DELAY),
                       static_cast<int>(astro().getStatus().state));
     TEST_ASSERT_EQUAL_UINT32(3, astro().getStatus().phaseRemainingSec);  // 5 - 2
+    TEST_ASSERT_EQUAL_UINT32(5, astro().getStatus().phaseTotalSec);      // delay length
 
     advanceSeconds(4);  // t=6: delay done at t=5, 1s into the 30s exposure
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::EXPOSING),
                       static_cast<int>(astro().getStatus().state));
     TEST_ASSERT_EQUAL_UINT32(29, astro().getStatus().phaseRemainingSec);  // 30 - 1
+    TEST_ASSERT_EQUAL_UINT32(30, astro().getStatus().phaseTotalSec);      // exposure length
 
     advanceSeconds(30);  // t=36: exposure ended at t=35, 1s into the 3s interval
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INTERVAL),
                       static_cast<int>(astro().getStatus().state));
     TEST_ASSERT_EQUAL_UINT32(2, astro().getStatus().phaseRemainingSec);  // 3 - 1
+    TEST_ASSERT_EQUAL_UINT32(3, astro().getStatus().phaseTotalSec);      // interval length
 }
 
 // Pause while exposing is DEFERRED: the current frame must finish its full

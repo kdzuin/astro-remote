@@ -1,95 +1,254 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>M5 Remote Control</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0f14" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>AstroRemote</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <link rel="stylesheet" href="tailwind.css" />
     <style>
-      .pressed {
-        transform: scale(0.95);
-        opacity: 0.8;
-        transition: all 0.1s ease-in-out;
+      /* Press feedback shared by pointer + keyboard paths. */
+      .key {
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
-
+      .key.pressed {
+        transform: scale(0.94);
+        filter: brightness(1.35);
+      }
       button {
-        transition: transform 0.1s ease-in-out, opacity 0.1s ease-in-out;
+        transition:
+          transform 0.08s ease,
+          filter 0.08s ease,
+          opacity 0.1s ease;
       }
-
-      button:active {
-        transform: scale(0.95);
-        opacity: 0.8;
+      /* Animated stripe for indeterminate/active phase bars. */
+      @keyframes barPulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+      .bar-active {
+        animation: barPulse 1.6s ease-in-out infinite;
       }
     </style>
   </head>
-  <body class="bg-gray-50 font-sans max-w-3xl mx-auto p-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-8">M5 Remote Control</h1>
+  <body
+    class="min-h-screen bg-bg text-text font-sans antialiased"
+    style="padding: max(1rem, env(safe-area-inset-top)) 1rem
+      max(1rem, env(safe-area-inset-bottom))"
+  >
+    <div class="mx-auto w-full max-w-5xl">
+      <!-- Header -->
+      <header class="mb-4 flex items-center justify-between gap-3">
+        <h1 class="text-xl font-bold tracking-tight sm:text-2xl">
+          Astro<span class="text-accent">Remote</span>
+        </h1>
+        <div class="flex items-center gap-2">
+          <button
+            id="scanButton"
+            class="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg shadow-sm hover:brightness-110 disabled:opacity-40"
+          >
+            Connect
+          </button>
+          <button
+            id="disconnectButton"
+            class="rounded-lg bg-surface-2 px-3 py-2 text-sm font-semibold text-text shadow-sm hover:brightness-110 disabled:opacity-40"
+            disabled
+          >
+            Disconnect
+          </button>
+        </div>
+      </header>
 
-    <div class="space-x-4 mb-8">
-      <button
-        id="scanButton"
-        class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors"
+      <!-- Connection status line -->
+      <div
+        id="status"
+        class="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted"
+        role="status"
+        aria-live="polite"
       >
-        Scan for Devices
-      </button>
-      <button
-        id="disconnectButton"
-        class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled
+        Ready to connect.
+      </div>
+
+      <!-- Unsupported-browser notice (shown when Web Bluetooth is absent) -->
+      <div
+        id="unsupported"
+        class="mb-4 hidden rounded-lg border border-warn/40 bg-warn/10 px-3 py-3 text-sm text-warn"
       >
-        Disconnect
-      </button>
+        This browser has no Web Bluetooth support. On a computer use
+        <strong>Chrome</strong> or <strong>Edge</strong>; on iPhone/iPad use a
+        Web-BLE browser such as <strong>Bluefy</strong>. Safari cannot connect.
+      </div>
+
+      <!-- Two-column on tablet/desktop; stacked on mobile. -->
+      <main class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <!-- Sequence status panel -->
+        <section
+          id="statusPanel"
+          class="rounded-2xl border border-border bg-surface p-4 sm:p-5"
+          aria-live="polite"
+        >
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span
+                id="stateDot"
+                class="inline-block h-2.5 w-2.5 rounded-full bg-muted"
+              ></span>
+              <span id="stateLabel" class="text-lg font-semibold">Idle</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-muted">
+              <span
+                id="cameraDot"
+                class="inline-block h-2 w-2 rounded-full bg-muted"
+                title="Camera link"
+              ></span>
+              <span id="cameraLabel">Camera —</span>
+            </div>
+          </div>
+
+          <!-- Error banner -->
+          <div
+            id="errorBanner"
+            class="mb-4 hidden rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-medium text-danger"
+          ></div>
+
+          <!-- Frame counter -->
+          <div class="mb-1 flex items-baseline justify-between">
+            <span class="text-sm text-muted">Frame</span>
+            <span id="frameCount" class="text-sm font-semibold tabular-nums"
+              >0 / 0</span
+            >
+          </div>
+
+          <!-- Sequence progress bar -->
+          <div class="mb-1 mt-3 flex items-baseline justify-between">
+            <span class="text-sm text-muted">Sequence</span>
+            <span
+              id="seqTimes"
+              class="text-xs tabular-nums text-muted"
+              >00:00 · -00:00</span
+            >
+          </div>
+          <div class="h-3 w-full overflow-hidden rounded-full bg-surface-2">
+            <div
+              id="seqBar"
+              class="h-full rounded-full bg-accent transition-[width] duration-500 ease-linear"
+              style="width: 0%"
+            ></div>
+          </div>
+
+          <!-- Phase progress bar -->
+          <div class="mb-1 mt-4 flex items-baseline justify-between">
+            <span id="phaseLabel" class="text-sm text-muted">Phase</span>
+            <span
+              id="phaseTime"
+              class="text-xs tabular-nums text-muted"
+              >-00:00</span
+            >
+          </div>
+          <div class="h-3 w-full overflow-hidden rounded-full bg-surface-2">
+            <div
+              id="phaseBar"
+              class="h-full rounded-full bg-ok transition-[width] duration-500 ease-linear"
+              style="width: 0%"
+            ></div>
+          </div>
+
+          <p class="mt-4 text-xs text-muted">
+            Live status is broadcast by the M5. Start / pause / stop from the
+            device or the d-pad.
+          </p>
+        </section>
+
+        <!-- Remote d-pad -->
+        <section
+          id="controlKeysContainer"
+          class="hidden rounded-2xl border border-border bg-surface p-4 sm:p-5"
+        >
+          <div
+            class="mx-auto grid aspect-square w-full max-w-xs grid-cols-3 grid-rows-3 gap-2 sm:gap-3"
+          >
+            <!-- row 1 -->
+            <button
+              id="backButton"
+              data-btn="6"
+              class="key flex items-center justify-center rounded-xl bg-surface-2 text-2xl active:brightness-125"
+              aria-label="Back"
+            >
+              ⎋
+            </button>
+            <button
+              id="upButton"
+              data-btn="1"
+              class="key flex items-center justify-center rounded-xl bg-surface-2 text-3xl active:brightness-125"
+              aria-label="Up"
+            >
+              ↑
+            </button>
+            <div></div>
+            <!-- row 2 -->
+            <button
+              id="leftButton"
+              data-btn="3"
+              class="key flex items-center justify-center rounded-xl bg-surface-2 text-3xl active:brightness-125"
+              aria-label="Left"
+            >
+              ←
+            </button>
+            <button
+              id="confirmButton"
+              data-btn="5"
+              class="key flex items-center justify-center rounded-full bg-accent text-xl font-bold text-bg active:brightness-125"
+              aria-label="Confirm"
+            >
+              OK
+            </button>
+            <button
+              id="rightButton"
+              data-btn="4"
+              class="key flex items-center justify-center rounded-xl bg-surface-2 text-3xl active:brightness-125"
+              aria-label="Right"
+            >
+              →
+            </button>
+            <!-- row 3 -->
+            <div></div>
+            <button
+              id="downButton"
+              data-btn="2"
+              class="key flex items-center justify-center rounded-xl bg-surface-2 text-3xl active:brightness-125"
+              aria-label="Down"
+            >
+              ↓
+            </button>
+            <div></div>
+          </div>
+          <p class="mt-4 text-center text-xs text-muted">
+            Arrow keys, Enter and Esc work too.
+          </p>
+        </section>
+      </main>
     </div>
 
-    <div id="status" class="mb-8 p-4 rounded-lg bg-blue-50 text-blue-700">
-      Ready to scan for devices.
-    </div>
-
-    <div id="deviceList" class="mb-8"></div>
-
-    <!-- Navigation controls -->
-    <div
-      class="aspect-square relative w-full max-w-xl mx-auto p-8 bg-gray-100 rounded-xl hidden"
-      id="controlKeysContainer"
-    >
-      <button
-        id="upButton"
-        class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-200 rounded-lg px-6 flex items-center justify-center text-lg md:text-2xl aspect-square cursor-pointer"
-      >
-        ⬆️
-      </button>
-      <button
-        id="downButton"
-        class="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-200 rounded-lg px-6 flex items-center justify-center text-lg md:text-2xl aspect-square cursor-pointer"
-      >
-        ⬇️
-      </button>
-      <button
-        id="leftButton"
-        class="absolute top-1/2 left-8 transform -translate-y-1/2 bg-gray-200 rounded-lg px-6 flex items-center justify-center text-lg md:text-2xl aspect-square cursor-pointer"
-      >
-        ⬅️
-      </button>
-      <button
-        id="rightButton"
-        class="absolute top-1/2 right-8 transform -translate-y-1/2 bg-gray-200 rounded-lg px-6 flex items-center justify-center text-lg md:text-2xl aspect-square cursor-pointer"
-      >
-        ➡️
-      </button>
-      <button
-        id="confirmButton"
-        class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-500 rounded-full px-6 flex items-center justify-center transition-colors text-2xl aspect-square cursor-pointer"
-      >
-        🆗
-      </button>
-      <button
-        id="backButton"
-        class="absolute top-8 left-8 bg-gray-200 rounded-lg px-6 flex items-center justify-center text-lg md:text-2xl aspect-square cursor-pointer"
-      >
-        🔙
-      </button>
-    </div>
-
-    <script src="ble.js"></script>
+    <script type="module" src="ble.js"></script>
   </body>
 </html>

@@ -212,6 +212,7 @@ void AstroProcess::updateTimings() {
     if (status_.state == State::IDLE || status_.state == State::STOPPED) {
         status_.remainingSec = 0;
         status_.phaseRemainingSec = 0;
+        status_.phaseTotalSec = 0;
         return;
     }
 
@@ -229,17 +230,20 @@ void AstroProcess::updateTimings() {
     uint32_t currentTime = status_.sequenceStartTime + status_.elapsedSec;
     switch (status_.state) {
         case State::INITIAL_DELAY:
+            status_.phaseTotalSec = params_.initialDelaySec;
             status_.phaseRemainingSec = status_.elapsedSec < params_.initialDelaySec
                                             ? params_.initialDelaySec - status_.elapsedSec
                                             : 0;
             break;
         case State::EXPOSING: {
             uint32_t e = currentTime - status_.currentFrameStartTime;
+            status_.phaseTotalSec = params_.exposureSec;
             status_.phaseRemainingSec = e < params_.exposureSec ? params_.exposureSec - e : 0;
             break;
         }
         case State::INTERVAL: {
             uint32_t e = currentTime - status_.currentFrameStartTime;
+            status_.phaseTotalSec = params_.intervalSec;
             status_.phaseRemainingSec = e < params_.intervalSec ? params_.intervalSec - e : 0;
             break;
         }
