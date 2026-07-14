@@ -68,6 +68,7 @@ public:
         uint32_t elapsedSec = 0;
         uint32_t remainingSec = 0;
         uint32_t phaseRemainingSec = 0;  // Time left in the current phase (delay/exposure/interval)
+        uint32_t phaseTotalSec = 0;      // Full length of the current phase; 0 when idle/stopped
         bool isCameraConnected = false;
         uint8_t errorCode = 0;
     };
@@ -100,9 +101,10 @@ public:
     const Parameters& getParameters() const { return params_; }
     bool setParameter(const std::string& name, uint16_t value);
 
-    // Live camera-connection state, fed from the app loop each tick. Kept as a
-    // plain setter so AstroProcess has no dependency on the BLE transport.
-    void setCameraConnected(bool connected) { status_.isCameraConnected = connected; }
+    // Live camera-connection state, fed from the app loop each tick. Notifies
+    // status observers on a change so the remote link sees camera connect/
+    // disconnect even while the sequence is idle (no periodic ticks then).
+    void setCameraConnected(bool connected);
 
     // Status access
     const Status& getStatus() const { return status_; }

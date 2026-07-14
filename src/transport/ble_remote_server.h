@@ -16,6 +16,7 @@
 #define FEEDBACK_CHAR_UUID "180F1002-1234-5678-90AB-CDEF12345678"
 #define ASTRO_STATUS_CHAR_UUID "180F1003-1234-5678-90AB-CDEF12345678"
 #define ASTRO_CONTROL_CHAR_UUID "180F1004-1234-5678-90AB-CDEF12345678"
+#define ASTRO_PARAMS_CHAR_UUID "180F1005-1234-5678-90AB-CDEF12345678"
 
 // Command format (16-bit base command + optional parameters)
 namespace RemoteCmd {
@@ -71,6 +72,8 @@ struct __attribute__((packed)) AstroStatusPacket {
     uint32_t currentFrameStartTime;
     uint32_t elapsedSec;
     uint32_t remainingSec;
+    uint32_t phaseRemainingSec;  // Time left in the current phase (delay/exposure/interval)
+    uint32_t phaseTotalSec;      // Full length of the current phase; 0 when idle/stopped
     uint8_t isCameraConnected;
     uint8_t errorCode;
 };
@@ -85,6 +88,7 @@ public:
     static void setCommandCallback(CommandCallback callback);
     static void sendFeedback(CommandStatus status);
     static void sendAstroStatus(const AstroStatusPacket& status);
+    static void sendAstroParams(const AstroParamPacket& params);
     static bool isConnected();
     static bool sendCommand16(uint16_t cmd);
     static bool sendCommand24(uint16_t cmd, uint8_t param);
@@ -98,6 +102,7 @@ private:
     static BLECharacteristic* pFeedbackChar;
     static BLECharacteristic* pAstroStatusChar;
     static BLECharacteristic* pAstroControlChar;
+    static BLECharacteristic* pAstroParamsChar;
     static CommandCallback commandCallback;
     static bool deviceConnected;
     static std::map<ButtonId, bool> buttonStates;

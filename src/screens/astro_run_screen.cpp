@@ -87,7 +87,7 @@ void AstroRunScreen::update() {
 
     // Evaluate state AFTER buttons (a Stop just above sets STOPPED now).
     const auto& status = astro.getStatus();
-    const int battery = SettingsProcess::getDeviceState().batteryLevel;
+    const int battery = SettingsProcess::getBatteryLevel();
     const bool emergency = SettingsProcess::isBatteryEmergency(battery);
 
     // Emergency battery: request a pause (deferred while exposing — the current
@@ -278,7 +278,7 @@ void AstroRunScreen::drawBottom() {
     // status-coloured cell hugging the value on the right (<20 red, <50 amber,
     // else green). A gap separates it from the time rows above and the bar below.
     y += GAP;
-    const int battLevel = SettingsProcess::getDeviceState().batteryLevel;
+    const int battLevel = SettingsProcess::getBatteryLevel();
     const uint32_t battColor = SettingsProcess::getBatteryStatusColor(battLevel);
     botCanvas_.setTextDatum(middle_left);
     botCanvas_.setTextColor(labelColor);

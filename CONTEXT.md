@@ -43,6 +43,15 @@ The wait between the end of one frame and the start of the next. Distinct from
 the initial delay before the first frame.
 _Avoid_: gap, pause, delay (reserve "delay" for the initial pre-sequence wait).
 
+**Phase**:
+The current segment of a running **Sequence**'s timeline — one of *initial
+delay*, *exposing* (shutter open for the current **Frame**), or *interval* (the
+wait before the next Frame). These are the state machine's non-idle states. The
+remote's *phase* progress tracks time within the current segment; the *sequence*
+progress tracks the whole run.
+_Avoid_: step, stage, subexposure (the exposing phase **is** the Frame's open
+period, not a distinct thing — and "sub" is reserved for the Frame).
+
 **Shutter status**:
 The camera's own report of whether the shutter is open (active) or closed
 (ready), delivered as a BLE status notification. The source of truth for
