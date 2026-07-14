@@ -86,6 +86,44 @@ To ensure proper code navigation and eliminate false errors:
    - `forcedInclude`: Handles global debug.h inclusion
    - PlatformIO will handle all ESP32/Arduino includes automatically
 
+### Zed Configuration
+
+Zed uses `clangd` for C++, which reads a `compile_commands.json` instead of a
+hand-written include path. This captures the exact build flags (including the
+force-included `debug.h`), so navigation and diagnostics match the real build.
+
+1. Generate the compilation database (re-run after changing `platformio.ini`
+   or adding files):
+
+   ```sh
+   pio run -e m5stick-c -t compiledb
+   ```
+
+   This writes `compile_commands.json` to the project root. It contains
+   machine-specific absolute paths and is git-ignored.
+
+2. The repo ships `.zed/settings.json` pointing `clangd` at that database:
+
+   ```json
+   {
+     "lsp": {
+       "clangd": {
+         "arguments": [
+           "--background-index",
+           "--compile-commands-dir=.",
+           "--query-driver=**/xtensa-esp32*",
+           "--header-insertion=never"
+         ]
+       }
+     }
+   }
+   ```
+
+   - `--compile-commands-dir=.`: locate `compile_commands.json` at the root
+   - `--query-driver`: let clangd query the Xtensa cross-compiler so ESP32
+     system headers resolve
+   - `--header-insertion=never`: stop clangd auto-adding includes
+
 ## Usage
 
 - Button A (M5 button): Confirm current action
