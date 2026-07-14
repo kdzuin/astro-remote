@@ -51,6 +51,7 @@ private:
     bool lastConnected_ = false;
     int lastBattery_ = -1;
     bool lastSummary_ = false;
+    bool lastFlashOn_ = false;  // critical-battery (<=15%) red flash currently shown
 
     SelectableList<AstroRunItem> actions_;  // title + Pause/Resume, Stop
     M5Canvas topCanvas_;
