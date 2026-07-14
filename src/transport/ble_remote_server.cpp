@@ -10,6 +10,7 @@ BLECharacteristic* BLERemoteServer::pControlChar = nullptr;
 BLECharacteristic* BLERemoteServer::pFeedbackChar = nullptr;
 BLECharacteristic* BLERemoteServer::pAstroStatusChar = nullptr;
 BLECharacteristic* BLERemoteServer::pAstroControlChar = nullptr;
+BLECharacteristic* BLERemoteServer::pAstroParamsChar = nullptr;
 BLERemoteServer::CommandCallback BLERemoteServer::commandCallback = nullptr;
 bool BLERemoteServer::deviceConnected = false;
 std::map<ButtonId, bool> BLERemoteServer::buttonStates;
@@ -36,13 +37,23 @@ void BLERemoteServer::init(const char* deviceName) {
         pService->createCharacteristic(FEEDBACK_CHAR_UUID, BLECharacteristic::PROPERTY_NOTIFY);
     pFeedbackChar->addDescriptor(new BLE2902());
 
-    pAstroStatusChar =
-        pService->createCharacteristic(ASTRO_STATUS_CHAR_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+    // READ so a client can poll current status (e.g. before a sequence starts,
+    // when notifications are otherwise idle); NOTIFY for live updates.
+    pAstroStatusChar = pService->createCharacteristic(
+        ASTRO_STATUS_CHAR_UUID,
+        BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
     pAstroStatusChar->addDescriptor(new BLE2902());
 
     pAstroControlChar =
         pService->createCharacteristic(ASTRO_CONTROL_CHAR_UUID, BLECharacteristic::PROPERTY_WRITE);
     pAstroControlChar->setCallbacks(&controlCharCallbacks);
+
+    // Sequence parameters (delay/exposure/frames/interval) — READ to fetch the
+    // configured plan before start, NOTIFY on change.
+    pAstroParamsChar = pService->createCharacteristic(
+        ASTRO_PARAMS_CHAR_UUID,
+        BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+    pAstroParamsChar->addDescriptor(new BLE2902());
 
     // Start service and advertising
     pService->start();
@@ -71,12 +82,27 @@ void BLERemoteServer::sendFeedback(CommandStatus status) {
 }
 
 void BLERemoteServer::sendAstroStatus(const AstroStatusPacket& status) {
-    if (!pAstroStatusChar || !deviceConnected) {
+    if (!pAstroStatusChar) {
         return;
     }
 
+    // Always refresh the value so a READ (poll) returns current data even when
+    // no client is connected; only notify when one is.
     pAstroStatusChar->setValue((uint8_t*)&status, sizeof(status));
-    pAstroStatusChar->notify();
+    if (deviceConnected) {
+        pAstroStatusChar->notify();
+    }
+}
+
+void BLERemoteServer::sendAstroParams(const AstroParamPacket& params) {
+    if (!pAstroParamsChar) {
+        return;
+    }
+
+    pAstroParamsChar->setValue((uint8_t*)&params, sizeof(params));
+    if (deviceConnected) {
+        pAstroParamsChar->notify();
+    }
 }
 
 bool BLERemoteServer::isConnected() {

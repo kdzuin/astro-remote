@@ -130,6 +130,53 @@
             class="mb-4 hidden rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-medium text-danger"
           ></div>
 
+          <!-- Configured plan (from the device; shown even before start) -->
+          <dl
+            id="planGrid"
+            class="mb-4 grid grid-cols-3 gap-x-3 gap-y-3 rounded-xl bg-surface-2 p-3 text-center"
+          >
+            <div>
+              <dt class="text-[0.7rem] uppercase tracking-wide text-muted">
+                Exposure
+              </dt>
+              <dd id="planExposure" class="text-sm font-semibold tabular-nums">
+                —
+              </dd>
+            </div>
+            <div>
+              <dt class="text-[0.7rem] uppercase tracking-wide text-muted">
+                Interval
+              </dt>
+              <dd id="planInterval" class="text-sm font-semibold tabular-nums">
+                —
+              </dd>
+            </div>
+            <div>
+              <dt class="text-[0.7rem] uppercase tracking-wide text-muted">
+                Delay
+              </dt>
+              <dd id="planDelay" class="text-sm font-semibold tabular-nums">
+                —
+              </dd>
+            </div>
+            <div>
+              <dt class="text-[0.7rem] uppercase tracking-wide text-muted">
+                Frames
+              </dt>
+              <dd id="planFrames" class="text-sm font-semibold tabular-nums">
+                —
+              </dd>
+            </div>
+            <div class="col-span-2">
+              <dt class="text-[0.7rem] uppercase tracking-wide text-muted">
+                Total time
+              </dt>
+              <dd id="planTotal" class="text-sm font-semibold tabular-nums">
+                —
+              </dd>
+            </div>
+          </dl>
+
           <!-- Frame counter -->
           <div class="mb-1 flex items-baseline justify-between">
             <span class="text-sm text-muted">Frame</span>
@@ -172,10 +219,6 @@
             ></div>
           </div>
 
-          <p class="mt-4 text-xs text-muted">
-            Live status is broadcast by the M5. Start / pause / stop from the
-            device or the d-pad.
-          </p>
         </section>
 
         <!-- Remote d-pad -->

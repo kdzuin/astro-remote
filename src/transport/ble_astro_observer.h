@@ -13,6 +13,14 @@ public:
     void onAstroParametersChanged(const AstroProcess::Parameters& params) override {
         LOG_DEBUG("[BLE] Parameters changed: exp=%ds, frames=%d, interval=%ds", params.exposureSec,
                   params.subframeCount, params.intervalSec);
+
+        AstroParamPacket packet = {};
+        packet.initialDelaySec = params.initialDelaySec;
+        packet.exposureSec = params.exposureSec;
+        packet.subframeCount = params.subframeCount;
+        packet.intervalSec = params.intervalSec;
+
+        BLERemoteServer::sendAstroParams(packet);
     }
 
     void onAstroStatusChanged(const AstroProcess::Status& status) override {

@@ -1,10 +1,14 @@
 import {
   ASTRO_STATE,
   decodeAstroStatus,
+  decodeAstroParams,
   interpolate,
   formatMMSS,
+  formatDuration,
   barFraction,
   stateLabel,
+  isFinished,
+  sequenceTotalSec,
 } from "./astro-status.js";
 
 class M5RemoteClient {
@@ -14,6 +18,7 @@ class M5RemoteClient {
     this.CONTROL_CHAR_UUID = "180f1001-1234-5678-90ab-cdef12345678";
     this.FEEDBACK_CHAR_UUID = "180f1002-1234-5678-90ab-cdef12345678";
     this.ASTRO_STATUS_CHAR_UUID = "180f1003-1234-5678-90ab-cdef12345678";
+    this.ASTRO_PARAMS_CHAR_UUID = "180f1005-1234-5678-90ab-cdef12345678";
 
     // Button command words (0x01XX) + release, matching RemoteCmd.
     this.BUTTON_DOWN = 0x0100;
@@ -25,6 +30,7 @@ class M5RemoteClient {
     this.controlChar = null;
     this.feedbackChar = null;
     this.astroStatusChar = null;
+    this.astroParamsChar = null;
 
     this.currentButtonId = null; // Which button is held (null = none).
 
@@ -32,7 +38,9 @@ class M5RemoteClient {
     // local interpolation between the device's ~1 Hz notifications.
     this.lastStatus = null;
     this.lastStatusAt = 0;
+    this.lastParams = null; // configured sequence plan (delay/exposure/…)
     this.tickTimer = null;
+    this.pollTimer = null; // polls status while idle (no notifications then)
 
     this.el = {
       deviceStatus: document.getElementById("status"),
@@ -46,6 +54,11 @@ class M5RemoteClient {
       cameraDot: document.getElementById("cameraDot"),
       cameraLabel: document.getElementById("cameraLabel"),
       errorBanner: document.getElementById("errorBanner"),
+      planExposure: document.getElementById("planExposure"),
+      planInterval: document.getElementById("planInterval"),
+      planDelay: document.getElementById("planDelay"),
+      planFrames: document.getElementById("planFrames"),
+      planTotal: document.getElementById("planTotal"),
       frameCount: document.getElementById("frameCount"),
       seqTimes: document.getElementById("seqTimes"),
       seqBar: document.getElementById("seqBar"),
@@ -248,9 +261,29 @@ class M5RemoteClient {
         console.warn("[BLE] astro-status characteristic unavailable:", err);
       }
 
+      // Sequence plan (delay/exposure/frames/interval) — for the pre-start
+      // display. READ to prime, NOTIFY on change.
+      try {
+        this.astroParamsChar = await this.service.getCharacteristic(
+          this.ASTRO_PARAMS_CHAR_UUID,
+        );
+        this.astroParamsChar.addEventListener(
+          "characteristicvaluechanged",
+          (e) => this.handleAstroParams(e.target.value),
+        );
+        await this.astroParamsChar.startNotifications();
+        try {
+          const v = await this.astroParamsChar.readValue();
+          this.handleAstroParams(v);
+        } catch {}
+      } catch (err) {
+        console.warn("[BLE] astro-params characteristic unavailable:", err);
+      }
+
       this.setDeviceStatus("Connected to " + (device.name || "M5Remote"), "success");
       this.setConnectedUI(true);
       this.startTicker();
+      this.startPolling();
     } catch (err) {
       console.error("[BLE] connection error:", err);
       this.setDeviceStatus("Connection error: " + err.message, "error");
@@ -269,6 +302,7 @@ class M5RemoteClient {
   onDisconnected() {
     this.setDeviceStatus("Disconnected", "info");
     this.stopTicker();
+    this.stopPolling();
     this.releaseButton(null, true);
     this.setConnectedUI(false);
     this.device = null;
@@ -277,7 +311,10 @@ class M5RemoteClient {
     this.controlChar = null;
     this.feedbackChar = null;
     this.astroStatusChar = null;
+    this.astroParamsChar = null;
     this.lastStatus = null;
+    this.lastParams = null;
+    this.renderPlan(null);
     this.renderStatus(null);
   }
 
@@ -290,6 +327,15 @@ class M5RemoteClient {
       this.renderStatus(this.lastStatus);
     } catch (err) {
       console.error("[BLE] bad astro status packet:", err);
+    }
+  }
+
+  handleAstroParams(value) {
+    try {
+      this.lastParams = decodeAstroParams(value);
+      this.renderPlan(this.lastParams);
+    } catch (err) {
+      console.error("[BLE] bad astro params packet:", err);
     }
   }
 
@@ -308,6 +354,57 @@ class M5RemoteClient {
       clearInterval(this.tickTimer);
       this.tickTimer = null;
     }
+  }
+
+  // Poll status while idle: the device only notifies on change or ~1 Hz while
+  // running, so before a sequence starts (and for live camera state) we read
+  // the current value periodically. Reads re-enter handleAstroStatus.
+  startPolling() {
+    this.stopPolling();
+    this.pollTimer = setInterval(async () => {
+      if (!this.astroStatusChar) return;
+      // While running, notifications already drive updates — skip the poll.
+      if (this.lastStatus && this.isRunningState(this.lastStatus.state)) return;
+      try {
+        this.handleAstroStatus(await this.astroStatusChar.readValue());
+      } catch {}
+    }, 1500);
+  }
+
+  stopPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  isRunningState(state) {
+    return (
+      state === ASTRO_STATE.INITIAL_DELAY ||
+      state === ASTRO_STATE.EXPOSING ||
+      state === ASTRO_STATE.INTERVAL
+    );
+  }
+
+  renderPlan(p) {
+    const e = this.el;
+    if (!p) {
+      for (const el of [
+        e.planExposure,
+        e.planInterval,
+        e.planDelay,
+        e.planFrames,
+        e.planTotal,
+      ]) {
+        el.textContent = "—";
+      }
+      return;
+    }
+    e.planExposure.textContent = formatDuration(p.exposureSec);
+    e.planInterval.textContent = formatDuration(p.intervalSec);
+    e.planDelay.textContent = formatDuration(p.initialDelaySec);
+    e.planFrames.textContent = String(p.subframeCount);
+    e.planTotal.textContent = formatDuration(sequenceTotalSec(p));
   }
 
   renderStatus(s) {
@@ -329,20 +426,21 @@ class M5RemoteClient {
       return;
     }
 
-    const running =
-      s.state === ASTRO_STATE.INITIAL_DELAY ||
-      s.state === ASTRO_STATE.EXPOSING ||
-      s.state === ASTRO_STATE.INTERVAL;
+    const running = this.isRunningState(s.state);
+    const finished = isFinished(s);
 
-    // State label + dot colour.
-    e.stateLabel.textContent = stateLabel(s.state);
-    const dotTone = {
-      [ASTRO_STATE.EXPOSING]: "bg-ok",
-      [ASTRO_STATE.INTERVAL]: "bg-accent",
-      [ASTRO_STATE.INITIAL_DELAY]: "bg-accent",
-      [ASTRO_STATE.PAUSED]: "bg-warn",
-      [ASTRO_STATE.ERROR]: "bg-danger",
-    }[s.state] || "bg-muted";
+    // State label + dot colour. "Finished" (all frames done) is distinguished
+    // from a user "Stopped" — the firmware reports STOPPED for both.
+    e.stateLabel.textContent = finished ? "Finished" : stateLabel(s.state);
+    let dotTone =
+      {
+        [ASTRO_STATE.EXPOSING]: "bg-ok",
+        [ASTRO_STATE.INTERVAL]: "bg-accent",
+        [ASTRO_STATE.INITIAL_DELAY]: "bg-accent",
+        [ASTRO_STATE.PAUSED]: "bg-warn",
+        [ASTRO_STATE.ERROR]: "bg-danger",
+      }[s.state] || "bg-muted";
+    if (finished) dotTone = "bg-ok";
     e.stateDot.className =
       "inline-block h-2.5 w-2.5 rounded-full " +
       dotTone +
@@ -351,18 +449,22 @@ class M5RemoteClient {
     // Frames.
     e.frameCount.textContent = `${s.completedFrames} / ${s.totalFrames}`;
 
-    // Sequence bar: elapsed / (elapsed + remaining).
+    // Sequence bar: elapsed / (elapsed + remaining). Finished pins it full.
     const seqTotal = s.elapsedSec + s.remainingSec;
-    e.seqBar.style.width = (barFraction(s.elapsedSec, seqTotal) * 100).toFixed(1) + "%";
+    const seqFrac = finished ? 1 : barFraction(s.elapsedSec, seqTotal);
+    e.seqBar.style.width = (seqFrac * 100).toFixed(1) + "%";
     e.seqTimes.textContent = `${formatMMSS(s.elapsedSec)} / ${formatMMSS(seqTotal)}`;
 
     // Phase bar: elapsed within the current phase.
     const phaseElapsed = s.phaseTotalSec - s.phaseRemainingSec;
-    e.phaseLabel.textContent =
-      s.state === ASTRO_STATE.PAUSED ? "Phase (paused)" : stateLabel(s.state);
+    e.phaseLabel.textContent = finished
+      ? "Complete"
+      : s.state === ASTRO_STATE.PAUSED
+        ? "Phase (paused)"
+        : stateLabel(s.state);
     e.phaseTime.textContent = formatMMSS(s.phaseRemainingSec);
     e.phaseBar.style.width =
-      (barFraction(phaseElapsed, s.phaseTotalSec) * 100).toFixed(1) + "%";
+      (finished ? 100 : barFraction(phaseElapsed, s.phaseTotalSec) * 100).toFixed(1) + "%";
     e.phaseBar.classList.toggle("bar-active", running);
 
     // Camera link indicator.

@@ -18,6 +18,10 @@ struct AstroMockState {
     int sendAstroStatusCalls = 0;
     AstroStatusPacket lastStatus{};
 
+    // BLERemoteServer::sendAstroParams capture
+    int sendAstroParamsCalls = 0;
+    AstroParamPacket lastParams{};
+
     void reset() { *this = AstroMockState{}; }
 };
 

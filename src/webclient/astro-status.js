@@ -17,6 +17,9 @@ export const ASTRO_STATE = Object.freeze({
 // Packed AstroStatusPacket size (ble_remote_server.h): 1 + 2 + 2 + 4*6 + 1 + 1.
 export const ASTRO_STATUS_PACKET_BYTES = 31;
 
+// Packed AstroParamPacket size (ble_remote_server.h): 4 x uint16.
+export const ASTRO_PARAMS_PACKET_BYTES = 8;
+
 const STATE_LABELS = Object.freeze({
   [ASTRO_STATE.IDLE]: "Idle",
   [ASTRO_STATE.INITIAL_DELAY]: "Initial delay",
@@ -92,4 +95,51 @@ export function interpolate(status, msSincePacket) {
     remainingSec: Math.max(0, status.remainingSec - delta),
     phaseRemainingSec: Math.max(0, status.phaseRemainingSec - delta),
   };
+}
+
+// Decode a little-endian AstroParamPacket (the configured sequence plan).
+export function decodeAstroParams(view) {
+  if (!view || view.byteLength < ASTRO_PARAMS_PACKET_BYTES) {
+    throw new RangeError(
+      `astro params packet too short: ${view ? view.byteLength : 0} < ${ASTRO_PARAMS_PACKET_BYTES}`,
+    );
+  }
+  return {
+    initialDelaySec: view.getUint16(0, true),
+    exposureSec: view.getUint16(2, true),
+    subframeCount: view.getUint16(4, true),
+    intervalSec: view.getUint16(6, true),
+  };
+}
+
+// Whole-sequence duration from the plan — matches Parameters::getTotalDurationSec.
+export function sequenceTotalSec(params) {
+  return (
+    params.initialDelaySec +
+    params.subframeCount * (params.exposureSec + params.intervalSec)
+  );
+}
+
+// A sequence that ended by completing every frame, vs. STOPPED by the user.
+// The firmware collapses both into STOPPED (no COMPLETED state), so we infer
+// "finished" as STOPPED with all frames done.
+export function isFinished(status) {
+  return (
+    status.state === ASTRO_STATE.STOPPED &&
+    status.totalFrames > 0 &&
+    status.completedFrames >= status.totalFrames
+  );
+}
+
+// Compact human duration: "1h 1m", "10m", "1m 30s", "45s". For the plan/total
+// where mm:ss would be unwieldy (a sequence can run hours).
+export function formatDuration(totalSec) {
+  let s = Math.max(0, Math.floor(totalSec));
+  const h = Math.floor(s / 3600);
+  s -= h * 3600;
+  const m = Math.floor(s / 60);
+  s -= m * 60;
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  return `${s}s`;
 }

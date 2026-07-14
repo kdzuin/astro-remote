@@ -101,9 +101,10 @@ public:
     const Parameters& getParameters() const { return params_; }
     bool setParameter(const std::string& name, uint16_t value);
 
-    // Live camera-connection state, fed from the app loop each tick. Kept as a
-    // plain setter so AstroProcess has no dependency on the BLE transport.
-    void setCameraConnected(bool connected) { status_.isCameraConnected = connected; }
+    // Live camera-connection state, fed from the app loop each tick. Notifies
+    // status observers on a change so the remote link sees camera connect/
+    // disconnect even while the sequence is idle (no periodic ticks then).
+    void setCameraConnected(bool connected);
 
     // Status access
     const Status& getStatus() const { return status_; }

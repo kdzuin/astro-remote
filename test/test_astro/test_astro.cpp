@@ -41,8 +41,16 @@ void BLERemoteServer::sendAstroStatus(const AstroStatusPacket& status) {
     g_mock.lastStatus = status;
 }
 
+void BLERemoteServer::sendAstroParams(const AstroParamPacket& params) {
+    g_mock.sendAstroParamsCalls++;
+    g_mock.lastParams = params;
+}
+
 // ---- Code under test (unity build) ------------------------------------------
 #include "processes/astro.cpp"
+// Observer under test too: it forwards process callbacks to the mocked
+// BLERemoteServer::send* above (header-only, safe to unity-include here).
+#include "transport/ble_astro_observer.h"
 
 // ---- Helpers ----------------------------------------------------------------
 static AstroProcess& astro() { return AstroProcess::instance(); }
@@ -427,6 +435,46 @@ void test_status_notification_throttled() {
     astro().removeObserver(&obs);
 }
 
+// Camera-connection changes at idle must notify observers (so the remote link
+// sees connect/disconnect even with no sequence running); no-op if unchanged.
+void test_camera_change_notifies_when_idle() {
+    astro().setCameraConnected(false);  // known baseline (singleton persists)
+    BLEAstroObserver& obs = BLEAstroObserver::instance();
+    astro().addObserver(&obs);  // routes onAstroStatusChanged -> mocked send
+    int before = g_mock.sendAstroStatusCalls;
+    astro().setCameraConnected(true);  // false -> true: one notify
+    TEST_ASSERT_EQUAL(before + 1, g_mock.sendAstroStatusCalls);
+    TEST_ASSERT_EQUAL(1, g_mock.lastStatus.isCameraConnected);
+
+    astro().setCameraConnected(true);  // unchanged: no extra notify
+    TEST_ASSERT_EQUAL(before + 1, g_mock.sendAstroStatusCalls);
+
+    astro().setCameraConnected(false);  // true -> false: one more
+    TEST_ASSERT_EQUAL(before + 2, g_mock.sendAstroStatusCalls);
+    TEST_ASSERT_EQUAL(0, g_mock.lastStatus.isCameraConnected);
+    astro().removeObserver(&obs);
+}
+
+// Setting parameters broadcasts them over the remote link (for the pre-start
+// plan display on the web client).
+void test_set_parameters_broadcasts_params() {
+    BLEAstroObserver& obs = BLEAstroObserver::instance();
+    astro().addObserver(&obs);
+    int before = g_mock.sendAstroParamsCalls;
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 10;
+    p.exposureSec = 90;
+    p.subframeCount = 30;
+    p.intervalSec = 4;
+    astro().setParameters(p);
+    TEST_ASSERT_TRUE(g_mock.sendAstroParamsCalls > before);  // broadcast happened
+    TEST_ASSERT_EQUAL_UINT16(10, g_mock.lastParams.initialDelaySec);
+    TEST_ASSERT_EQUAL_UINT16(90, g_mock.lastParams.exposureSec);
+    TEST_ASSERT_EQUAL_UINT16(30, g_mock.lastParams.subframeCount);
+    TEST_ASSERT_EQUAL_UINT16(4, g_mock.lastParams.intervalSec);
+    astro().removeObserver(&obs);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_start_rejects_invalid_params);
@@ -442,5 +490,7 @@ int main(int, char**) {
     RUN_TEST(test_start_does_not_close_open_shutter);
     RUN_TEST(test_bulb_failure_errors);
     RUN_TEST(test_status_notification_throttled);
+    RUN_TEST(test_camera_change_notifies_when_idle);
+    RUN_TEST(test_set_parameters_broadcasts_params);
     return UNITY_END();
 }

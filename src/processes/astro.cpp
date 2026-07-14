@@ -258,6 +258,16 @@ void AstroProcess::notifyParametersChanged() {
     }
 }
 
+void AstroProcess::setCameraConnected(bool connected) {
+    if (status_.isCameraConnected == connected) {
+        return;
+    }
+    status_.isCameraConnected = connected;
+    // Push the change out now; while idle there are no periodic notifications,
+    // so without this the remote link would show a stale camera state.
+    notifyStatusObservers();
+}
+
 void AstroProcess::notifyStatusObservers() {
     for (auto* observer : observers_) {
         observer->onAstroStatusChanged(status_);

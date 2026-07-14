@@ -3,11 +3,16 @@ import assert from "node:assert/strict";
 import {
   ASTRO_STATE,
   ASTRO_STATUS_PACKET_BYTES,
+  ASTRO_PARAMS_PACKET_BYTES,
   decodeAstroStatus,
+  decodeAstroParams,
   formatMMSS,
+  formatDuration,
   barFraction,
   stateLabel,
   interpolate,
+  isFinished,
+  sequenceTotalSec,
 } from "./astro-status.js";
 
 // Build a packed little-endian AstroStatusPacket buffer for tests. Mirrors the
@@ -149,4 +154,84 @@ test("interpolate is frozen when paused or not running", () => {
     const out = interpolate(base, 4000);
     assert.deepEqual(out, base, `state ${state} should freeze`);
   }
+});
+
+// --- params + finished + duration -------------------------------------------
+
+function packParams(f = {}) {
+  const buf = new ArrayBuffer(ASTRO_PARAMS_PACKET_BYTES);
+  const v = new DataView(buf);
+  v.setUint16(0, f.initialDelaySec ?? 0, true);
+  v.setUint16(2, f.exposureSec ?? 0, true);
+  v.setUint16(4, f.subframeCount ?? 0, true);
+  v.setUint16(6, f.intervalSec ?? 0, true);
+  return v;
+}
+
+test("params packet is 8 bytes (4 x uint16)", () => {
+  assert.equal(ASTRO_PARAMS_PACKET_BYTES, 8);
+});
+
+test("decodeAstroParams reads all four fields little-endian", () => {
+  const v = packParams({
+    initialDelaySec: 10,
+    exposureSec: 90,
+    subframeCount: 30,
+    intervalSec: 4,
+  });
+  const p = decodeAstroParams(v);
+  assert.equal(p.initialDelaySec, 10);
+  assert.equal(p.exposureSec, 90);
+  assert.equal(p.subframeCount, 30);
+  assert.equal(p.intervalSec, 4);
+});
+
+test("decodeAstroParams rejects a short buffer", () => {
+  assert.throws(() => decodeAstroParams(new DataView(new ArrayBuffer(4))));
+});
+
+test("sequenceTotalSec = delay + frames*(exposure+interval)", () => {
+  const p = { initialDelaySec: 10, exposureSec: 90, subframeCount: 30, intervalSec: 4 };
+  assert.equal(sequenceTotalSec(p), 10 + 30 * (90 + 4)); // 2830
+});
+
+test("isFinished: STOPPED with all frames done is finished", () => {
+  assert.equal(
+    isFinished({ state: ASTRO_STATE.STOPPED, completedFrames: 20, totalFrames: 20 }),
+    true,
+  );
+});
+
+test("isFinished: STOPPED with frames remaining is NOT finished (aborted)", () => {
+  assert.equal(
+    isFinished({ state: ASTRO_STATE.STOPPED, completedFrames: 7, totalFrames: 20 }),
+    false,
+  );
+});
+
+test("isFinished: STOPPED with zero total frames is not finished", () => {
+  assert.equal(
+    isFinished({ state: ASTRO_STATE.STOPPED, completedFrames: 0, totalFrames: 0 }),
+    false,
+  );
+});
+
+test("isFinished: non-STOPPED states are never finished", () => {
+  for (const s of [
+    ASTRO_STATE.IDLE,
+    ASTRO_STATE.EXPOSING,
+    ASTRO_STATE.INTERVAL,
+    ASTRO_STATE.PAUSED,
+    ASTRO_STATE.ERROR,
+  ]) {
+    assert.equal(isFinished({ state: s, completedFrames: 20, totalFrames: 20 }), false);
+  }
+});
+
+test("formatDuration is compact h/m/s", () => {
+  assert.equal(formatDuration(0), "0s");
+  assert.equal(formatDuration(45), "45s");
+  assert.equal(formatDuration(90), "1m 30s");
+  assert.equal(formatDuration(600), "10m");
+  assert.equal(formatDuration(3661), "1h 1m");
 });
