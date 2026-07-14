@@ -5,6 +5,7 @@
 #include "screens/base_screen.h"
 
 enum class AstroMenuItem {
+    Connect,
     Focus,
     Start,
     Pause,

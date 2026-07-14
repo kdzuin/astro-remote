@@ -5,6 +5,8 @@
 #include "components/menu_system.h"
 #include "processes/astro.h"
 #include "screens/focus_screen.h"
+#include "screens/scan_screen.h"
+#include "transport/ble_device.h"
 #include "transport/remote_control_manager.h"
 #include "utils/colors.h"
 
@@ -40,6 +42,12 @@ void AstroScreen::updateMenuItems() {
     const auto& status = astro.getStatus();
 
     menuItems.clear();
+
+    // Offer a connect entry (first item) whenever the camera is not connected,
+    // so the camera can be reached without leaving the Astro screen.
+    if (!BLEDeviceManager::isConnected()) {
+        menuItems.addItem(AstroMenuItem::Connect, "Connect");
+    }
 
     if (!astro.isRunning()) {
         menuItems.addItem(AstroMenuItem::Start, "Start");
@@ -119,13 +127,18 @@ void AstroScreen::drawContent() {
         setStatusText(buffer);
         setStatusBgColor(stateColor);
 
+    } else if (!BLEDeviceManager::isConnected()) {
+        // Not running and no camera: surface the connection state, since the
+        // sequence cannot start without it.
+        setStatusText(BLEDeviceManager::isPaired() ? "Not connected" : "No camera paired");
+        setStatusBgColor(colors::get(colors::ERROR));
     } else {
         char buffer[64];
         uint32_t totalSec = params.getTotalDurationSec();
         snprintf(buffer, sizeof(buffer), "Total: %02d:%02d:%02d", totalSec / 3600,
                  (totalSec % 3600) / 60, totalSec % 60);
         setStatusText(buffer);
-        setStatusBgColor(colors::get(colors::GRAY_800));
+        setStatusBgColor(colors::get(colors::SUCCESS));
     }
     // Draw menu
 
@@ -161,6 +174,15 @@ void AstroScreen::update() {
 
     if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT)) {
         adjustParameter(-1);
+    }
+
+    // Redraw when the camera connection state flips, so the Connect item and
+    // status text stay in sync without a button press.
+    const bool connected = BLEDeviceManager::isConnected();
+    if (connected != wasConnected) {
+        wasConnected = connected;
+        updateMenuItems();
+        draw();
     }
 }
 
@@ -207,6 +229,28 @@ void AstroScreen::selectMenuItem() {
     auto selectedItem = menuItems.getSelectedId();
 
     switch (selectedItem) {
+        case AstroMenuItem::Connect:
+            if (BLEDeviceManager::isPaired()) {
+                // Known device: try a direct reconnect, staying on this screen.
+                setStatusText("Connecting...");
+                setStatusBgColor(colors::get(colors::IN_PROGRESS));
+                drawStatusBar();
+
+                if (BLEDeviceManager::connectToSavedDevice()) {
+                    setStatusText("Connected!");
+                    setStatusBgColor(colors::get(colors::SUCCESS));
+                } else {
+                    setStatusText("Failed to connect!");
+                    setStatusBgColor(colors::get(colors::ERROR));
+                }
+                updateMenuItems();
+                draw();
+            } else {
+                // No saved device: go discover/pair one.
+                MenuSystem::setScreen(new ScanScreen());
+            }
+            break;
+
         case AstroMenuItem::Focus:
             MenuSystem::setScreen(new FocusScreen());
             break;
