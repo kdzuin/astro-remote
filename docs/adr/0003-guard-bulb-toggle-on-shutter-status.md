@@ -12,9 +12,13 @@ This is viable because the camera reliably reports shutter open/closed
 between the remote's sequence state and the real shutter state would invert
 every subsequent toggle and silently ruin the sequence.
 
+Both toggles are guarded symmetrically: `stopExposure()` only closes when the
+shutter is reported open, and `startExposure()` only opens when it is reported
+closed (an already-open shutter is adopted as the current exposure rather than
+toggled shut).
+
 ## Consequences
 
-- The camera's shutter status is treated as the source of truth for closing;
-  the sequence state is only the remote's timer-driven belief.
-- The *opening* toggle in `startExposure()` is not yet guarded — it assumes the
-  shutter is closed at frame start (true on clean INTERVAL/DELAY transitions).
+- The camera's shutter status is treated as the source of truth for both
+  opening and closing; the sequence state is only the remote's timer-driven
+  belief.

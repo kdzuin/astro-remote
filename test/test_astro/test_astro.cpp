@@ -343,6 +343,32 @@ void test_stop_does_not_reopen_closed_shutter() {
     TEST_ASSERT_FALSE(g_mock.shutterActive);                     // still closed
 }
 
+// Guard: if the shutter is already OPEN when startExposure runs (desync), do
+// NOT toggle — a blind toggle would CLOSE it and the frame would never expose.
+// The already-open shutter is adopted as the current exposure.
+void test_start_does_not_close_open_shutter() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 5;  // gives us a delay phase before the first frame
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 3;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    astro().start();  // INITIAL_DELAY, shutter still closed
+
+    // Simulate the shutter already being open when the first exposure begins.
+    g_mock.shutterActive = true;
+
+    int triggersBefore = g_mock.triggerBulbCalls;
+    advanceSeconds(6);  // delay (5s) elapses -> first exposure starts
+
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::EXPOSING),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL(triggersBefore, g_mock.triggerBulbCalls);  // no open toggle
+    TEST_ASSERT_TRUE(g_mock.shutterActive);                      // left open
+}
+
 // triggerBulb failure at exposure start drops the machine into ERROR.
 void test_bulb_failure_errors() {
     AstroProcess::Parameters p;
@@ -410,6 +436,7 @@ int main(int, char**) {
     RUN_TEST(test_resume_continues_from_count);
     RUN_TEST(test_stop_during_exposure_closes_shutter);
     RUN_TEST(test_stop_does_not_reopen_closed_shutter);
+    RUN_TEST(test_start_does_not_close_open_shutter);
     RUN_TEST(test_bulb_failure_errors);
     RUN_TEST(test_status_notification_throttled);
     return UNITY_END();

@@ -265,9 +265,15 @@ bool AstroProcess::startExposure() {
         return false;
 
     status_.currentFrameStartTime = millis() / 1000;
-    if (!CameraCommands::triggerBulb()) {  // open toggle
-        status_.errorCode = 3;             // Failed to start exposure
-        return false;
+
+    // Bulb is a toggle: only open if the shutter is actually closed. If it is
+    // already open (desync), toggling would CLOSE it and the frame would never
+    // expose — so adopt the open shutter as this exposure instead.
+    if (!CameraCommands::isShutterActive()) {
+        if (!CameraCommands::triggerBulb()) {  // open toggle
+            status_.errorCode = 3;             // Failed to start exposure
+            return false;
+        }
     }
     exposureActive_ = true;
     return true;
