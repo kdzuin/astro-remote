@@ -417,9 +417,11 @@ class M5RemoteClient {
       e.stateDot.className = "inline-block h-2.5 w-2.5 rounded-full bg-muted";
       e.frameCount.textContent = "0 / 0";
       e.seqTimes.textContent = "00:00 / 00:00";
-      e.seqBar.style.width = "0%";
       e.phaseLabel.textContent = "Phase";
       e.phaseTime.textContent = "00:00";
+      e.seqBar.classList.add("bar-snap"); // no glide on reset to empty
+      e.phaseBar.classList.add("bar-snap");
+      e.seqBar.style.width = "0%";
       e.phaseBar.style.width = "0%";
       e.phaseBar.classList.remove("bar-active");
       e.seqBar.classList.remove("bar-active");
@@ -456,6 +458,11 @@ class M5RemoteClient {
     // leftover timings — don't draw them as live progress.
     const aborted =
       !running && !finished && s.state !== ASTRO_STATE.PAUSED;
+
+    // Snap to full/empty on terminal states; glide only during running motion.
+    const snap = finished || aborted;
+    e.seqBar.classList.toggle("bar-snap", snap);
+    e.phaseBar.classList.toggle("bar-snap", snap);
 
     // Fractional fills so the bars glide instead of stepping once per second.
     const prog = smoothProgress(s, msSincePacket);
@@ -517,13 +524,34 @@ class M5RemoteClient {
   }
 }
 
+// Local dev hosts: the cache-first service worker keeps serving stale files
+// between reloads, which fights active development. Skip it (and tear down any
+// previously-registered one + its caches) so localhost always gets fresh files.
+// Deployed hosts still get the full offline PWA.
+const IS_DEV_HOST = ["localhost", "127.0.0.1", "[::1]"].includes(
+  location.hostname,
+);
+
 window.addEventListener("load", () => {
-  // Register the service worker for offline use (ADR 0006). Best-effort:
-  // needs a secure context, absent in some Web-BLE browsers — never blocks.
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("sw.js")
-      .catch((err) => console.warn("[PWA] service worker registration failed:", err));
+    if (IS_DEV_HOST) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const r of regs) r.unregister();
+      });
+      if (window.caches) {
+        caches.keys().then((keys) => {
+          for (const k of keys) if (k.startsWith("astroremote-")) caches.delete(k);
+        });
+      }
+    } else {
+      // Register the service worker for offline use (ADR 0006). Best-effort:
+      // needs a secure context, absent in some Web-BLE browsers — never blocks.
+      navigator.serviceWorker
+        .register("sw.js")
+        .catch((err) =>
+          console.warn("[PWA] service worker registration failed:", err),
+        );
+    }
   }
 
   if (!navigator.bluetooth) {

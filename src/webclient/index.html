@@ -36,6 +36,11 @@
           filter 0.08s ease,
           opacity 0.1s ease;
       }
+      /* Snap instantly (no glide) when a bar jumps to full/empty on a state
+         change — only the incremental running motion should animate. */
+      .bar-snap {
+        transition: none !important;
+      }
       /* Animated stripe for indeterminate/active phase bars. */
       @keyframes barPulse {
         0%,
