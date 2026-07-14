@@ -46,8 +46,10 @@ private:
     // Change fingerprints, per region.
     int lastAction_ = -1;
     int lastState_ = -1;  // affects the action labels (Pause vs Resume)
+    bool lastPausePending_ = false;  // "Pausing..." label; state stays EXPOSING
     uint32_t lastElapsed_ = 0xFFFFFFFF;
     bool lastConnected_ = false;
+    int lastBattery_ = -1;
     bool lastSummary_ = false;
 
     SelectableList<AstroRunItem> actions_;  // title + Pause/Resume, Stop
