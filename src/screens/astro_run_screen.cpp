@@ -3,6 +3,7 @@
 #include "components/menu_system.h"
 #include "processes/settings.h"
 #include "screens/astro_screen.h"
+#include "screens/emergency_screen.h"
 #include "transport/ble_device.h"
 #include "transport/remote_control_manager.h"
 #include "utils/colors.h"
@@ -86,11 +87,32 @@ void AstroRunScreen::update() {
 
     // Evaluate state AFTER buttons (a Stop just above sets STOPPED now).
     const auto& status = astro.getStatus();
+    const int battery = SettingsProcess::getDeviceState().batteryLevel;
+    const bool emergency = SettingsProcess::isBatteryEmergency(battery);
+
+    // Emergency battery: request a pause (deferred while exposing — the current
+    // frame finishes, we keep flashing here in the meantime via the critical
+    // alert below). Once the sequence actually parks in PAUSED, the switch below
+    // hands off to the full-screen EmergencyScreen instead of the config screen.
+    if (emergency && !summaryMode_ && astro.isRunning() &&
+        status.state != AstroProcess::State::PAUSED) {
+        astro.pause();
+    }
+
     if (!summaryMode_) {
         switch (status.state) {
             case AstroProcess::State::PAUSED:
-                // Pause parks back on the config screen, where Resume lives.
-                MenuSystem::setScreen(new AstroScreen());
+                if (emergency) {
+                    // Battery-forced pause: take over with the emergency screen,
+                    // which holds (flashing) until charged or stopped.
+                    if (lastFlashOn_) {
+                        M5.Display.setBrightness(PreferencesManager::getBrightness());
+                    }
+                    MenuSystem::setScreen(new EmergencyScreen());
+                } else {
+                    // User pause parks on the config screen, where Resume lives.
+                    MenuSystem::setScreen(new AstroScreen());
+                }
                 return;
             case AstroProcess::State::STOPPED:
             case AstroProcess::State::ERROR:
@@ -107,7 +129,6 @@ void AstroRunScreen::update() {
     }
 
     const bool connected = BLEDeviceManager::isConnected();
-    const int battery = SettingsProcess::getDeviceState().batteryLevel;
     const int state = static_cast<int>(status.state);
     const bool pausePending = astro.isPausePending();
 

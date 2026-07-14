@@ -52,20 +52,34 @@ public:
         PreferencesManager::setBrightness(static_cast<uint8_t>(nextLevel));
     }
 
-    // Battery level below this (percent) is "critical" — red status colour and,
-    // on the Astro run screen, the full-screen alert flash.
+    // Battery tiers (percent). Below WARNING → amber; below CRITICAL → red +
+    // the Astro run-screen alert flash; at/below EMERGENCY → auto-pause and the
+    // full-screen emergency takeover. One source for every battery threshold.
+    static constexpr int BATTERY_WARNING_PCT = 50;
     static constexpr int BATTERY_CRITICAL_PCT = 20;
+    static constexpr int BATTERY_EMERGENCY_PCT = 10;
 
-    // A negative level means the reading is unavailable — not critical.
+    // A negative level means the reading is unavailable — not critical/emergency.
     static bool isBatteryCritical(int batteryLevel) {
         return batteryLevel >= 0 && batteryLevel < BATTERY_CRITICAL_PCT;
+    }
+
+    // True only when running on battery. Charging or unknown-charge-state both
+    // count as "not on battery" — never trip the emergency lockout on cable.
+    static bool isCharging() {
+        return M5.Power.isCharging() == m5::Power_Class::is_charging_t::is_charging;
+    }
+
+    // Emergency: on battery (not charging) and at/below the emergency threshold.
+    static bool isBatteryEmergency(int batteryLevel) {
+        return batteryLevel >= 0 && batteryLevel <= BATTERY_EMERGENCY_PCT && !isCharging();
     }
 
     static uint32_t getBatteryStatusColor(int batteryLevel) {
         if (batteryLevel < BATTERY_CRITICAL_PCT) {
             return colors::get(colors::ERROR);  // Critical
         }
-        if (batteryLevel < 50) {
+        if (batteryLevel < BATTERY_WARNING_PCT) {
             return colors::get(colors::WARNING);  // Warning
         }
         return colors::get(colors::SUCCESS);  // Good
