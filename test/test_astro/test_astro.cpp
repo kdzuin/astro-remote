@@ -19,13 +19,20 @@ AstroMockState g_mock;
 
 // ---- Mock collaborators -----------------------------------------------------
 namespace CameraCommands {
-bool takeBulb() {
-    g_mock.takeBulbCalls++;
-    return !g_mock.takeBulbShouldFail;
+bool triggerBulb() {
+    g_mock.triggerBulbCalls++;
+    if (g_mock.triggerBulbShouldFail) {
+        return false;
+    }
+    g_mock.shutterActive = !g_mock.shutterActive;  // Toggle, like the real camera.
+    return true;
 }
 bool emergencyStop() {
     g_mock.emergencyStopCalls++;
     return true;
+}
+bool isShutterActive() {
+    return g_mock.shutterActive;
 }
 }  // namespace CameraCommands
 
@@ -92,7 +99,7 @@ void test_start_requires_camera() {
     p.initialDelaySec = 5;
     p.exposureSec = 30;
     p.subframeCount = 10;  // must be a multiple of 10 and >= 10
-    p.intervalSec = 1;
+    p.intervalSec = 3;
     astro().setParameters(p);
     // isCameraConnected defaults false
 
@@ -121,21 +128,23 @@ void test_setParameter_validation() {
     TEST_ASSERT_FALSE(astro().setParameter("subframeCount", 15));  // not a multiple of 10
     TEST_ASSERT_FALSE(astro().setParameter("subframeCount", 5));   // below min
 
-    // interval: range 1..60
-    TEST_ASSERT_FALSE(astro().setParameter("intervalSec", 0));   // below min
+    // interval: range 3..60 (3s minimum guardrail between exposures)
+    TEST_ASSERT_FALSE(astro().setParameter("intervalSec", 2));   // below min
+    TEST_ASSERT_TRUE(astro().setParameter("intervalSec", 3));    // at min
     TEST_ASSERT_FALSE(astro().setParameter("intervalSec", 61));  // above max
 
     TEST_ASSERT_FALSE(astro().setParameter("bogus", 5));  // unknown parameter
 }
 
-// A full 10-frame sequence: assert it fires exactly one bulb per frame and
-// ends STOPPED. delay=5, exposure=30, interval=1, frames=10 (min/step is 10).
+// A full 10-frame sequence. Bulb is a toggle: each frame fires triggerBulb
+// twice (open at exposure start, close at exposure end), so 10 frames = 20
+// triggers. Ends STOPPED. delay=5, exposure=30, interval=3, frames=10.
 void test_full_sequence_completes() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 5;
     p.exposureSec = 30;
     p.subframeCount = 10;
-    p.intervalSec = 1;
+    p.intervalSec = 3;
     astro().setParameters(p);
 
     astro().setCameraConnected(true);
@@ -144,49 +153,206 @@ void test_full_sequence_completes() {
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INITIAL_DELAY),
                       static_cast<int>(astro().getStatus().state));
 
-    // Total sequence: 5 (delay) + 10*(30 exposure + 1 interval) = 315s.
+    // Total sequence: 5 (delay) + 10*(30 exposure + 3 interval) = 335s.
     // Run a bit past the end.
-    advanceSeconds(330);
+    advanceSeconds(350);
 
-    TEST_ASSERT_EQUAL(10, g_mock.takeBulbCalls);
+    TEST_ASSERT_EQUAL(20, g_mock.triggerBulbCalls);  // 10 open + 10 close
     TEST_ASSERT_EQUAL_UINT16(10, astro().getStatus().completedFrames);
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::STOPPED),
                       static_cast<int>(astro().getStatus().state));
 }
 
-// Pause while exposing must release the shutter (emergencyStop) and hold state.
-void test_pause_during_exposure_releases_shutter() {
+// phaseRemainingSec counts down the time left in the CURRENT phase (delay,
+// exposure, or interval) — distinct from remainingSec (whole series).
+void test_phase_remaining_counts_down_per_phase() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 5;
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 3;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    astro().start();  // INITIAL_DELAY, 5s
+
+    advanceSeconds(2);  // 2s into the 5s delay
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INITIAL_DELAY),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL_UINT32(3, astro().getStatus().phaseRemainingSec);  // 5 - 2
+
+    advanceSeconds(4);  // t=6: delay done at t=5, 1s into the 30s exposure
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::EXPOSING),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL_UINT32(29, astro().getStatus().phaseRemainingSec);  // 30 - 1
+
+    advanceSeconds(30);  // t=36: exposure ended at t=35, 1s into the 3s interval
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INTERVAL),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL_UINT32(2, astro().getStatus().phaseRemainingSec);  // 3 - 1
+}
+
+// Pause while exposing is DEFERRED: the current frame must finish its full
+// exposure (not be cut short), then the sequence enters PAUSED with the frame
+// counted. delay=0, exposure=30, so the frame ends at t=30.
+void test_pause_during_exposure_defers_until_frame_done() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 0;
     p.exposureSec = 30;
     p.subframeCount = 10;
-    p.intervalSec = 1;
+    p.intervalSec = 3;
     astro().setParameters(p);
     astro().setCameraConnected(true);
 
     astro().start();
-    advanceSeconds(2);  // into first exposure
+    advanceSeconds(2);  // into first exposure (open toggle fired, 1 trigger)
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::EXPOSING),
                       static_cast<int>(astro().getStatus().state));
 
-    int stopsBefore = g_mock.emergencyStopCalls;
+    int triggersBefore = g_mock.triggerBulbCalls;  // == 1 (open)
+    astro().pause();
+
+    // Still exposing right after pause: frame not cut short, shutter not closed.
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::EXPOSING),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL(triggersBefore, g_mock.triggerBulbCalls);
+
+    // Let the exposure run to its full length; the frame closes and counts,
+    // then the sequence parks in PAUSED (not INTERVAL).
+    advanceSeconds(30);
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::PAUSED),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL_UINT16(1, astro().getStatus().completedFrames);
+    TEST_ASSERT_EQUAL(triggersBefore + 1, g_mock.triggerBulbCalls);  // close toggle
+}
+
+// Pause during the interval (shutter already closed) parks immediately in
+// PAUSED with no extra shutter toggle.
+void test_pause_during_interval_is_immediate() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 0;
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 5;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    astro().start();
+    advanceSeconds(31);  // frame 1 done, now in INTERVAL
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INTERVAL),
+                      static_cast<int>(astro().getStatus().state));
+
+    int triggersBefore = g_mock.triggerBulbCalls;
     astro().pause();
 
     TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::PAUSED),
                       static_cast<int>(astro().getStatus().state));
-    TEST_ASSERT_EQUAL(stopsBefore + 1, g_mock.emergencyStopCalls);
+    TEST_ASSERT_EQUAL(triggersBefore, g_mock.triggerBulbCalls);  // no toggle
 }
 
-// takeBulb failure at exposure start drops the machine into ERROR.
+// Resume continues the sequence from the preserved frame count (does not
+// restart from frame 0), entering the interval wait before the next frame.
+void test_resume_continues_from_count() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 0;
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 3;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    astro().start();
+    advanceSeconds(31);  // frame 1 done (open+close = 2 triggers), in INTERVAL
+    astro().pause();
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::PAUSED),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL_UINT16(1, astro().getStatus().completedFrames);
+
+    // Sit paused a while — must not advance or shoot.
+    int triggersAtPause = g_mock.triggerBulbCalls;
+    advanceSeconds(120);
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::PAUSED),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL(triggersAtPause, g_mock.triggerBulbCalls);
+    TEST_ASSERT_EQUAL_UINT16(1, astro().getStatus().completedFrames);
+
+    astro().resume();
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::INTERVAL),
+                      static_cast<int>(astro().getStatus().state));
+
+    // Finish the remaining 9 frames. Total triggers = 20 (10 frames * 2).
+    advanceSeconds(9 * (30 + 3) + 10);
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::STOPPED),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL_UINT16(10, astro().getStatus().completedFrames);
+    TEST_ASSERT_EQUAL(20, g_mock.triggerBulbCalls);
+}
+
+// Stop while exposing must close the shutter (a second bulb toggle), not leave
+// the camera holding the exposure open, and halt at STOPPED.
+void test_stop_during_exposure_closes_shutter() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 0;
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 3;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    astro().start();
+    advanceSeconds(2);  // into first exposure (open toggle fired)
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::EXPOSING),
+                      static_cast<int>(astro().getStatus().state));
+
+    int triggersBefore = g_mock.triggerBulbCalls;
+    TEST_ASSERT_TRUE(g_mock.shutterActive);  // open toggle really opened it
+    astro().stop();
+
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::STOPPED),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL(triggersBefore + 1, g_mock.triggerBulbCalls);  // close toggle
+    TEST_ASSERT_FALSE(g_mock.shutterActive);  // shutter actually closed
+}
+
+// Guard: if the shutter is already closed when stopExposure runs (e.g. camera
+// closed it externally / state desync), do NOT toggle — a blind toggle would
+// re-OPEN the shutter. stop() must leave the shutter closed regardless.
+void test_stop_does_not_reopen_closed_shutter() {
+    AstroProcess::Parameters p;
+    p.initialDelaySec = 0;
+    p.exposureSec = 30;
+    p.subframeCount = 10;
+    p.intervalSec = 3;
+    astro().setParameters(p);
+    astro().setCameraConnected(true);
+
+    astro().start();
+    advanceSeconds(2);  // EXPOSING, shutter open
+    TEST_ASSERT_TRUE(g_mock.shutterActive);
+
+    // Simulate the camera having already closed the shutter (external stop,
+    // timeout, missed toggle) while the process still thinks it is exposing.
+    g_mock.shutterActive = false;
+
+    int triggersBefore = g_mock.triggerBulbCalls;
+    astro().stop();
+
+    TEST_ASSERT_EQUAL(static_cast<int>(AstroProcess::State::STOPPED),
+                      static_cast<int>(astro().getStatus().state));
+    TEST_ASSERT_EQUAL(triggersBefore, g_mock.triggerBulbCalls);  // no toggle
+    TEST_ASSERT_FALSE(g_mock.shutterActive);                     // still closed
+}
+
+// triggerBulb failure at exposure start drops the machine into ERROR.
 void test_bulb_failure_errors() {
     AstroProcess::Parameters p;
     p.initialDelaySec = 0;
     p.exposureSec = 30;
     p.subframeCount = 10;
-    p.intervalSec = 1;
+    p.intervalSec = 3;
     astro().setParameters(p);
     astro().setCameraConnected(true);
-    g_mock.takeBulbShouldFail = true;
+    g_mock.triggerBulbShouldFail = true;
 
     astro().start();
     advanceSeconds(2);
@@ -203,7 +369,7 @@ void test_status_notification_throttled() {
     p.initialDelaySec = 5;
     p.exposureSec = 30;
     p.subframeCount = 10;
-    p.intervalSec = 1;
+    p.intervalSec = 3;
     astro().setParameters(p);
     astro().setCameraConnected(true);
 
@@ -238,7 +404,12 @@ int main(int, char**) {
     RUN_TEST(test_start_requires_camera);
     RUN_TEST(test_setParameter_validation);
     RUN_TEST(test_full_sequence_completes);
-    RUN_TEST(test_pause_during_exposure_releases_shutter);
+    RUN_TEST(test_phase_remaining_counts_down_per_phase);
+    RUN_TEST(test_pause_during_exposure_defers_until_frame_done);
+    RUN_TEST(test_pause_during_interval_is_immediate);
+    RUN_TEST(test_resume_continues_from_count);
+    RUN_TEST(test_stop_during_exposure_closes_shutter);
+    RUN_TEST(test_stop_does_not_reopen_closed_shutter);
     RUN_TEST(test_bulb_failure_errors);
     RUN_TEST(test_status_notification_throttled);
     return UNITY_END();

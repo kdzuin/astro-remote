@@ -61,7 +61,7 @@ enum class FocusMode { AUTO_FOCUS, MANUAL_FOCUS };
 void init();
 void update();
 bool takePhoto();
-bool takeBulb();
+bool triggerBulb();  // One bulb toggle (open OR close); call twice per frame.
 bool recordStart();
 bool recordStop();
 bool isFocusAcquired();

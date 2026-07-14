@@ -36,7 +36,7 @@ public:
 
         static constexpr uint16_t INTERVAL_DEFAULT = 5;
         static constexpr uint16_t INTERVAL_STEP = 1;
-        static constexpr uint16_t INTERVAL_MIN = 1;
+        static constexpr uint16_t INTERVAL_MIN = 3;  // 3s guardrail between exposures
         static constexpr uint16_t INTERVAL_MAX = 60;
 
         // Parameter values
@@ -67,6 +67,7 @@ public:
         uint32_t currentFrameStartTime = 0;      // Unix timestamp
         uint32_t elapsedSec = 0;
         uint32_t remainingSec = 0;
+        uint32_t phaseRemainingSec = 0;  // Time left in the current phase (delay/exposure/interval)
         bool isCameraConnected = false;
         uint8_t errorCode = 0;
     };
@@ -90,6 +91,7 @@ public:
     // Command interface
     void start();
     void pause();
+    void resume();
     void stop();
     void reset();
 
@@ -108,6 +110,10 @@ public:
         return status_.state != State::IDLE && status_.state != State::STOPPED &&
                status_.state != State::ERROR;
     }
+
+    // True after pause() during an exposure, until the frame finishes and the
+    // sequence parks in PAUSED. Lets the UI show a "pausing" hint.
+    bool isPausePending() const { return pausePending_; }
 
     // Observer interface for UI updates
     class Observer {
@@ -145,6 +151,8 @@ private:
     uint32_t lastUpdateTime_ = 0;
     uint32_t lastNotifySec_ = 0;  // Throttles periodic status notifications to ~1 Hz.
     bool exposureActive_ = false;
+    bool pausePending_ = false;   // Pause requested mid-exposure; park after frame ends.
+    uint32_t pausedAtSec_ = 0;    // When PAUSED began, to shift the timeline on resume.
 
     void initializeObservers();  // Defined in cpp
     bool initialized_ = false;

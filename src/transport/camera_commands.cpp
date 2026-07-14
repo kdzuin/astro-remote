@@ -149,27 +149,23 @@ bool takePhoto() {
     return true;
 };
 
-bool takeBulb() {
-    LOG_PERIPHERAL("[Camera] Take bulb photo");
+bool triggerBulb() {
+    // One bulb toggle = a full press+release of the shutter. In bulb mode the
+    // first toggle opens the exposure and the next toggle closes it, so the
+    // astro sequence calls this once to start a frame and once to end it.
+    LOG_PERIPHERAL("[Camera] Trigger bulb (toggle)");
 
-    // Step 1: Press shutter
     if (!sendCommand16(Cmd::SHUTTER_FULL_DOWN)) {
         LOG_PERIPHERAL("[Camera] Failed to press shutter");
         return false;
     }
 
-    // Step 2: Wait for shutter active notification
-    while (!isShutterActive()) {
-        delay(10);
-    }
-
-    // Step 4: Release shutter
     if (!sendCommand16(Cmd::SHUTTER_FULL_UP)) {
         LOG_PERIPHERAL("[Camera] Failed to release shutter");
         return false;
     }
 
-    LOG_PERIPHERAL("[Camera] Bulb Start/Stop command successful");
+    LOG_PERIPHERAL("[Camera] Bulb toggle sent");
     return true;
 };
 

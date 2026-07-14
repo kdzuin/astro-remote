@@ -29,7 +29,7 @@ public:
             case ManualMenuItem::TakeVideo:
                 return CameraCommands::recordStart();
             case ManualMenuItem::TakeBulb:
-                return CameraCommands::takeBulb();
+                return CameraCommands::triggerBulb();
             case ManualMenuItem::ZoomIn:
                 return CameraCommands::zoomIn(0x70);
             case ManualMenuItem::ZoomOut:

@@ -54,6 +54,9 @@ void AstroScreen::updateMenuItems() {
     } else {
         if (status.state == AstroProcess::State::PAUSED) {
             menuItems.addItem(AstroMenuItem::Start, "Resume");
+        } else if (astro.isPausePending()) {
+            // Pause requested, waiting for the current frame to finish.
+            menuItems.addItem(AstroMenuItem::Pause, "Pausing...", false);
         } else {
             menuItems.addItem(AstroMenuItem::Pause, "Pause");
         }
@@ -78,11 +81,20 @@ void AstroScreen::updateMenuItems() {
         menuItems.addItem(AstroMenuItem::DelayBetweenExposures, "Interval", buffer, true);
 
     } else {
-        // Show status when running
-        char buffer[32];
-        snprintf(buffer, sizeof(buffer), "Frame: %d/%d", status.completedFrames + 1,
+        // Running: show frame progress plus whole-series elapsed / remaining.
+        char frameBuf[16];
+        snprintf(frameBuf, sizeof(frameBuf), "%d/%d", status.completedFrames + 1,
                  params.subframeCount);
-        menuItems.addItem(AstroMenuItem::SubframeCount, buffer);
+        menuItems.addItem(AstroMenuItem::SubframeCount, "Frame", frameBuf, false);
+
+        char timeBuf[16];
+        snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d:%02d", status.elapsedSec / 3600,
+                 (status.elapsedSec % 3600) / 60, status.elapsedSec % 60);
+        menuItems.addItem(AstroMenuItem::SubframeCount, "Elapsed", timeBuf, false);
+
+        snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d:%02d", status.remainingSec / 3600,
+                 (status.remainingSec % 3600) / 60, status.remainingSec % 60);
+        menuItems.addItem(AstroMenuItem::SubframeCount, "Left", timeBuf, false);
     }
 }
 
@@ -93,37 +105,43 @@ void AstroScreen::drawContent() {
 
     // Draw status bar
     if (astro.isRunning()) {
-        char buffer[64];
-        const char* stateStr;
-        uint16_t stateColor;
+        // State is shown as a compact ASCII symbol, colour-coded via the bar:
+        //   ...  delay      *  shooting     ~  interval    ||  paused
+        // A dropped camera mid-run flips the symbol to '!' so the loss is
+        // visible even though the bar colour otherwise tracks the phase.
+        const bool connected = BLEDeviceManager::isConnected();
+        const char* symbol;
+        uint32_t stateColor;
 
         switch (status.state) {
             case AstroProcess::State::INITIAL_DELAY:
-                stateStr = "Delay";
+                symbol = "...";
                 stateColor = colors::get(colors::BLUE_500);
                 break;
             case AstroProcess::State::EXPOSING:
-                stateStr = "Exposing";
+                symbol = "*";
                 stateColor = colors::get(colors::GREEN_500);
                 break;
             case AstroProcess::State::INTERVAL:
-                stateStr = "Interval";
-                stateColor = colors::get(colors::YELLOW_500);
+                symbol = "~";
+                stateColor = colors::get(colors::BLUE_500);
                 break;
             case AstroProcess::State::PAUSED:
-                stateStr = "Paused";
-                stateColor = colors::get(colors::ORANGE_500);
+                symbol = "||";
+                stateColor = colors::get(colors::BLACK);  // line off while paused
                 break;
             default:
-                stateStr = "Unknown";
-                stateColor = colors::get(colors::RED_500);
+                symbol = "?";
+                stateColor = colors::get(colors::BLACK);
+        }
+        if (!connected) {
+            symbol = "!";
         }
 
-        snprintf(buffer, sizeof(buffer), "%s | %02d:%02d:%02d | %02d:%02d:%02d", stateStr,
-                 status.elapsedSec / 3600, (status.elapsedSec % 3600) / 60, status.elapsedSec % 60,
-                 status.remainingSec / 3600, (status.remainingSec % 3600) / 60,
-                 status.remainingSec % 60);
-
+        // Symbol + time left in the CURRENT phase (mm:ss).
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%s  %02d:%02d", symbol,
+                 (status.phaseRemainingSec % 3600) / 60, status.phaseRemainingSec % 60);
         setStatusText(buffer);
         setStatusBgColor(stateColor);
 
@@ -257,7 +275,7 @@ void AstroScreen::selectMenuItem() {
 
         case AstroMenuItem::Start:
             if (astro.getStatus().state == AstroProcess::State::PAUSED) {
-                astro.start();
+                astro.resume();  // Continue from the paused frame count.
             } else if (!astro.isRunning()) {
                 astro.start();
             }

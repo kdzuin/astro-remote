@@ -9,9 +9,10 @@
 
 struct AstroMockState {
     // CameraCommands
-    int takeBulbCalls = 0;
+    int triggerBulbCalls = 0;
     int emergencyStopCalls = 0;
-    bool takeBulbShouldFail = false;
+    bool triggerBulbShouldFail = false;
+    bool shutterActive = false;  // Simulated camera shutter state (toggled by triggerBulb).
 
     // BLERemoteServer::sendAstroStatus capture
     int sendAstroStatusCalls = 0;

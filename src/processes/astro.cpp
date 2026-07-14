@@ -25,17 +25,41 @@ void AstroProcess::start() {
     status_.sequenceStartTime = millis() / 1000;  // Convert to seconds
     status_.completedFrames = 0;
     status_.totalFrames = params_.subframeCount;
+    pausePending_ = false;
     updateTimings();
     setState(State::INITIAL_DELAY);
 }
 
 void AstroProcess::pause() {
-    if (isRunning()) {
-        if (status_.state == State::EXPOSING) {
-            stopExposure();
-        }
-        setState(State::PAUSED);
+    if (!isRunning() || status_.state == State::PAUSED) {
+        return;
     }
+
+    if (status_.state == State::EXPOSING) {
+        // Deferred pause: never cut a frame short. Flag it and let update()
+        // park in PAUSED once the current exposure finishes normally.
+        pausePending_ = true;
+        return;
+    }
+
+    // Delay/interval: shutter is closed, so pause immediately.
+    pausedAtSec_ = millis() / 1000;
+    setState(State::PAUSED);
+}
+
+void AstroProcess::resume() {
+    if (status_.state != State::PAUSED) {
+        return;
+    }
+
+    // Shift the timeline forward by however long we were paused, so elapsed and
+    // per-frame timing stay continuous, then wait out a fresh interval before
+    // the next frame. completedFrames is preserved (no restart).
+    uint32_t now = millis() / 1000;
+    uint32_t pausedDuration = now - pausedAtSec_;
+    status_.sequenceStartTime += pausedDuration;
+    status_.currentFrameStartTime = now;
+    setState(State::INTERVAL);
 }
 
 void AstroProcess::stop() {
@@ -56,6 +80,7 @@ void AstroProcess::reset() {
     status_.remainingSec = 0;
     status_.totalFrames = params_.subframeCount;
     status_.errorCode = 0;
+    pausePending_ = false;
     setState(State::IDLE);
 }
 
@@ -104,6 +129,13 @@ void AstroProcess::update() {
     if (!isRunning())
         return;
 
+    // While PAUSED the clock is frozen: don't advance timings or the state
+    // machine. resume() shifts sequenceStartTime past the paused span so the
+    // elapsed/remaining figures stay continuous.
+    if (status_.state == State::PAUSED) {
+        return;
+    }
+
     // Update timings
     status_.elapsedSec = currentTime - status_.sequenceStartTime;
     updateTimings();
@@ -128,6 +160,11 @@ void AstroProcess::update() {
 
                 if (status_.completedFrames >= params_.subframeCount) {
                     setState(State::STOPPED);
+                } else if (pausePending_) {
+                    // Deferred pause takes effect now that the frame is done.
+                    pausePending_ = false;
+                    pausedAtSec_ = currentTime;
+                    setState(State::PAUSED);
                 } else {
                     status_.currentFrameStartTime = currentTime;
                     setState(State::INTERVAL);
@@ -174,14 +211,40 @@ void AstroProcess::setState(State newState) {
 void AstroProcess::updateTimings() {
     if (status_.state == State::IDLE || status_.state == State::STOPPED) {
         status_.remainingSec = 0;
+        status_.phaseRemainingSec = 0;
         return;
     }
 
+    // Whole-series remaining.
     uint32_t totalTime = params_.getTotalDurationSec();
     if (status_.elapsedSec > totalTime) {
         status_.remainingSec = 0;
     } else {
         status_.remainingSec = totalTime - status_.elapsedSec;
+    }
+
+    // Time left in the current phase. currentTime is reconstructed from the
+    // just-updated elapsedSec (= currentTime - sequenceStartTime) so this stays
+    // a pure function of status_/params_.
+    uint32_t currentTime = status_.sequenceStartTime + status_.elapsedSec;
+    switch (status_.state) {
+        case State::INITIAL_DELAY:
+            status_.phaseRemainingSec = status_.elapsedSec < params_.initialDelaySec
+                                            ? params_.initialDelaySec - status_.elapsedSec
+                                            : 0;
+            break;
+        case State::EXPOSING: {
+            uint32_t e = currentTime - status_.currentFrameStartTime;
+            status_.phaseRemainingSec = e < params_.exposureSec ? params_.exposureSec - e : 0;
+            break;
+        }
+        case State::INTERVAL: {
+            uint32_t e = currentTime - status_.currentFrameStartTime;
+            status_.phaseRemainingSec = e < params_.intervalSec ? params_.intervalSec - e : 0;
+            break;
+        }
+        default:  // PAUSED, etc. — leave frozen.
+            break;
     }
 }
 
@@ -202,8 +265,8 @@ bool AstroProcess::startExposure() {
         return false;
 
     status_.currentFrameStartTime = millis() / 1000;
-    if (!CameraCommands::takeBulb()) {
-        status_.errorCode = 3;  // Failed to start exposure
+    if (!CameraCommands::triggerBulb()) {  // open toggle
+        status_.errorCode = 3;             // Failed to start exposure
         return false;
     }
     exposureActive_ = true;
@@ -211,8 +274,14 @@ bool AstroProcess::startExposure() {
 }
 
 void AstroProcess::stopExposure() {
+    // Bulb is a toggle: a second trigger closes the exposure the open toggle
+    // started. Guard on the camera's reported shutter state — if it is already
+    // closed (external stop, timeout, missed toggle), toggling again would
+    // re-OPEN it, so skip. Only toggle when the shutter is actually open.
     if (exposureActive_) {
-        CameraCommands::emergencyStop();
+        if (CameraCommands::isShutterActive()) {
+            CameraCommands::triggerBulb();  // close toggle
+        }
         exposureActive_ = false;
     }
 }
