@@ -19,7 +19,6 @@ void RemoteControlManager::init() {
     buttonStates[ButtonId::BTN_A] = false;
     buttonStates[ButtonId::BTN_B] = false;
     buttonStates[ButtonId::BTN_PWR] = false;
-    buttonStates[ButtonId::BTN_EMERGENCY] = false;
 
     // Initialize all buttons as processed
     buttonProcessed[ButtonId::UP] = true;
@@ -31,7 +30,6 @@ void RemoteControlManager::init() {
     buttonProcessed[ButtonId::BTN_A] = true;
     buttonProcessed[ButtonId::BTN_B] = true;
     buttonProcessed[ButtonId::BTN_PWR] = true;
-    buttonProcessed[ButtonId::BTN_EMERGENCY] = true;
 }
 
 void RemoteControlManager::update() {
@@ -39,7 +37,6 @@ void RemoteControlManager::update() {
     setButtonState(ButtonId::BTN_A, M5.BtnA.wasPressed());
     setButtonState(ButtonId::BTN_B, M5.BtnB.wasPressed());
     setButtonState(ButtonId::BTN_PWR, M5.BtnPWR.wasClicked());
-    setButtonState(ButtonId::BTN_EMERGENCY, M5.BtnA.wasPressed() && M5.BtnB.wasPressed());
 
     // Reset processed flags for buttons that were released
     for (auto& pair : buttonStates) {

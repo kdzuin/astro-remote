@@ -26,7 +26,6 @@ public:
     static bool wasAPressed() { return wasButtonPressed(ButtonId::BTN_A); }
     static bool wasBPressed() { return wasButtonPressed(ButtonId::BTN_B); }
     static bool wasPWRPressed() { return wasButtonPressed(ButtonId::BTN_PWR); }
-    static bool wasEmergencyPressed() { return wasButtonPressed(ButtonId::BTN_EMERGENCY); }
 
     // Internal use - called by BLE notification handler
     static void setButtonState(ButtonId button, bool pressed);

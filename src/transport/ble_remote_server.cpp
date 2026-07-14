@@ -139,7 +139,7 @@ void BLERemoteServer::ControlCharCallbacks::onWrite(BLECharacteristic* pCharacte
 
             // Validate button ID
             if (static_cast<uint8_t>(button) < static_cast<uint8_t>(ButtonId::UP) ||
-                static_cast<uint8_t>(button) > static_cast<uint8_t>(ButtonId::BTN_EMERGENCY)) {
+                static_cast<uint8_t>(button) > static_cast<uint8_t>(ButtonId::BTN_PWR)) {
                 LOG_PERIPHERAL("[BLE] Invalid button ID");
                 sendFeedback(CommandStatus::INVALID);
                 return;
