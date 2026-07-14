@@ -48,7 +48,9 @@ Service `8000FF00-FF00-FFFF-FFFF-FFFFFFFFFFFF` **[verified]** with:
 
 Two byte formats:
 - **16-bit**: `[MSB, LSB]` — e.g. shutter/record.
-- **24-bit**: `[MSB, LSB, PARAM]` — e.g. zoom/focus, PARAM is intensity.
+- **24-bit**: `[MSB, LSB, PARAM]` — e.g. zoom/focus, PARAM is step intensity.
+  For manual focus, `0x00` releases; press steps verified on-device from `0x01`
+  (smallest) up to `0x7F`.
 
 Command codes (all **[code]** unless noted):
 

@@ -65,9 +65,9 @@ inline void FocusScreen::update() {
 
     if (FocusProcess::getState().focusing) {
         if (RemoteControlManager::wasButtonPressed(ButtonId::LEFT)) {
-            FocusProcess::handleFocus(1);
-        } else if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT)) {
             FocusProcess::handleFocus(-1);
+        } else if (RemoteControlManager::wasButtonPressed(ButtonId::RIGHT)) {
+            FocusProcess::handleFocus(1);
         }
     }
 }
