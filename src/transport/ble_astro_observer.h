@@ -20,10 +20,12 @@ public:
                   static_cast<int>(status.state), status.completedFrames + 1, status.totalFrames,
                   status.elapsedSec);
 
-        AstroStatusPacket packet;
+        AstroStatusPacket packet = {};  // Zero-init: no garbage in unset fields.
         packet.state = static_cast<uint8_t>(status.state);
         packet.completedFrames = status.completedFrames;
         packet.totalFrames = status.totalFrames;
+        packet.sequenceStartTime = status.sequenceStartTime;
+        packet.currentFrameStartTime = status.currentFrameStartTime;
         packet.elapsedSec = status.elapsedSec;
         packet.remainingSec = status.remainingSec;
         packet.isCameraConnected = status.isCameraConnected;
