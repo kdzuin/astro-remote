@@ -185,12 +185,21 @@ Both are documented in `README.md`.
 
 ## Status & known gaps
 
-The codebase is a work in progress. Notable items:
+The Astro flow works end-to-end on real hardware: connect, configure, run a
+bulb sequence (verified against a Sony camera over serial), pause/resume, and
+stop. The dedicated design decisions behind it are recorded as ADRs in
+`docs/adr/`, and the reverse-engineered camera protocol in
+`docs/sony-ble-protocol.md`.
 
-- **`AstroProcess::status_.isCameraConnected` is read but never written**
-  anywhere in the firmware. Because `start()` refuses to run when it is false,
-  astro sequences currently cannot start on a real device. Needs a setter wired
-  from the BLE connection state.
-- **Emergency stop is a stub** — `Application::emergencyStop()` only logs.
-- The pairing-code display in `MySecurity::onPassKeyNotify` is commented out.
+Current gaps / unfinished:
+
+- **Web client does not consume astro status.** `src/webclient/` only sends
+  button/astro commands and reads a 1-byte feedback; it never subscribes to the
+  astro-status characteristic, so the browser cannot show live progress. The
+  firmware side (packet + notify) is done. Deferred feature.
+- **Unverified protocol details** (see `docs/sony-ble-protocol.md`): the
+  camera-type advertisement byte `0x03`, focus/record status frames, and the
+  first-pair confirmation UX — all need a clean run to confirm.
+- Only the Astro run screen uses off-screen canvases (ADR 0005); other screens
+  still draw directly and can flicker.
 - `.backup/camera_control.*` is superseded legacy code (pre-refactor monolith).
