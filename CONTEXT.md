@@ -10,6 +10,46 @@ exposure sequences), with general photo/video remote features as well.
 Written in C++, built with **PlatformIO** on the **Arduino framework**, using
 the **M5Unified** library for hardware access.
 
+## Language
+
+Terms specific to this project. Use these; avoid the listed alternatives.
+
+**Bulb toggle**:
+One full-press + release of the camera shutter sent over the Sony BT remote
+protocol. In Bulb exposure mode this *toggles* the shutter: the first toggle
+opens the exposure, the next closes it. Contrast the physical shutter button,
+where Bulb is a press-and-hold. The remote cannot "hold", so it opens with one
+toggle and closes with another.
+_Avoid_: take bulb, bulb photo, bulb shot.
+
+**Frame** (a.k.a. subframe):
+One captured exposure in an astro sequence. A frame spans two bulb toggles
+(open, then close) with the exposure time between them.
+_Avoid_: shot, picture, image, sub.
+
+**Sequence**:
+The full astro run: an initial delay, then N frames each separated by an
+interval. Owned by the astro state machine.
+_Avoid_: session, run, program.
+
+**Interval**:
+The wait between the end of one frame and the start of the next. Distinct from
+the initial delay before the first frame.
+_Avoid_: gap, pause, delay (reserve "delay" for the initial pre-sequence wait).
+
+**Shutter status**:
+The camera's own report of whether the shutter is open (active) or closed
+(ready), delivered as a BLE status notification. The source of truth for
+whether an exposure is actually happening — distinct from the sequence state,
+which is the remote's timer-driven belief.
+_Avoid_: exposure state, shooting flag.
+
+**Camera link** vs **Remote link**:
+Two separate BLE connections. The *camera link* is the M5 acting as BLE client
+to the Sony camera. The *remote link* is the M5 acting as BLE server to an
+external client (the web remote). See the two-BLE-roles section below.
+_Avoid_: "the connection" (ambiguous — always say which link).
+
 ## The key architectural idea: two BLE roles
 
 The device runs two Bluetooth stacks at once:
