@@ -1,6 +1,6 @@
 #include "screens/settings_screen.h"
 
-#include "screens/scan_screen.h"
+#include "screens/camera_list_screen.h"
 #include "transport/remote_control_manager.h"
 #include "utils/colors.h"
 
@@ -22,11 +22,8 @@ void SettingsScreen::updateMenuItems() {
         menuItems.addItem(SettingsMenuItem::Connect, "Connect");
     }
 
-    if (connState.isPaired) {
-        menuItems.addItem(SettingsMenuItem::Forget, "Forget Camera");
-    } else {
-        menuItems.addItem(SettingsMenuItem::Scan, "Scan New");
-    }
+    // All add/forget/switch lives in the Camera list; this is the entry point.
+    menuItems.addItem(SettingsMenuItem::Cameras, "Cameras");
     menuItems.addSeparator();
     menuItems.addItem(SettingsMenuItem::AutoConnect, "AutoConnect",
                       (connState.isAutoConnectEnabled ? "On" : "Off"), true);
@@ -77,17 +74,10 @@ void SettingsScreen::selectMenuItem() {
             draw();
             break;
 
-        case SettingsMenuItem::Forget:
-            SettingsProcess::forgetDevice();
-            setStatusText("Select Option");
-            setStatusBgColor(colors::get(colors::NORMAL));
-            updateMenuItems();
-            draw();
-            break;
-
-        case SettingsMenuItem::Scan:
-            MenuSystem::setScreen(new ScanScreen());
-            break;
+        case SettingsMenuItem::Cameras:
+            // Navigates away and deletes this screen; return immediately.
+            MenuSystem::setScreen(new CameraListScreen());
+            return;
 
         case SettingsMenuItem::AutoConnect:
             SettingsProcess::toggleAutoConnect();

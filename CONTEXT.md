@@ -59,6 +59,25 @@ whether an exposure is actually happening — distinct from the sequence state,
 which is the remote's timer-driven belief.
 _Avoid_: exposure state, shooting flag.
 
+**Saved camera**:
+A Sony camera the remote remembers across power cycles — its BLE address plus
+the advertised name captured when it was first paired. The remote can hold
+several; they persist in NVS. Contrast a scan result, which is a live,
+transient discovery not yet saved.
+_Avoid_: paired device, known camera, bonded device.
+
+**Active camera**:
+The one **Saved camera** the remote will auto-connect to on boot and treat as
+the current target. Exactly zero or one at a time. Set implicitly by connecting
+a camera; cleared when that camera is forgotten.
+_Avoid_: current camera, default camera, selected camera.
+
+**Camera list**:
+The user-facing list of **Saved cameras** — the screen where you pick which one
+to use, add a new one, or forget one. Distinct from the scan list, which shows
+live discoveries.
+_Avoid_: device list, paired list.
+
 **Camera link** vs **Remote link**:
 Two separate BLE connections. The *camera link* is the M5 acting as BLE client
 to the Sony camera. The *remote link* is the M5 acting as BLE server to an
