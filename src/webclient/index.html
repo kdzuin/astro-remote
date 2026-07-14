@@ -65,14 +65,13 @@
         <div class="flex items-center gap-2">
           <button
             id="scanButton"
-            class="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg shadow-sm hover:brightness-110 disabled:opacity-40"
+            class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg shadow-sm hover:brightness-110 disabled:opacity-40"
           >
             Connect
           </button>
           <button
             id="disconnectButton"
-            class="rounded-lg bg-surface-2 px-3 py-2 text-sm font-semibold text-text shadow-sm hover:brightness-110 disabled:opacity-40"
-            disabled
+            class="hidden rounded-lg border border-border bg-surface-2 px-4 py-2 text-sm font-semibold text-text shadow-sm hover:brightness-110"
           >
             Disconnect
           </button>
@@ -121,7 +120,7 @@
                 class="inline-block h-2 w-2 rounded-full bg-muted"
                 title="Camera link"
               ></span>
-              <span id="cameraLabel">Camera —</span>
+              <span id="cameraLabel">Camera unknown</span>
             </div>
           </div>
 
@@ -145,7 +144,7 @@
             <span
               id="seqTimes"
               class="text-xs tabular-nums text-muted"
-              >00:00 · -00:00</span
+              >00:00 / 00:00</span
             >
           </div>
           <div class="h-3 w-full overflow-hidden rounded-full bg-surface-2">
@@ -162,7 +161,7 @@
             <span
               id="phaseTime"
               class="text-xs tabular-nums text-muted"
-              >-00:00</span
+              >00:00</span
             >
           </div>
           <div class="h-3 w-full overflow-hidden rounded-full bg-surface-2">

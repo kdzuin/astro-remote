@@ -2,7 +2,7 @@
 //
 // Bump CACHE_VERSION whenever any precached asset changes, or clients keep
 // serving the old copy. Old caches are purged on activate.
-const CACHE_VERSION = "astroremote-v1";
+const CACHE_VERSION = "astroremote-v2";
 
 // Explicit precache list — every asset the app needs offline. Kept explicit
 // (not a glob) so build artifacts like package.json / input.css / node_modules

@@ -63,8 +63,16 @@ class M5RemoteClient {
     this.bindKeyboardControls();
     this.bindSafetyReleases();
 
-    this.el.disconnectButton.disabled = true;
+    this.setConnectedUI(false);
     this.renderStatus(null); // idle placeholder
+  }
+
+  // Show exactly one of Connect / Disconnect; toggle the d-pad with it.
+  setConnectedUI(connected) {
+    this.el.scanButton.classList.toggle("hidden", connected);
+    this.el.disconnectButton.classList.toggle("hidden", !connected);
+    this.el.controls.classList.toggle("hidden", !connected);
+    this.el.scanButton.disabled = false;
   }
 
   // --- Input: pointer (mouse + touch + pen, one path) --------------------
@@ -241,9 +249,7 @@ class M5RemoteClient {
       }
 
       this.setDeviceStatus("Connected to " + (device.name || "M5Remote"), "success");
-      this.el.scanButton.disabled = true;
-      this.el.disconnectButton.disabled = false;
-      this.el.controls.classList.remove("hidden");
+      this.setConnectedUI(true);
       this.startTicker();
     } catch (err) {
       console.error("[BLE] connection error:", err);
@@ -264,9 +270,7 @@ class M5RemoteClient {
     this.setDeviceStatus("Disconnected", "info");
     this.stopTicker();
     this.releaseButton(null, true);
-    this.el.scanButton.disabled = false;
-    this.el.disconnectButton.disabled = true;
-    this.el.controls.classList.add("hidden");
+    this.setConnectedUI(false);
     this.device = null;
     this.server = null;
     this.service = null;
@@ -312,16 +316,16 @@ class M5RemoteClient {
       e.stateLabel.textContent = "Idle";
       e.stateDot.className = "inline-block h-2.5 w-2.5 rounded-full bg-muted";
       e.frameCount.textContent = "0 / 0";
-      e.seqTimes.textContent = "00:00 · -00:00";
+      e.seqTimes.textContent = "00:00 / 00:00";
       e.seqBar.style.width = "0%";
       e.phaseLabel.textContent = "Phase";
-      e.phaseTime.textContent = "-00:00";
+      e.phaseTime.textContent = "00:00";
       e.phaseBar.style.width = "0%";
       e.phaseBar.classList.remove("bar-active");
       e.seqBar.classList.remove("bar-active");
       e.errorBanner.classList.add("hidden");
       e.cameraDot.className = "inline-block h-2 w-2 rounded-full bg-muted";
-      e.cameraLabel.textContent = "Camera —";
+      e.cameraLabel.textContent = "Camera unknown";
       return;
     }
 
@@ -350,13 +354,13 @@ class M5RemoteClient {
     // Sequence bar: elapsed / (elapsed + remaining).
     const seqTotal = s.elapsedSec + s.remainingSec;
     e.seqBar.style.width = (barFraction(s.elapsedSec, seqTotal) * 100).toFixed(1) + "%";
-    e.seqTimes.textContent = `${formatMMSS(s.elapsedSec)} · -${formatMMSS(s.remainingSec)}`;
+    e.seqTimes.textContent = `${formatMMSS(s.elapsedSec)} / ${formatMMSS(seqTotal)}`;
 
     // Phase bar: elapsed within the current phase.
     const phaseElapsed = s.phaseTotalSec - s.phaseRemainingSec;
     e.phaseLabel.textContent =
       s.state === ASTRO_STATE.PAUSED ? "Phase (paused)" : stateLabel(s.state);
-    e.phaseTime.textContent = `-${formatMMSS(s.phaseRemainingSec)}`;
+    e.phaseTime.textContent = formatMMSS(s.phaseRemainingSec);
     e.phaseBar.style.width =
       (barFraction(phaseElapsed, s.phaseTotalSec) * 100).toFixed(1) + "%";
     e.phaseBar.classList.toggle("bar-active", running);
